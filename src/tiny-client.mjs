@@ -1,6 +1,6 @@
 const DEFAULT_TIMEOUT_MS = 120_000;
 
-export async function callTinyImplementer({ endpoint, model, spec, context = {}, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+export async function callTinyImplementer({ endpoint, model, spec, context = {}, repairPacket = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   if (!endpoint) throw new Error("tiny endpoint is required");
   if (!model) throw new Error("tiny model is required");
 
@@ -27,13 +27,17 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
               "Do not redesign the task, expand scope, or invent requirements.",
               "Return JSON only.",
               "Allowed statuses: candidate, insufficient_spec, cannot_safely_implement.",
-              "For candidate, return {status, changes:[{path,operation,symbol?,content}]}.",
-              "If the specification is ambiguous, return insufficient_spec instead of guessing."
+              "Allowed change operations in v1:",
+              "- replace_text: {path, operation:'replace_text', expected, content}; expected must be exact existing text and occur once.",
+              "- create_file: {path, operation:'create_file', content}; only when the spec explicitly allows new files.",
+              "For candidate, return {status:'candidate', changes:[...]}.",
+              "If the specification or supplied context is insufficient, return insufficient_spec instead of guessing.",
+              "Never name a path outside scope.allowed_files."
             ].join("\n")
           },
           {
             role: "user",
-            content: JSON.stringify({ implementation_spec: spec, context })
+            content: JSON.stringify({ implementation_spec: spec, context, repair_packet: repairPacket })
           }
         ]
       })

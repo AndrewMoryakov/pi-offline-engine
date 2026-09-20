@@ -10,7 +10,10 @@ const spec = {
   target: { file: "src/RetryPolicy.cs", symbol: "RetryPolicy.ExecuteAsync" },
   requirements: ["Pass cancellation token to Task.Delay"],
   scope: { allowed_files: ["src/RetryPolicy.cs"], allow_new_files: false },
-  verification: { build: { project: "src/App.csproj" }, tests: ["RetryPolicyTests.Cancellation"] }
+  verification: {
+    build: { project: "src/App.csproj" },
+    tests: { project: "tests/App.Tests.csproj", names: ["RetryPolicyTests.Cancellation"] }
+  }
 };
 
 test("accepts a bounded implementation spec", () => {
@@ -26,20 +29,36 @@ test("rejects traversal paths", () => {
   assert.equal(isSafeRelativePath("src/x.cs"), true);
 });
 
+test("rejects more than two delegated files", () => {
+  const bad = structuredClone(spec);
+  bad.scope.allowed_files = ["src/RetryPolicy.cs", "src/A.cs", "src/B.cs"];
+  assert.equal(validateImplementationSpec(bad).ok, false);
+});
+
 test("rejects candidate outside allowed scope", () => {
   const candidate = {
     status: "candidate",
-    changes: [{ path: "src/Other.cs", operation: "replace_symbol", symbol: "Other.Run", content: "void Run() {}" }]
+    changes: [{ path: "src/Other.cs", operation: "replace_text", expected: "old", content: "new" }]
   };
   const result = validateCandidate(candidate, spec);
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /outside allowed scope/);
 });
 
-test("accepts bounded candidate", () => {
+test("accepts exact replacement candidate", () => {
   const candidate = {
     status: "candidate",
-    changes: [{ path: "src/RetryPolicy.cs", operation: "replace_symbol", symbol: "RetryPolicy.ExecuteAsync", content: "async Task ExecuteAsync() {}" }]
+    changes: [{ path: "src/RetryPolicy.cs", operation: "replace_text", expected: "Task.Delay(delay)", content: "Task.Delay(delay, cancellationToken)" }]
   };
   assert.equal(validateCandidate(candidate, spec).ok, true);
+});
+
+test("create_file requires explicit permission and allowed path", () => {
+  const candidate = { status: "candidate", changes: [{ path: "src/New.cs", operation: "create_file", content: "class New {}" }] };
+  assert.equal(validateCandidate(candidate, spec).ok, false);
+
+  const allowed = structuredClone(spec);
+  allowed.scope.allowed_files.push("src/New.cs");
+  allowed.scope.allow_new_files = true;
+  assert.equal(validateCandidate(candidate, allowed).ok, true);
 });

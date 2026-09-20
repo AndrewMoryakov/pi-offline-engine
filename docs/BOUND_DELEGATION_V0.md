@@ -2,44 +2,102 @@
 
 ## Purpose
 
-Prove the smallest useful contract between a slow main reasoning model and a fast local coding model before adding automatic writes or repair loops.
+Prove a useful contract between a slow main reasoning model and a fast local coding model while keeping mutation and verification under Pi control.
 
-## Boundary
+## Two surfaces
 
-The main Pi agent owns problem understanding and produces an `ImplementationSpec v1`.
+### `delegate_implementation`
 
-The tiny implementer receives only that bounded spec plus explicitly supplied context. It may return:
+Candidate-only mode. The main agent creates `ImplementationSpec v1`; the TinyCoder returns a bounded candidate. No files are modified.
 
-- `candidate`
-- `insufficient_spec`
-- `cannot_safely_implement`
+### `execute_delegated_implementation`
 
-A candidate is rejected if it names an unsupported operation, an unsafe path, or a path outside the spec scope.
+Bounded execution mode:
 
-v0 never writes the candidate to disk.
+```text
+ImplementationSpec
+  -> user approves declared scope once
+  -> capture SHA-256 preimage
+  -> TinyCoder candidate
+  -> validate paths/operations
+  -> exact deterministic apply
+  -> dotnet build/tests --no-restore
+  -> if red: compact RepairPacket
+  -> TinyCoder repair
+  -> at most 3 total attempts
+  -> return verified or escalate to main model
+```
 
-## Runtime
+The main 27B model is intentionally absent from the inner repair loop.
 
-`delegate_implementation` calls an OpenAI-compatible endpoint:
+## Candidate operations
 
-- `PI_OFFLINE_TINY_ENDPOINT` (default `http://127.0.0.1:8081`)
-- `PI_OFFLINE_TINY_MODEL` (default `qwen2.5-coder-3b-instruct`)
+v1 auto-apply supports only:
 
-The intended first backend is llama.cpp serving Qwen2.5-Coder-3B-Instruct.
+- `replace_text` with exact `expected` text that occurs exactly once;
+- `create_file` when the spec explicitly permits new files and the path is present in `scope.allowed_files`.
 
-## Telemetry
+Symbolic links and paths outside the workspace/scope are rejected.
 
-Events are appended to `.pi/offline-engine/events.jsonl`.
+More semantic operations such as `replace_symbol` belong to a later Tree-sitter/Roslyn-backed slice.
 
-Only control metadata is logged in v0: spec id, model, endpoint, latency, usage, candidate status and validation outcome. Full source/context payloads are not copied into the event log.
+## Preimage rule
 
-## Next gate
+Pi snapshots SHA-256 for every allowed file **before** each TinyCoder call.
 
-Do not add autonomous repair until deterministic candidate application has:
+Application is refused if an allowed file appears, disappears, or changes while the TinyCoder is working. This prevents a stale candidate from overwriting concurrent user/agent edits.
 
-1. preimage/stale-state protection;
-2. allowed-file enforcement at apply time;
-3. a reversible or inspectable patch representation;
-4. unit tests for partial failure.
+Pi also participates in Pi's `withFileMutationQueue()` for every affected path, so built-in edit/write calls cannot race the delegated mutation in the same process.
 
-After that, add syntax/LSP/build/test verification and a compact `RepairPacket`.
+## Verification contract
+
+v1 accepts:
+
+```json
+{
+  "verification": {
+    "build": { "project": "src/App/App.csproj" },
+    "tests": {
+      "project": "tests/App.Tests/App.Tests.csproj",
+      "names": ["RetryTests.Cancellation"]
+    }
+  }
+}
+```
+
+Pi constructs the commands itself. The model cannot inject an arbitrary verification shell command.
+
+Checks run with `--no-restore` for offline safety. Full stdout/stderr is stored under `.pi/offline-engine/artifacts/`; only compact diagnostics are sent back through model context.
+
+## Repair
+
+A red verification produces a compact `RepairPacket` containing:
+
+- previous change paths/operations;
+- build/test status;
+- selected diagnostics;
+- artifact references.
+
+The next TinyCoder call sees the original specification plus the RepairPacket and the caller-supplied bounded context.
+
+Default: three total TinyCoder attempts (initial + two repairs). `PI_OFFLINE_TINY_MAX_ATTEMPTS` may lower this but is capped at 3.
+
+## Headless safety
+
+Mutating delegated execution requires interactive confirmation by default.
+
+Headless mutation is rejected unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is explicitly set. That mode is intended only inside a separately controlled sandbox.
+
+## Runtime files
+
+All generated state is local and gitignored:
+
+- `.pi/offline-engine/events.jsonl`
+- `.pi/offline-engine/candidates/`
+- `.pi/offline-engine/artifacts/`
+
+Candidate records include generated patch content for local inspection. The event log contains control metadata rather than full source payloads.
+
+## Known boundary
+
+If verification remains red after the final TinyCoder attempt, the last bounded candidate remains in the workspace and control returns to the main model. v0 does not attempt autonomous git rollback or crash-safe transactional recovery; those are separate reliability features rather than hidden behavior.

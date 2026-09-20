@@ -1,1 +1,144 @@
 # pi-offline-engine
+
+Offline-first extension experiments for the Pi coding agent.
+
+The project explores a compound local coding system where a large local model is reserved for reasoning and architecture, while deterministic tools and a much smaller local coding model perform bounded implementation work.
+
+## Current vertical slice
+
+Two Pi tools are provided:
+
+- `delegate_implementation` — candidate-only; no writes.
+- `execute_delegated_implementation` — bounded implementation loop with guarded writes and deterministic .NET verification.
+
+The execute flow is:
+
+```text
+main local model
+  -> strict ImplementationSpec
+  -> one user approval for the declared file scope
+  -> local TinyCoder
+  -> exact candidate validation + stale-preimage check
+  -> apply
+  -> dotnet build/tests --no-restore
+  -> compact RepairPacket on failure
+  -> TinyCoder repair (up to two)
+  -> verified result or escalation to main model
+```
+
+The main model does not participate in the cheap repair loop.
+
+## Install
+
+```bash
+pi install git:github.com/AndrewMoryakov/pi-offline-engine
+```
+
+During development from a clone:
+
+```bash
+pi -e ./extensions/index.ts
+```
+
+Pi extensions execute with user permissions. Review source before installation.
+
+## Tiny implementer
+
+Run an OpenAI-compatible local endpoint, for example llama.cpp serving Qwen2.5-Coder-3B-Instruct:
+
+```bash
+export PI_OFFLINE_TINY_ENDPOINT=http://127.0.0.1:8081
+export PI_OFFLINE_TINY_MODEL=qwen2.5-coder-3b-instruct
+export PI_OFFLINE_TINY_MAX_ATTEMPTS=3
+```
+
+Then run Pi normally.
+
+`/offline-status` shows the active local settings.
+
+## ImplementationSpec v1
+
+Example:
+
+```json
+{
+  "version": 1,
+  "spec_id": "retry-001",
+  "operation": "modify_symbol",
+  "goal": { "summary": "Propagate cancellation into the retry delay." },
+  "target": {
+    "file": "src/Payments/RetryPolicy.cs",
+    "symbol": "RetryPolicy.ExecuteAsync"
+  },
+  "requirements": [
+    "Call ThrowIfCancellationRequested before every retry.",
+    "Pass cancellationToken to Task.Delay."
+  ],
+  "scope": {
+    "allowed_files": ["src/Payments/RetryPolicy.cs"],
+    "allow_new_files": false,
+    "allow_dependencies": false,
+    "allow_public_api_change": false
+  },
+  "verification": {
+    "build": { "project": "src/Payments/Payments.csproj" },
+    "tests": {
+      "project": "tests/Payments.Tests/Payments.Tests.csproj",
+      "names": ["RetryPolicyTests.CancellationBeforeRetry"]
+    }
+  }
+}
+```
+
+v1 delegation is intentionally limited to at most two files.
+
+## Candidate format
+
+Auto-apply supports only exact operations:
+
+```json
+{
+  "status": "candidate",
+  "changes": [
+    {
+      "path": "src/Payments/RetryPolicy.cs",
+      "operation": "replace_text",
+      "expected": "await Task.Delay(delay);",
+      "content": "await Task.Delay(delay, cancellationToken);"
+    }
+  ]
+}
+```
+
+or an explicitly allowed `create_file`.
+
+If the TinyCoder lacks enough information, it should return `insufficient_spec` instead of guessing.
+
+## Safety
+
+Before every TinyCoder attempt, SHA-256 is captured for every allowed file. A candidate is rejected as stale if any of those files changes before apply.
+
+Mutations use Pi's file mutation queue, are scope-checked, and require interactive confirmation unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is explicitly enabled in a controlled sandbox.
+
+Full verification logs and candidate records stay under the gitignored `.pi/offline-engine/` directory.
+
+## Development
+
+```bash
+npm test
+npm run check
+```
+
+See [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md) for the runtime contract.
+
+## Next layers
+
+After this contract is measured on real tasks:
+
+1. Tree-sitter/LSP post-edit validation before build;
+2. local retrieval/context preparation;
+3. compact tool-result hooks;
+4. lean edit / structural transformation;
+5. specialized code embeddings + reranking;
+6. smaller 0.5B/1.5B implementation tiers;
+7. speculative decoding experiments for the main local model.

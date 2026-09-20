@@ -1,12 +1,12 @@
 {
   "name": "pi-offline-engine",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "description": "Offline-first Pi extension for bounded local coding delegation.",
   "scripts": {
     "test": "node --test",
-    "check": "node --check ./src/implementation-spec.mjs && node --check ./src/tiny-client.mjs && node --check ./src/event-log.mjs"
+    "check": "node --check ./src/implementation-spec.mjs && node --check ./src/tiny-client.mjs && node --check ./src/event-log.mjs && node --check ./src/workspace-snapshot.mjs && node --check ./src/candidate-store.mjs && node --check ./src/apply-candidate.mjs && node --check ./src/verification.mjs && node --check ./src/repair-packet.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",

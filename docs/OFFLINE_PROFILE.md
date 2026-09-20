@@ -10,7 +10,7 @@ The objective is not to maximize the number of Pi tools. It is to move routine r
 
 - **pi-knowledge 0.10.2** — local-first BM25 + embeddings retrieval. Use local `multilingual-e5-small`, `low_token`, and offline mode.
 - **pi-lsp-extension 1.3.0** — live language semantics, diagnostics, definition/references, plus structural Tree-sitter fallback and code search/rewrite.
-- **pi-code-tool 0.6.1** — sandboxed Python composition over host tools so loops/filtering/aggregation do not require a model turn per primitive.
+- **pi-code-tool 0.6.1** — sandboxed Python composition over host tools so loops/filtering/aggregation do not require a model turn per primitive. In this profile it is treated as a **read-only orchestration tool**: do not use its bridged bash/edit/write calls, because the bridge constructs Pi built-ins directly and does not pass through top-level edit overrides such as pi-lean-edit.
 - **pi-lean-edit 0.3.6** — replaces `read/edit` with snapshot-backed range edits so the model does not have to reproduce old text in every edit.
 
 ### Optional
@@ -81,20 +81,20 @@ After installation, configure the LSP extension for C# if it does not auto-detec
 /lsp-config csharp csharp-ls stdio
 ```
 
-Do not change a repository's target framework or `global.json` just to make the language server run.
+Do not change a repository's target framework or `global.json` just to make the language server run.\n\n## .NET 10 test runner note\n\nIf the repository opts into Microsoft.Testing.Platform through `global.json` (`test.runner = Microsoft.Testing.Platform`), pi-offline-engine uses MTP's `--report-trx` evidence path instead of VSTest's `--logger trx`. The test project must already reference or otherwise provide `Microsoft.Testing.Extensions.TrxReport`; restore it while online. `/offline-doctor` warns when MTP is detected but the TRX option is not advertised.
 
 ## Before going offline
 
 While the network is still available:
 
-1. install all selected Pi packages;
-2. force the local embedding model to download by indexing a real repository with `pi-knowledge`;
-3. run `knowledge_doctor` and confirm the index is ready;
-4. start C# LSP at least once on the real solution;
-5. make sure the main GGUF and TinyCoder GGUF are local;
-6. run `dotnet restore` on the project(s) you expect to work on;
-7. disconnect networking and run `/offline-doctor`;
-8. run one real small edit/build/test task offline.
+1. install all selected Pi packages;\n2. add `/.pi/offline-engine/` to the target repository's `.git/info/exclude` so local engine artifacts cannot be accidentally staged;
+3. force the local embedding model to download by indexing a real repository with `pi-knowledge`;
+4. run `knowledge_doctor` and confirm the index is ready;
+5. start C# LSP at least once on the real solution;
+6. make sure the main GGUF and TinyCoder GGUF are local;
+7. run `dotnet restore` on the project(s) you expect to work on;
+8. disconnect networking and run `/offline-doctor`;
+9. run one real small edit/build/test task offline.
 
 For the slow main local model, then use:
 

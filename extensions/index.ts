@@ -8,14 +8,15 @@ import { appendEvent } from "../src/event-log.mjs";
 import { snapshotAllowedFiles, resolveInside } from "../src/workspace-snapshot.mjs";
 import { saveCandidateRecord } from "../src/candidate-store.mjs";
 import { applyCandidate } from "../src/apply-candidate.mjs";
-import { runVerification } from "../src/verification.mjs";
+import { preflightVerificationInfrastructure, runVerification } from "../src/verification.mjs";
 import { buildRepairPacket } from "../src/repair-packet.mjs";
 import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 import { compactToolResult } from "../src/tool-result-compactor.mjs";
 import { buildRepoCapsule } from "../src/repo-capsule.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
-import { buildRuntimeFailureOutcome } from "../src/delegation-state.mjs";
+import { buildRuntimeFailureOutcome, buildTinyTerminalOutcome } from "../src/delegation-state.mjs";
+import { addPiUsage, toPiUsage } from "../src/pi-usage.mjs";
 
 const NonEmptyString = Type.String({ minLength: 1 });
 
@@ -68,8 +69,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
     promptSnippet: "Delegate a precise bounded code change to the local tiny implementer without applying it",
     promptGuidelines: [
       "Use delegate_implementation only after you understand the problem and can provide an explicit bounded ImplementationSpec.",
-      "Include exact source snippets in delegate_implementation context when the tiny model needs to produce replace_text edits.",
-      "Do not delegate architecture decisions, ambiguous work, or broad repository exploration."
+      "When using delegate_implementation, include exact source snippets in its context when the tiny model needs to produce replace_text edits.",
+      "Do not use delegate_implementation for architecture decisions, ambiguous work, or broad repository exploration."
     ],
     parameters: DelegationParametersSchema,
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
@@ -101,7 +102,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
         if (!candidateCheck.ok) {
           return {
             content: [{ type: "text", text: `Tiny implementer returned an invalid candidate: ${candidateCheck.errors.join("; ")}` }],
-            details: { accepted: false, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs, errors: candidateCheck.errors }
+            details: { accepted: false, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs, errors: candidateCheck.errors },
+            usage: toPiUsage(result.usage)
           };
         }
 
@@ -111,7 +113,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
 
         return {
           content: [{ type: "text", text: JSON.stringify(result.candidate, null, 2) }],
-          details: { accepted: true, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs }
+          details: { accepted: true, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs },
+          usage: toPiUsage(result.usage)
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -128,9 +131,10 @@ export default function offlineEngine(pi: ExtensionAPI) {
     promptSnippet: "Execute a strict ImplementationSpec through the local tiny coding model and deterministic verification",
     promptGuidelines: [
       "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
-      "Treat execute_delegated_implementation status verification_passed as compiler/test evidence only; it is not authority that the user task is semantically complete.",
+      "Treat execute_delegated_implementation status verification_passed as compiler/test evidence only; inspect the current diff/changed files before deciding the user task is semantically complete.",
       "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
-      "Provide exact relevant source snippets in context; the tiny model is not a repository explorer."
+      "When using execute_delegated_implementation, provide exact relevant source snippets in context; the tiny model is not a repository explorer.",
+      "Call execute_delegated_implementation as the only mutating tool in its assistant turn; do not issue sibling edit, write, or mutating shell calls in parallel."
     ],
     parameters: DelegationParametersSchema,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
@@ -166,6 +170,46 @@ export default function offlineEngine(pi: ExtensionAPI) {
       let workspaceModified = false;
       let stage = "not_started";
       const attempts = [];
+      const cumulativeChangedFiles = new Set<string>();
+
+      let verificationPreflight = null;
+      try {
+        stage = "verification_preflight";
+        verificationPreflight = await preflightVerificationInfrastructure({
+          cwd: ctx.cwd,
+          spec: params.spec,
+          exec: (command, args, options) => pi.exec(command, args, options),
+          signal
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const outcome = buildRuntimeFailureOutcome({
+          stage,
+          workspaceModified: false,
+          error: message,
+          attempts,
+          changedFiles: []
+        });
+        await appendEvent(ctx.cwd, {
+          type: "delegated_implementation_runtime_failure",
+          specId: params.spec.spec_id,
+          attempt: 0,
+          ...outcome
+        });
+        return {
+          content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
+          details: {
+            success: false,
+            escalated: true,
+            reason: outcome.reason,
+            stage: outcome.stage,
+            workspaceModified: false,
+            error: outcome.error,
+            attempts
+          }
+        };
+      }
+      let nestedUsage: any = undefined;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         try {
@@ -185,6 +229,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           signal
         });
 
+        nestedUsage = addPiUsage(nestedUsage, toPiUsage(result.usage));
         stage = "candidate_validation";
         const candidateCheck = validateCandidate(result.candidate, params.spec);
         await appendEvent(ctx.cwd, {
@@ -203,9 +248,34 @@ export default function offlineEngine(pi: ExtensionAPI) {
         if (!candidateCheck.ok) throw new Error(`Tiny implementer returned an invalid candidate: ${candidateCheck.errors.join("; ")}`);
 
         if (result.candidate.status !== "candidate") {
+          const outcome = buildTinyTerminalOutcome({
+            terminalStatus: result.candidate.status,
+            reason: result.candidate.reason ?? null,
+            attempt,
+            usage: result.usage,
+            workspaceModified,
+            changedFiles: [...cumulativeChangedFiles]
+          });
+
+          await appendEvent(ctx.cwd, {
+            type: workspaceModified ? "delegated_implementation_escalated" : "tiny_terminal_status",
+            specId: params.spec.spec_id,
+            attempt,
+            ...outcome
+          });
+
           return {
-            content: [{ type: "text", text: JSON.stringify({ status: result.candidate.status, attempt, reason: result.candidate.reason ?? null }, null, 2) }],
-            details: { success: false, terminalStatus: result.candidate.status, attempt, usage: result.usage }
+            content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
+            details: {
+              success: false,
+              escalated: workspaceModified,
+              terminalStatus: result.candidate.status,
+              attempt,
+              usage: result.usage,
+              workspaceModified: outcome.workspace_modified,
+              changedFiles: outcome.changed_files
+            },
+            usage: nestedUsage
           };
         }
 
@@ -217,6 +287,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         stage = "apply";
         const applied = await withMutationQueues(targetPaths, () => applyCandidate(ctx.cwd, record));
         workspaceModified = true;
+        for (const file of applied.changedFiles) cumulativeChangedFiles.add(file);
         await appendEvent(ctx.cwd, {
           type: "candidate_applied",
           specId: params.spec.spec_id,
@@ -232,7 +303,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
           spec: params.spec,
           exec: (command, args, options) => pi.exec(command, args, options),
           signal,
-          attempt
+          attempt,
+          preflight: verificationPreflight
         });
         lastVerification = verification;
 
@@ -253,17 +325,25 @@ export default function offlineEngine(pi: ExtensionAPI) {
         });
 
         if (verification.passed) {
-          await appendEvent(ctx.cwd, { type: "delegated_implementation_succeeded", specId: params.spec.spec_id, attempt });
+          await appendEvent(ctx.cwd, { type: "delegated_verification_passed", specId: params.spec.spec_id, attempt });
           return {
             content: [{ type: "text", text: JSON.stringify({
               status: "verification_passed",
               task_complete: false,
               note: "Compiler/test verification passed; the main reasoner still owns semantic completion.",
               attempt,
-              changedFiles: applied.changedFiles,
+              changedFiles: [...cumulativeChangedFiles].sort(),
               verification
             }, null, 2) }],
-            details: { success: true, taskComplete: false, attempt, attempts, verification }
+            details: {
+              success: true,
+              taskComplete: false,
+              attempt,
+              attempts,
+              changedFiles: [...cumulativeChangedFiles].sort(),
+              verification
+            },
+            usage: nestedUsage
           };
         }
 
@@ -275,7 +355,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
             stage,
             workspaceModified,
             error: message,
-            attempts
+            attempts,
+            changedFiles: [...cumulativeChangedFiles]
           });
 
           await appendEvent(ctx.cwd, {
@@ -293,9 +374,12 @@ export default function offlineEngine(pi: ExtensionAPI) {
               reason: outcome.reason,
               stage: outcome.stage,
               workspaceModified: outcome.workspace_modified,
+              workspaceStateUncertain: outcome.workspace_state_uncertain,
+              changedFiles: outcome.changed_files,
               error: outcome.error,
               attempts
-            }
+            },
+            usage: nestedUsage
           };
         }
       }
@@ -308,17 +392,55 @@ export default function offlineEngine(pi: ExtensionAPI) {
             status: "needs_main_model",
             reason: "tiny_implementation_attempts_exhausted",
             workspace_modified: workspaceModified,
+            changed_files: [...cumulativeChangedFiles].sort(),
             attempts: maxAttempts,
             verification: lastVerification
           }, null, 2)
         }],
-        details: { success: false, escalated: true, workspaceModified, attempts, verification: lastVerification }
+        details: {
+          success: false,
+          escalated: true,
+          workspaceModified,
+          changedFiles: [...cumulativeChangedFiles].sort(),
+          attempts,
+          verification: lastVerification
+        },
+        usage: nestedUsage
       };
     }
   });
 
   pi.on("session_start", async () => {
     lastRepoCapsuleFingerprint = null;
+  });
+
+  pi.on("session_compact", async () => {
+    // Compaction can remove the prior hidden capsule from replay context.
+    // Force a fresh deterministic capsule on the next user prompt.
+    lastRepoCapsuleFingerprint = null;
+  });
+
+  pi.on("session_tree", async () => {
+    // Tree navigation can move to a branch without the last injected capsule.
+    lastRepoCapsuleFingerprint = null;
+  });
+
+  pi.on("before_agent_start", async (event) => {
+    const options = event.systemPromptOptions;
+    const codeToolActive = options?.selectedTools?.includes("code") === true;
+    if (!codeToolActive) return;
+
+    const guidelines = options.promptGuidelines ?? (options.promptGuidelines = []);
+    const prefix = "pi-offline-engine:";
+    const desired = [
+      `${prefix} Use the code tool for read-only filtering, aggregation, search composition, and mechanical analysis.`,
+      `${prefix} Do not invoke bash/edit/write from inside the code tool in this profile; those bridged calls bypass top-level edit/LSP extension lifecycles.`,
+      `${prefix} Perform mutations through the active top-level edit/write tools or execute_delegated_implementation.`
+    ];
+
+    for (const guideline of desired) {
+      if (!guidelines.includes(guideline)) guidelines.push(guideline);
+    }
   });
 
   pi.on("before_agent_start", async (_event, ctx) => {
@@ -416,11 +538,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
   pi.registerCommand("offline-doctor", {
     description: "Check local offline readiness",
     handler: async (_args, ctx) => {
+      const activeNames = new Set(pi.getActiveTools());
+      const activeTools = pi.getAllTools().filter((tool) => activeNames.has(tool.name));
       const report = await runOfflineDoctor({
         cwd: ctx.cwd,
         endpoint: tinyEndpoint(),
         model: tinyModel(),
-        tools: pi.getAllTools(),
+        tools: activeTools,
         exec: (command, args, options) => pi.exec(command, args, options)
       });
       ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");

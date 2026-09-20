@@ -22,6 +22,18 @@ export async function runOfflineDoctor({
     timeoutMs
   }));
 
+  checks.push(await checkDotnetTestCapabilities({
+    exec,
+    cwd,
+    timeoutMs
+  }));
+
+  checks.push(await checkRuntimeStateIgnore({
+    exec,
+    cwd,
+    timeoutMs
+  }));
+
   checks.push(await checkCommand({
     name: "csharp-ls",
     required: false,
@@ -103,6 +115,92 @@ async function checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs) {
     };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function checkRuntimeStateIgnore({ exec, cwd, timeoutMs }) {
+  try {
+    const repo = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, timeout: timeoutMs });
+    if (repo.code !== 0 || repo.killed === true) {
+      return {
+        id: "runtime_state_ignore",
+        required: false,
+        ok: true,
+        status: "ok",
+        message: "not inside a Git repository; no Git ignore check needed"
+      };
+    }
+
+    const ignored = await exec(
+      "git",
+      ["check-ignore", "-q", "--no-index", ".pi/offline-engine/probe"],
+      { cwd, timeout: timeoutMs }
+    );
+
+    const ok = ignored.code === 0;
+    return {
+      id: "runtime_state_ignore",
+      required: false,
+      ok,
+      status: ok ? "ok" : "warn",
+      message: ok
+        ? ".pi/offline-engine is ignored by Git"
+        : ".pi/offline-engine is not ignored; add '/.pi/offline-engine/' to .git/info/exclude before real use to avoid accidental commits"
+    };
+  } catch (error) {
+    return {
+      id: "runtime_state_ignore",
+      required: false,
+      ok: false,
+      status: "warn",
+      message: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+async function checkDotnetTestCapabilities({ exec, cwd, timeoutMs }) {
+  try {
+    const result = await exec("dotnet", ["test", "--help"], { cwd, timeout: timeoutMs });
+    if (result.code !== 0 || result.killed === true) {
+      return {
+        id: "dotnet_test_runner",
+        required: false,
+        ok: false,
+        status: "warn",
+        message: `unable to inspect dotnet test capabilities (exit ${String(result.code)})`
+      };
+    }
+
+    const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    const mtp = /--test-modules\b|--max-parallel-test-modules\b/.test(text);
+    if (!mtp) {
+      return {
+        id: "dotnet_test_runner",
+        required: false,
+        ok: true,
+        status: "ok",
+        message: "VSTest mode detected"
+      };
+    }
+
+    const hasTrx = /--report-trx\b/.test(text);
+    return {
+      id: "dotnet_test_runner",
+      required: false,
+      ok: hasTrx,
+      status: hasTrx ? "ok" : "warn",
+      message: hasTrx
+        ? "Microsoft.Testing.Platform mode detected; TRX reporter is available"
+        : "Microsoft.Testing.Platform mode detected, but --report-trx is not advertised; test verification needs Microsoft.Testing.Extensions.TrxReport restored before going offline"
+    };
+  } catch (error) {
+    return {
+      id: "dotnet_test_runner",
+      required: false,
+      ok: false,
+      status: "warn",
+      message: error instanceof Error ? error.message : String(error)
+    };
   }
 }
 

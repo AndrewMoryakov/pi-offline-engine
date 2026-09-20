@@ -20,3 +20,44 @@ test("mechanical verification is not presented as semantic task completion", () 
 test("tool guidelines contain no accidental literal newline escape between array items", () => {
   assert.equal(source.includes('decided.",\\n      "A verification_passed'), false);
 });
+
+
+test("delegated tool forbids sibling mutating calls in its guideline", () => {
+  assert.match(source, /only mutating tool in its assistant turn/);
+});
+
+test("repository capsule is refreshed after session compaction", () => {
+  assert.match(source, /pi\.on\("session_compact"/);
+  assert.match(source, /lastRepoCapsuleFingerprint = null/);
+});
+
+test("TinyCoder nested usage is returned to Pi session accounting", () => {
+  assert.match(source, /usage: nestedUsage/);
+  assert.match(source, /toPiUsage\(result\.usage\)/);
+});
+
+
+test("delegated execution preflights verification before TinyCoder", () => {
+  const preflightIndex = source.indexOf("preflightVerificationInfrastructure({");
+  const tinyLoopIndex = source.indexOf("for (let attempt = 1; attempt <= maxAttempts");
+  assert.ok(preflightIndex >= 0);
+  assert.ok(tinyLoopIndex >= 0);
+  assert.ok(preflightIndex < tinyLoopIndex);
+});
+
+test("offline doctor inspects active rather than merely registered tools", () => {
+  assert.match(source, /new Set\(pi\.getActiveTools\(\)\)/);
+  assert.match(source, /getAllTools\(\)\.filter/);
+});
+
+test("code tool gets a read-only mutation policy on every agent start", () => {
+  assert.match(source, /Use the code tool for read-only filtering/);
+  assert.match(source, /Do not invoke bash\/edit\/write from inside the code tool/);
+});
+
+
+test("uses structured prompt guidelines for code policy to preserve prompt caching", () => {
+  assert.match(source, /options\.promptGuidelines/);
+  assert.match(source, /pi-offline-engine:/);
+  assert.doesNotMatch(source, /return \{ systemPrompt: event\.systemPrompt \+/);
+});

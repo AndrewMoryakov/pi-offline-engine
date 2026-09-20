@@ -27,3 +27,37 @@ test("repair packet carries previous generated content for stateless retries", (
   assert.equal(packet.verification.diagnostics.length, 1);
   assert.equal(packet.repair_attempt, 1);
 });
+
+
+test("repair packet carries runner and executed-test evidence", () => {
+  const packet = buildRepairPacket({
+    spec: { spec_id: "retry-tests", goal: { summary: "repair failing test" } },
+    attempt: 2,
+    candidate: {
+      changes: [{ path: "src/A.cs", operation: "replace_text", expected: "old", content: "new" }]
+    },
+    verification: {
+      passed: false,
+      diagnostics: ["zero tests executed"],
+      checks: [{
+        kind: "tests-1",
+        passed: false,
+        code: 0,
+        killed: false,
+        artifact: ".pi/build.log",
+        resultArtifact: ".pi/results.trx",
+        runner: "vstest",
+        testPattern: "A.Tests.Case",
+        expectedTestPatterns: ["A.Tests.Case"],
+        testCount: 0,
+        executedTestCount: 0
+      }]
+    }
+  });
+
+  const check = packet.verification.checks[0];
+  assert.equal(check.runner, "vstest");
+  assert.equal(check.testPattern, "A.Tests.Case");
+  assert.equal(check.executedTestCount, 0);
+  assert.equal(check.resultArtifact, ".pi/results.trx");
+});

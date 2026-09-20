@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { runVerification } from "../src/verification.mjs";
+import { detectDotnetTestRunner, runVerification } from "../src/verification.mjs";
 
 const baseSpec = {
   spec_id: "verify-001",
@@ -20,37 +21,154 @@ async function createProjects(cwd) {
   await fs.writeFile(path.join(cwd, "tests", "App.Tests.csproj"), "<Project />", "utf8");
 }
 
-function writeTrxFromArgs(args, total) {
+function trxPathFromArgs(args) {
   const resultsIndex = args.indexOf("--results-directory");
-  const loggerIndex = args.indexOf("--logger");
   const directory = args[resultsIndex + 1];
-  const logger = args[loggerIndex + 1];
-  const fileName = logger.replace(/^trx;LogFileName=/, "");
-  return fs.mkdir(directory, { recursive: true })
-    .then(() => fs.writeFile(
-      path.join(directory, fileName),
-      `<?xml version="1.0"?><TestRun><ResultSummary><Counters total="${total}" executed="${total}" passed="${total}" failed="0" /></ResultSummary></TestRun>`,
-      "utf8"
-    ));
+
+  const loggerIndex = args.indexOf("--logger");
+  if (loggerIndex >= 0) {
+    const logger = args[loggerIndex + 1];
+    return path.join(directory, logger.replace(/^trx;LogFileName=/, ""));
+  }
+
+  const filenameIndex = args.indexOf("--report-trx-filename");
+  return path.join(directory, args[filenameIndex + 1]);
 }
 
-test("runs build before filtered tests and requires a nonzero TRX count", async () => {
+async function writeTrxFromArgs(
+  args,
+  {
+    total = 1,
+    executed = total,
+    passed = executed,
+    failed = 0,
+    tests = []
+  } = {}
+) {
+  const file = trxPathFromArgs(args);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+
+  const results = tests.map((x, i) =>
+    `<UnitTestResult testId="${i + 1}" testName="${x.name}" outcome="${x.outcome ?? "Passed"}" />`
+  ).join("");
+
+  const definitions = tests.map((x, i) =>
+    `<UnitTest id="${i + 1}" name="${x.name}"><TestMethod className="${x.className}" name="${x.methodName ?? x.name}" /></UnitTest>`
+  ).join("");
+
+  await fs.writeFile(
+    file,
+    `<?xml version="1.0"?><TestRun><Results>${results}</Results><TestDefinitions>${definitions}</TestDefinitions><ResultSummary><Counters total="${total}" executed="${executed}" passed="${passed}" failed="${failed}" /></ResultSummary></TestRun>`,
+    "utf8"
+  );
+}
+
+function vstestHelp() {
+  return { code: 0, killed: false, stdout: "Options:\n  --logger <LOGGER>\n  --filter <EXPRESSION>", stderr: "" };
+}
+
+function mtpHelp({ trx = true } = {}) {
+  return {
+    code: 0,
+    killed: false,
+    stdout: [
+      "Options:",
+      "  --test-modules <EXPRESSION>",
+      "  --max-parallel-test-modules <NUMBER>",
+      ...(trx ? ["  --report-trx", "  --report-trx-filename <FILE>"] : [])
+    ].join("\n"),
+    stderr: ""
+  };
+}
+
+test("detects VSTest and MTP from dotnet test help", async () => {
+  assert.equal(await detectDotnetTestRunner({
+    cwd: "/repo",
+    exec: async () => vstestHelp()
+  }), "vstest");
+
+  assert.equal(await detectDotnetTestRunner({
+    cwd: "/repo",
+    exec: async () => mtpHelp()
+  }), "mtp");
+});
+
+test("VSTest runs every declared pattern independently and requires execution evidence", async () => {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
   await createProjects(cwd);
   const calls = [];
   const exec = async (command, args) => {
     calls.push([command, args]);
-    if (args[0] === "test") await writeTrxFromArgs(args, 2);
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    if (args[0] === "test") await writeTrxFromArgs(args, { total: 1, executed: 1 });
     return { code: 0, killed: false, stdout: "ok", stderr: "" };
   };
 
   const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
   assert.equal(result.passed, true);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 4); // build + runner help + 2 targeted test runs
   assert.equal(calls[0][1][0], "build");
-  assert.equal(calls[1][1][0], "test");
-  assert.ok(calls[1][1].includes("--filter"));
-  assert.equal(result.checks[1].testCount, 2);
+  assert.deepEqual(calls[1][1], ["test", "--help"]);
+  assert.equal(calls[2][1][0], "test");
+  assert.equal(calls[3][1][0], "test");
+  assert.ok(calls[2][1].includes("--filter"));
+  assert.ok(calls[3][1].includes("--filter"));
+  assert.equal(result.checks[1].executedTestCount, 1);
+  assert.equal(result.checks[2].executedTestCount, 1);
+  assert.equal(result.checks[1].runner, "vstest");
+});
+
+test("MTP uses report-trx and validates every expected identity from one executed suite", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  const calls = [];
+  const exec = async (_command, args) => {
+    calls.push(args);
+    if (args[0] === "test" && args[1] === "--help") return mtpHelp();
+    if (args[0] === "test") {
+      await writeTrxFromArgs(args, {
+        total: 2,
+        executed: 2,
+        tests: [
+          { name: "Cancellation", className: "RetryTests", methodName: "Cancellation" },
+          { name: "Backoff", className: "RetryTests", methodName: "Backoff" }
+        ]
+      });
+    }
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+
+  const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
+  assert.equal(result.passed, true);
+  const testArgs = calls.find((args) => args[0] === "test" && args[1] !== "--help");
+  assert.ok(testArgs.includes("--project"));
+  assert.ok(testArgs.includes("--report-trx"));
+  assert.ok(testArgs.includes("--report-trx-filename"));
+  assert.ok(testArgs.includes("--"));
+  assert.equal(testArgs.includes("--logger"), false);
+  assert.equal(testArgs.includes("--filter"), false);
+  assert.equal(result.checks[1].runner, "mtp");
+  assert.equal(result.checks[1].executedTestCount, 2);
+});
+
+test("MTP fails if one declared expected pattern is absent from executed TRX identities", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return mtpHelp();
+    if (args[0] === "test") {
+      await writeTrxFromArgs(args, {
+        total: 1,
+        executed: 1,
+        tests: [{ name: "Cancellation", className: "RetryTests", methodName: "Cancellation" }]
+      });
+    }
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+
+  const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
+  assert.equal(result.passed, false);
+  assert.match(result.diagnostics.join("\n"), /RetryTests\.Backoff/);
 });
 
 test("does not run tests after failed build", async () => {
@@ -68,29 +186,70 @@ test("does not run tests after failed build", async () => {
   assert.match(result.diagnostics.join("\n"), /CS1002/);
 });
 
-test("rejects exit-code-zero test runs that executed zero tests", async () => {
+test("rejects exit-code-zero VSTest runs that executed zero tests", async () => {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
   await createProjects(cwd);
   const exec = async (_command, args) => {
-    if (args[0] === "test") await writeTrxFromArgs(args, 0);
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    if (args[0] === "test") await writeTrxFromArgs(args, { total: 0, executed: 0 });
     return { code: 0, killed: false, stdout: "ok", stderr: "" };
   };
 
   const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
   assert.equal(result.passed, false);
-  assert.equal(result.checks[1].testCount, 0);
+  assert.equal(result.checks[1].executedTestCount, 0);
   assert.match(result.diagnostics.join("\n"), /zero tests executed/);
+});
+
+test("rejects total-positive but all-skipped test results", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    if (args[0] === "test") await writeTrxFromArgs(args, { total: 3, executed: 0, passed: 0 });
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+
+  const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
+  assert.equal(result.passed, false);
+  assert.equal(result.checks[1].testCount, 3);
+  assert.equal(result.checks[1].executedTestCount, 0);
 });
 
 test("rejects successful test exit when no TRX result is produced", async () => {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
   await createProjects(cwd);
-  const exec = async () => ({ code: 0, killed: false, stdout: "ok", stderr: "" });
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
 
   const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
   assert.equal(result.passed, false);
-  assert.equal(result.checks[1].testCount, null);
-  assert.match(result.diagnostics.join("\n"), /no readable TRX/);
+  assert.equal(result.checks[1].executedTestCount, null);
+  assert.match(result.diagnostics.join("\n"), /no readable TRX execution count/);
+});
+
+test("VSTest fails when any one of multiple declared patterns executes no tests", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  let testCall = 0;
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    if (args[0] === "test") {
+      testCall += 1;
+      await writeTrxFromArgs(args, testCall === 1
+        ? { total: 1, executed: 1 }
+        : { total: 0, executed: 0 });
+    }
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+
+  const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
+  assert.equal(result.passed, false);
+  assert.equal(testCall, 2);
+  assert.equal(result.checks[1].passed, true);
+  assert.equal(result.checks[2].passed, false);
 });
 
 test("rejects verification project symlinks escaping the workspace", async (t) => {
@@ -121,26 +280,44 @@ test("rejects verification project symlinks escaping the workspace", async (t) =
   );
 });
 
-
-test("does not reuse stale TRX evidence from a previous identical run", async () => {
+test("does not reuse stale VSTest TRX evidence from a previous identical pattern run", async () => {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
   await createProjects(cwd);
 
-  // Match the deterministic path used by verification.mjs.
-  const crypto = await import("node:crypto");
-  const id = crypto.createHash("sha256").update("verify-001:1:trx").digest("hex").slice(0, 20);
+  const id = crypto.createHash("sha256").update("verify-001:1:trx:vstest-0").digest("hex").slice(0, 20);
   const resultDir = path.join(cwd, ".pi", "offline-engine", "test-results", id);
   await fs.mkdir(resultDir, { recursive: true });
   await fs.writeFile(
     path.join(resultDir, "results.trx"),
-    '<?xml version="1.0"?><TestRun><ResultSummary><Counters total="99" /></ResultSummary></TestRun>',
+    '<?xml version="1.0"?><TestRun><ResultSummary><Counters total="99" executed="99" /></ResultSummary></TestRun>',
     "utf8"
   );
 
-  const exec = async () => ({ code: 0, killed: false, stdout: "ok", stderr: "" });
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
   const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
 
   assert.equal(result.passed, false);
-  assert.equal(result.checks[1].testCount, null);
-  assert.match(result.diagnostics.join("\n"), /no readable TRX/);
+  assert.equal(result.checks[1].executedTestCount, null);
+  assert.match(result.diagnostics.join("\n"), /no readable TRX execution count/);
+});
+
+
+test("fails fast when MTP has no TRX report extension", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  let actualTestRuns = 0;
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return mtpHelp({ trx: false });
+    if (args[0] === "test") actualTestRuns += 1;
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+
+  await assert.rejects(
+    () => runVerification({ cwd, spec: baseSpec, exec, attempt: 1 }),
+    /TRX reporting is unavailable/
+  );
+  assert.equal(actualTestRuns, 0);
 });

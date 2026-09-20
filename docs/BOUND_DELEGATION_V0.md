@@ -28,7 +28,7 @@ ImplementationSpec
   -> return verification_passed evidence or escalate to main model
 ```
 
-The main 27B model is intentionally absent from the inner repair loop. A `verification_passed` result means only that the declared compiler/test checks passed; it does not mean the user task is semantically complete.
+The main 27B model is intentionally absent from the inner repair loop. A `verification_passed` result means only that the declared compiler/test checks passed; it does not mean the user task is semantically complete. The main agent must inspect the current diff/changed files before claiming completion. In v0, `execute_delegated_implementation` must be the only mutating tool in its assistant turn so sibling writes cannot contaminate verification.
 
 ## Candidate operations
 
@@ -67,7 +67,7 @@ v1 accepts:
 
 Pi constructs the commands itself. The model cannot inject an arbitrary verification shell command.
 
-Checks run with `--no-restore` for offline safety. Test verification also requires a fresh TRX result with `total > 0`; exit code 0 with zero or unknown executed tests is treated as failure. Full stdout/stderr is stored under `.pi/offline-engine/artifacts/`; only compact diagnostics are sent back through model context.
+Checks run with `--no-restore` for offline safety. Test verification requires a fresh TRX result proving `executed > 0`; exit code 0 alone is never sufficient evidence. In VSTest mode each declared test pattern runs independently through `--filter`. In .NET 10 Microsoft.Testing.Platform mode the project suite runs once with `--report-trx`, and every declared pattern must be found among executed TRX identities. MTP therefore requires the project to have `Microsoft.Testing.Extensions.TrxReport` available before going offline. Full stdout/stderr is stored under `.pi/offline-engine/artifacts/`; only compact diagnostics are sent back through model context.
 
 ## Repair
 
@@ -101,3 +101,8 @@ Candidate records include generated patch content for local inspection. The even
 ## Known boundary
 
 If verification remains red after the final TinyCoder attempt, the last bounded candidate remains in the workspace and control returns to the main model. v0 does not attempt autonomous git rollback or crash-safe transactional recovery; those are separate reliability features rather than hidden behavior.
+
+
+## Companion-tool mutation policy
+
+In the recommended offline profile, the `code` tool is read-only for orchestration/search/filtering. Its bridged `bash/edit/write` calls construct Pi built-ins directly and can bypass top-level edit/LSP overrides. Mutations should use the active top-level edit/write tools or `execute_delegated_implementation`.

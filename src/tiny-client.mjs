@@ -137,11 +137,26 @@ function parseJsonObject(text) {
 }
 
 function normalizeUsage(usage = {}) {
+  const promptTokens = finiteOrNull(usage.prompt_tokens ?? usage.input_tokens);
+  const cacheReadTokens = finiteOrNull(
+    usage.prompt_tokens_details?.cached_tokens ??
+    usage.cache_read_input_tokens ??
+    usage.cached_tokens
+  ) ?? 0;
+  const outputTokens = finiteOrNull(usage.completion_tokens ?? usage.output_tokens);
+  const inputTokens = promptTokens === null ? null : Math.max(0, promptTokens - cacheReadTokens);
+
   return {
-    inputTokens: usage.prompt_tokens ?? usage.input_tokens ?? null,
-    outputTokens: usage.completion_tokens ?? usage.output_tokens ?? null,
-    totalTokens: usage.total_tokens ?? null
+    inputTokens,
+    outputTokens,
+    cacheReadTokens,
+    cacheWriteTokens: 0,
+    totalTokens: finiteOrNull(usage.total_tokens)
   };
+}
+
+function finiteOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function ensureTrailingSlash(endpoint) {

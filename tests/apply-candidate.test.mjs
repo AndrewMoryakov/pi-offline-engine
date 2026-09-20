@@ -85,3 +85,13 @@ test("creates an explicitly allowed new file", async () => {
   await applyCandidate(cwd, { spec: s, candidate, snapshot });
   assert.equal(await fs.readFile(path.join(cwd, "src", "B.cs"), "utf8"), "class B {}\n");
 });
+
+
+test("apply implementation registers each target for rollback before writing", async () => {
+  const source = await fs.readFile(new URL("../src/apply-candidate.mjs", import.meta.url), "utf8");
+  const pushIndex = source.indexOf("written.push(item);");
+  const writeIndex = source.indexOf('await fs.writeFile(item.absolute, item.next, "utf8");');
+  assert.ok(pushIndex >= 0);
+  assert.ok(writeIndex >= 0);
+  assert.ok(pushIndex < writeIndex, "rollback registration precedes the actual write");
+});

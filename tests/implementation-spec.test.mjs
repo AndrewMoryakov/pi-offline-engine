@@ -9,7 +9,12 @@ const spec = {
   goal: { summary: "Propagate cancellation into delay" },
   target: { file: "src/RetryPolicy.cs", symbol: "RetryPolicy.ExecuteAsync" },
   requirements: ["Pass cancellation token to Task.Delay"],
-  scope: {\n    allowed_files: ["src/RetryPolicy.cs"],\n    allow_new_files: false,\n    allow_dependencies: false,\n    allow_public_api_change: false\n  },
+  scope: {
+    allowed_files: ["src/RetryPolicy.cs"],
+    allow_new_files: false,
+    allow_dependencies: false,
+    allow_public_api_change: false
+  },
   verification: {
     build: { project: "src/App.csproj" },
     tests: { project: "tests/App.Tests.csproj", names: ["RetryPolicyTests.Cancellation"] }
@@ -62,7 +67,6 @@ test("create_file requires explicit permission and allowed path", () => {
   allowed.scope.allow_new_files = true;
   assert.equal(validateCandidate(candidate, allowed).ok, true);
 });
-
 
 test("rejects unknown spec operations", () => {
   const bad = structuredClone(spec);

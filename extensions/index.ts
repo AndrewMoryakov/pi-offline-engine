@@ -128,7 +128,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
     promptSnippet: "Execute a strict ImplementationSpec through the local tiny coding model and deterministic verification",
     promptGuidelines: [
       "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
-      "A verification_passed result is compiler/test evidence, not authority that the user task is semantically complete.",
+      "Treat execute_delegated_implementation status verification_passed as compiler/test evidence only; it is not authority that the user task is semantically complete.",
       "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
       "Provide exact relevant source snippets in context; the tiny model is not a repository explorer."
     ],

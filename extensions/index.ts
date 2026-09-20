@@ -69,8 +69,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
     promptSnippet: "Delegate a precise bounded code change to the local tiny implementer without applying it",
     promptGuidelines: [
       "Use delegate_implementation only after you understand the problem and can provide an explicit bounded ImplementationSpec.",
-      "Include exact source snippets in delegate_implementation context when the tiny model needs to produce replace_text edits.",
-      "Do not delegate architecture decisions, ambiguous work, or broad repository exploration."
+      "When using delegate_implementation, include exact source snippets in its context when the tiny model needs to produce replace_text edits.",
+      "Do not use delegate_implementation for architecture decisions, ambiguous work, or broad repository exploration."
     ],
     parameters: DelegationParametersSchema,
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
@@ -133,7 +133,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
       "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
       "Treat execute_delegated_implementation status verification_passed as compiler/test evidence only; inspect the current diff/changed files before deciding the user task is semantically complete.",
       "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
-      "Provide exact relevant source snippets in context; the tiny model is not a repository explorer.",
+      "When using execute_delegated_implementation, provide exact relevant source snippets in context; the tiny model is not a repository explorer.",
       "Call execute_delegated_implementation as the only mutating tool in its assistant turn; do not issue sibling edit, write, or mutating shell calls in parallel."
     ],
     parameters: DelegationParametersSchema,

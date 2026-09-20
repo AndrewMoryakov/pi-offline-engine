@@ -82,7 +82,7 @@ try {
   assert.equal(result.usage.outputTokens, 41);
   assert.equal(observedBody.model, "smoke-tiny");
   assert.equal(observedBody.temperature, 0);
-  assert.equal(observedBody.response_format.type, "json_object");
+  assert.equal(observedBody.response_format.type, "json_schema");
   assert.match(observedBody.messages[1].content, /transport-smoke-001/);
 
   process.stdout.write("TINY TRANSPORT SMOKE: PASS\n");

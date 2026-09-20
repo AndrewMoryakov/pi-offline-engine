@@ -20,3 +20,18 @@ test("mechanical verification is not presented as semantic task completion", () 
 test("tool guidelines contain no accidental literal newline escape between array items", () => {
   assert.equal(source.includes('decided.",\\n      "A verification_passed'), false);
 });
+
+
+test("delegated tool forbids sibling mutating calls in its guideline", () => {
+  assert.match(source, /only mutating tool in its assistant turn/);
+});
+
+test("repository capsule is refreshed after session compaction", () => {
+  assert.match(source, /pi\.on\("session_compact"/);
+  assert.match(source, /lastRepoCapsuleFingerprint = null/);
+});
+
+test("TinyCoder nested usage is returned to Pi session accounting", () => {
+  assert.match(source, /usage: nestedUsage/);
+  assert.match(source, /toPiUsage\(result\.usage\)/);
+});

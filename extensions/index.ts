@@ -286,7 +286,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         });
 
         if (verification.passed) {
-          await appendEvent(ctx.cwd, { type: "delegated_implementation_succeeded", specId: params.spec.spec_id, attempt });
+          await appendEvent(ctx.cwd, { type: "delegated_verification_passed", specId: params.spec.spec_id, attempt });
           return {
             content: [{ type: "text", text: JSON.stringify({
               status: "verification_passed",
@@ -372,6 +372,17 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async () => {
+    lastRepoCapsuleFingerprint = null;
+  });
+
+  pi.on("session_compact", async () => {
+    // Compaction can remove the prior hidden capsule from replay context.
+    // Force a fresh deterministic capsule on the next user prompt.
+    lastRepoCapsuleFingerprint = null;
+  });
+
+  pi.on("session_tree", async () => {
+    // Tree navigation can move to a branch without the last injected capsule.
     lastRepoCapsuleFingerprint = null;
   });
 

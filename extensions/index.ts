@@ -127,7 +127,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
     description: "Run a bounded local TinyCoder implementation loop: candidate, guarded apply, dotnet verification, and up to two cheap repair attempts before returning control.",
     promptSnippet: "Execute a strict ImplementationSpec through the local tiny coding model and deterministic verification",
     promptGuidelines: [
-      "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",\n      "A verification_passed result is compiler/test evidence, not authority that the user task is semantically complete.",
+      "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
+      "A verification_passed result is compiler/test evidence, not authority that the user task is semantically complete.",
       "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
       "Provide exact relevant source snippets in context; the tiny model is not a repository explorer."
     ],

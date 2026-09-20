@@ -23,7 +23,7 @@ main local model
   -> dotnet build/tests --no-restore
   -> compact RepairPacket on failure
   -> TinyCoder repair (up to two)
-  -> verified result or escalation to main model
+  -> verification_passed evidence or escalation to main model
 ```
 
 The main model does not participate in the cheap repair loop.

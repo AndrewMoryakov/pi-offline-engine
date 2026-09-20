@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "name": "offline-dotnet-v1",
+  "reviewedAt": "2026-09-20",
+  "packages": [
+    {
+      "name": "pi-knowledge",
+      "version": "0.10.2",
+      "tier": "required",
+      "purpose": "local-first hybrid repository retrieval with local embeddings"
+    },
+    {
+      "name": "pi-lsp-extension",
+      "version": "1.3.0",
+      "tier": "required",
+      "purpose": "LSP semantics, diagnostics, structural search and Tree-sitter fallback"
+    },
+    {
+      "name": "pi-code-tool",
+      "version": "0.6.1",
+      "tier": "required",
+      "purpose": "sandboxed programmatic tool composition without model round-trips"
+    },
+    {
+      "name": "pi-lean-edit",
+      "version": "0.3.6",
+      "tier": "required",
+      "purpose": "range edits backed by prior-read snapshots to reduce edit-token overhead"
+    },
+    {
+      "name": "pi-sub-agent",
+      "version": "0.1.5",
+      "tier": "optional",
+      "purpose": "bounded scout/reviewer roles with statically assigned models"
+    },
+    {
+      "name": "pi-tree-sitter",
+      "version": "0.2.8",
+      "tier": "deferred",
+      "purpose": "pre-write syntax guard; useful but edit-hook compatibility with pi-lean-edit is not yet qualified"
+    }
+  ],
+  "environment": {
+    "PI_KNOWLEDGE_EMBEDDING": "local:multilingual-e5-small",
+    "PI_KNOWLEDGE_SEARCH_PROFILE": "low_token",
+    "PI_KNOWLEDGE_OFFLINE": "1",
+    "PI_OFFLINE_COMPACT_TOOL_RESULTS": "1",
+    "PI_OFFLINE_REPO_CAPSULE": "1",
+    "PI_OFFLINE_TINY_MAX_ATTEMPTS": "3"
+  }
+}

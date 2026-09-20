@@ -130,7 +130,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
       "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
       "Treat execute_delegated_implementation status verification_passed as compiler/test evidence only; inspect the current diff/changed files before deciding the user task is semantically complete.",
       "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
-      "Provide exact relevant source snippets in context; the tiny model is not a repository explorer."
+      "Provide exact relevant source snippets in context; the tiny model is not a repository explorer.",
+      "Call execute_delegated_implementation as the only mutating tool in its assistant turn; do not issue sibling edit, write, or mutating shell calls in parallel."
     ],
     parameters: DelegationParametersSchema,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
@@ -327,6 +328,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
               reason: outcome.reason,
               stage: outcome.stage,
               workspaceModified: outcome.workspace_modified,
+              workspaceStateUncertain: outcome.workspace_state_uncertain,
+              changedFiles: outcome.changed_files,
               error: outcome.error,
               attempts
             }

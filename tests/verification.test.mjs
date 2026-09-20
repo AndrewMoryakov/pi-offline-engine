@@ -120,3 +120,27 @@ test("rejects verification project symlinks escaping the workspace", async (t) =
     /escapes workspace/
   );
 });
+
+
+test("does not reuse stale TRX evidence from a previous identical run", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+
+  // Match the deterministic path used by verification.mjs.
+  const crypto = await import("node:crypto");
+  const id = crypto.createHash("sha256").update("verify-001:1:trx").digest("hex").slice(0, 20);
+  const resultDir = path.join(cwd, ".pi", "offline-engine", "test-results", id);
+  await fs.mkdir(resultDir, { recursive: true });
+  await fs.writeFile(
+    path.join(resultDir, "results.trx"),
+    '<?xml version="1.0"?><TestRun><ResultSummary><Counters total="99" /></ResultSummary></TestRun>',
+    "utf8"
+  );
+
+  const exec = async () => ({ code: 0, killed: false, stdout: "ok", stderr: "" });
+  const result = await runVerification({ cwd, spec: baseSpec, exec, attempt: 1 });
+
+  assert.equal(result.passed, false);
+  assert.equal(result.checks[1].testCount, null);
+  assert.match(result.diagnostics.join("\n"), /no readable TRX/);
+});

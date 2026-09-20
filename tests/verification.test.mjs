@@ -67,8 +67,18 @@ function vstestHelp() {
   return { code: 0, killed: false, stdout: "Options:\n  --logger <LOGGER>\n  --filter <EXPRESSION>", stderr: "" };
 }
 
-function mtpHelp() {
-  return { code: 0, killed: false, stdout: "Options:\n  --test-modules <EXPRESSION>\n  --max-parallel-test-modules <NUMBER>", stderr: "" };
+function mtpHelp({ trx = true } = {}) {
+  return {
+    code: 0,
+    killed: false,
+    stdout: [
+      "Options:",
+      "  --test-modules <EXPRESSION>",
+      "  --max-parallel-test-modules <NUMBER>",
+      ...(trx ? ["  --report-trx", "  --report-trx-filename <FILE>"] : [])
+    ].join("\n"),
+    stderr: ""
+  };
 }
 
 test("detects VSTest and MTP from dotnet test help", async () => {

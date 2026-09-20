@@ -51,8 +51,10 @@ export async function applyCandidate(cwd, record) {
   try {
     for (const item of plan) {
       await fs.mkdir(path.dirname(item.absolute), { recursive: true });
-      await fs.writeFile(item.absolute, item.next, "utf8");
+      // Register the current path for rollback before the write starts. A
+      // failed write may already have truncated/partially replaced the file.
       written.push(item);
+      await fs.writeFile(item.absolute, item.next, "utf8");
     }
   } catch (error) {
     const rollbackErrors = [];

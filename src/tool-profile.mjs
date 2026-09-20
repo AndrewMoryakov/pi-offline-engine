@@ -9,7 +9,10 @@ export function buildMinimalToolSet(allTools, platform = process.platform) {
   add("read");
   add("edit");
   add("write");
-  add(platform === "win32" ? "powershell" : "bash");
+
+  if (platform === "win32" && names.has("powershell")) add("powershell");
+  else if (names.has("bash")) add("bash");
+  else if (names.has("powershell")) add("powershell");
 
   if (names.has("code")) add("code");
   else {

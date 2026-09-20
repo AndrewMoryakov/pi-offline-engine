@@ -32,7 +32,12 @@ test("uses json_schema structured output when supported", async () => {
         status: "candidate",
         changes: [{ path: "src/A.cs", operation: "replace_text", expected: "1", content: "2" }]
       }) } }],
-      usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14 }
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 4,
+        total_tokens: 14,
+        prompt_tokens_details: { cached_tokens: 3 }
+      }
     }));
   });
 
@@ -50,6 +55,10 @@ test("uses json_schema structured output when supported", async () => {
     assert.equal(bodies.length, 1);
     assert.equal(bodies[0].response_format.type, "json_schema");
     assert.equal(bodies[0].response_format.json_schema.strict, true);
+    assert.equal(result.usage.inputTokens, 7);
+    assert.equal(result.usage.cacheReadTokens, 3);
+    assert.equal(result.usage.outputTokens, 4);
+    assert.equal(result.usage.totalTokens, 14);
   } finally {
     server.close();
     await once(server, "close");

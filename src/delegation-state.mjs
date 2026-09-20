@@ -1,6 +1,7 @@
 export function failureReasonForStage(stage) {
   if (stage === "tiny_call") return "tiny_transport_failure";
   if (stage === "candidate_validation") return "tiny_invalid_candidate";
+  if (stage === "verification_preflight") return "verification_infrastructure_failure";
   if (stage === "verification") return "verification_execution_failure";
   if (stage === "apply") return "candidate_apply_failure";
   return "delegated_runtime_failure";

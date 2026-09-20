@@ -120,7 +120,7 @@ Before every TinyCoder attempt, SHA-256 is captured for every allowed file. A ca
 
 Mutations use Pi's file mutation queue, are scope-checked, and require interactive confirmation unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is explicitly enabled in a controlled sandbox.
 
-Full verification logs and candidate records stay under the gitignored `.pi/offline-engine/` directory.
+Full verification logs and candidate records stay under the gitignored `.pi/offline-engine/` directory. Test verification is runner-aware: VSTest uses targeted TRX runs, while .NET 10 Microsoft.Testing.Platform uses `--report-trx` and checks declared patterns against executed TRX identities.
 
 ## Development
 

@@ -22,6 +22,12 @@ export async function runOfflineDoctor({
     timeoutMs
   }));
 
+  checks.push(await checkDotnetTestCapabilities({
+    exec,
+    cwd,
+    timeoutMs
+  }));
+
   checks.push(await checkCommand({
     name: "csharp-ls",
     required: false,
@@ -103,6 +109,52 @@ async function checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs) {
     };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function checkDotnetTestCapabilities({ exec, cwd, timeoutMs }) {
+  try {
+    const result = await exec("dotnet", ["test", "--help"], { cwd, timeout: timeoutMs });
+    if (result.code !== 0 || result.killed === true) {
+      return {
+        id: "dotnet_test_runner",
+        required: false,
+        ok: false,
+        status: "warn",
+        message: `unable to inspect dotnet test capabilities (exit ${String(result.code)})`
+      };
+    }
+
+    const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    const mtp = /--test-modules\b|--max-parallel-test-modules\b/.test(text);
+    if (!mtp) {
+      return {
+        id: "dotnet_test_runner",
+        required: false,
+        ok: true,
+        status: "ok",
+        message: "VSTest mode detected"
+      };
+    }
+
+    const hasTrx = /--report-trx\b/.test(text);
+    return {
+      id: "dotnet_test_runner",
+      required: false,
+      ok: hasTrx,
+      status: hasTrx ? "ok" : "warn",
+      message: hasTrx
+        ? "Microsoft.Testing.Platform mode detected; TRX reporter is available"
+        : "Microsoft.Testing.Platform mode detected, but --report-trx is not advertised; test verification needs Microsoft.Testing.Extensions.TrxReport restored before going offline"
+    };
+  } catch (error) {
+    return {
+      id: "dotnet_test_runner",
+      required: false,
+      ok: false,
+      status: "warn",
+      message: error instanceof Error ? error.message : String(error)
+    };
   }
 }
 

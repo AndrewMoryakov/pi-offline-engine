@@ -62,3 +62,16 @@ test("create_file requires explicit permission and allowed path", () => {
   allowed.scope.allow_new_files = true;
   assert.equal(validateCandidate(candidate, allowed).ok, true);
 });
+
+
+test("rejects unknown spec operations", () => {
+  const bad = structuredClone(spec);
+  bad.operation = "do_whatever";
+  assert.equal(validateImplementationSpec(bad).ok, false);
+});
+
+test("requires explicit scope policy booleans", () => {
+  const bad = structuredClone(spec);
+  delete bad.scope.allow_new_files;
+  assert.equal(validateImplementationSpec(bad).ok, false);
+});

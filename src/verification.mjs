@@ -29,13 +29,21 @@ export async function runVerification({ cwd, spec, exec, signal, timeoutMs = DEF
 
   if (spec.verification.tests) {
     const project = await resolveVerificationProject(root, spec.verification.tests.project);
-    const runner = await detectDotnetTestRunner({
+    const testCapabilities = await inspectDotnetTestRunner({
       cwd: root,
       exec,
       signal,
       timeoutMs: Math.min(timeoutMs, RUNNER_DETECTION_TIMEOUT_MS)
     });
+    const runner = testCapabilities.runner;
     const names = spec.verification.tests.names ?? [];
+
+    if (runner === "mtp" && !testCapabilities.trxReporting) {
+      throw new Error(
+        "Microsoft.Testing.Platform is active but TRX reporting is unavailable. " +
+        "Add/enable Microsoft.Testing.Extensions.TrxReport (or an SDK profile that includes it) before offline verification."
+      );
+    }
 
     if (runner === "mtp") {
       const mtp = await runMtpTests({
@@ -203,16 +211,23 @@ async function attachTrxEvidence(tests, trxPath, { runner, expectedPatterns }) {
   return tests;
 }
 
-export async function detectDotnetTestRunner({ cwd, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {
+export async function inspectDotnetTestRunner({ cwd, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {
   const help = await exec("dotnet", ["test", "--help"], { cwd, signal, timeout: timeoutMs });
   if (help.code !== 0 || help.killed === true) {
     throw new Error(`unable to detect dotnet test runner (exit ${String(help.code)})`);
   }
 
   const text = `${help.stdout ?? ""}\n${help.stderr ?? ""}`;
-  // MTP's .NET 10 driver exposes these stable option names; VSTest does not.
-  if (/--test-modules\b|--max-parallel-test-modules\b/.test(text)) return "mtp";
-  return "vstest";
+  const runner = /--test-modules\b|--max-parallel-test-modules\b/.test(text) ? "mtp" : "vstest";
+  return {
+    runner,
+    trxReporting: runner === "vstest" || /--report-trx\b/.test(text),
+    helpText: text
+  };
+}
+
+export async function detectDotnetTestRunner(options) {
+  return (await inspectDotnetTestRunner(options)).runner;
 }
 
 async function runDotnetCheck({ cwd, exec, signal, timeoutMs, kind, project, args, specId, attempt }) {

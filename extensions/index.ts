@@ -14,6 +14,7 @@ import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs"
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 import { compactToolResult } from "../src/tool-result-compactor.mjs";
 import { buildRepoCapsule } from "../src/repo-capsule.mjs";
+import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
 
 export default function offlineEngine(pi: ExtensionAPI) {
   let savedActiveTools: string[] | null = null;
@@ -293,7 +294,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
       toolName: event.toolName,
       artifact: compacted.artifact,
       originalChars: compacted.originalChars,
-      originalLines: compacted.originalLines
+      originalLines: compacted.originalLines,
+      compactedChars: compacted.content?.[0]?.type === "text" ? compacted.content[0].text.length : 0
     });
     return { content: compacted.content };
   });
@@ -365,6 +367,14 @@ export default function offlineEngine(pi: ExtensionAPI) {
         return;
       }
       ctx.ui.notify(`Active tools (${pi.getActiveTools().length}): ${pi.getActiveTools().join(", ")}`, "info");
+    }
+  });
+
+  pi.registerCommand("offline-stats", {
+    description: "Show local TinyCoder and context-saving statistics",
+    handler: async (_args, ctx) => {
+      const { events } = await readOfflineEvents(ctx.cwd);
+      ctx.ui.notify(formatOfflineStats(summarizeOfflineEvents(events)), "info");
     }
   });
 

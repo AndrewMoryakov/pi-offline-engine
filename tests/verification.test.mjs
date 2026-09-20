@@ -293,3 +293,21 @@ test("does not reuse stale VSTest TRX evidence from a previous identical pattern
   assert.equal(result.checks[1].executedTestCount, null);
   assert.match(result.diagnostics.join("\n"), /no readable TRX execution count/);
 });
+
+
+test("fails fast when MTP has no TRX report extension", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  let actualTestRuns = 0;
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return mtpHelp({ trx: false });
+    if (args[0] === "test") actualTestRuns += 1;
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+
+  await assert.rejects(
+    () => runVerification({ cwd, spec: baseSpec, exec, attempt: 1 }),
+    /TRX reporting is unavailable/
+  );
+  assert.equal(actualTestRuns, 0);
+});

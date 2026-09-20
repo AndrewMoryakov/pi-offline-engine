@@ -54,3 +54,10 @@ test("code tool gets a read-only mutation policy on every agent start", () => {
   assert.match(source, /Use the code tool for read-only filtering/);
   assert.match(source, /Do not invoke bash\/edit\/write from inside the code tool/);
 });
+
+
+test("uses structured prompt guidelines for code policy to preserve prompt caching", () => {
+  assert.match(source, /options\.promptGuidelines/);
+  assert.match(source, /pi-offline-engine:/);
+  assert.doesNotMatch(source, /return \{ systemPrompt: event\.systemPrompt \+/);
+});

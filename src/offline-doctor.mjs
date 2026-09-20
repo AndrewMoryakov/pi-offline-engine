@@ -28,6 +28,12 @@ export async function runOfflineDoctor({
     timeoutMs
   }));
 
+  checks.push(await checkRuntimeStateIgnore({
+    exec,
+    cwd,
+    timeoutMs
+  }));
+
   checks.push(await checkCommand({
     name: "csharp-ls",
     required: false,
@@ -109,6 +115,46 @@ async function checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs) {
     };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function checkRuntimeStateIgnore({ exec, cwd, timeoutMs }) {
+  try {
+    const repo = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, timeout: timeoutMs });
+    if (repo.code !== 0 || repo.killed === true) {
+      return {
+        id: "runtime_state_ignore",
+        required: false,
+        ok: true,
+        status: "ok",
+        message: "not inside a Git repository; no Git ignore check needed"
+      };
+    }
+
+    const ignored = await exec(
+      "git",
+      ["check-ignore", "-q", "--no-index", ".pi/offline-engine/probe"],
+      { cwd, timeout: timeoutMs }
+    );
+
+    const ok = ignored.code === 0;
+    return {
+      id: "runtime_state_ignore",
+      required: false,
+      ok,
+      status: ok ? "ok" : "warn",
+      message: ok
+        ? ".pi/offline-engine is ignored by Git"
+        : ".pi/offline-engine is not ignored; add '/.pi/offline-engine/' to .git/info/exclude before real use to avoid accidental commits"
+    };
+  } catch (error) {
+    return {
+      id: "runtime_state_ignore",
+      required: false,
+      ok: false,
+      status: "warn",
+      message: error instanceof Error ? error.message : String(error)
+    };
   }
 }
 

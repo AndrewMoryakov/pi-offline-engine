@@ -213,3 +213,20 @@ It is enabled by default. Control it with:
 ```
 
 Set `PI_OFFLINE_REPO_CAPSULE=0` to disable it at startup.
+
+
+## Recommended offline .NET companion stack
+
+See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md).
+
+Preview the pinned package installation plan without changing anything:
+
+```bash
+npm run profile:offline
+```
+
+After reviewing the package sources, apply it with:
+
+```bash
+node ./scripts/bootstrap-offline-profile.mjs --apply
+```

@@ -46,3 +46,36 @@ test("doctor fails required readiness when tiny endpoint is unavailable", async 
   assert.equal(report.ready, false);
   assert.ok(report.requiredFailures.includes("tiny_endpoint"));
 });
+
+
+test("warns when MTP lacks the TRX report extension", async () => {
+  const fetchFn = async (url) => {
+    const pathname = new URL(url).pathname;
+    if (pathname === "/health") return { ok: true, async json() { return {}; } };
+    if (pathname === "/v1/models") return { ok: true, async json() { return { data: [{ id: "tiny" }] }; } };
+    return { ok: false, async json() { return {}; } };
+  };
+
+  const exec = async (command, args) => {
+    if (command === "dotnet" && args[0] === "--info") {
+      return { code: 0, killed: false, stdout: ".NET SDK 10.0", stderr: "" };
+    }
+    if (command === "dotnet" && args[0] === "test") {
+      return { code: 0, killed: false, stdout: "--test-modules\n--max-parallel-test-modules", stderr: "" };
+    }
+    throw new Error("missing");
+  };
+
+  const report = await runOfflineDoctor({
+    cwd: "/tmp",
+    endpoint: "http://127.0.0.1:8081",
+    model: "tiny",
+    tools: [{ name: "execute_delegated_implementation" }],
+    exec,
+    fetchFn
+  });
+
+  assert.equal(report.ready, true);
+  assert.ok(report.warnings.includes("dotnet_test_runner"));
+  assert.match(formatDoctorReport(report), /Microsoft\.Testing\.Extensions\.TrxReport/);
+});

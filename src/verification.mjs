@@ -4,6 +4,7 @@ import { isSafeRelativePath } from "./implementation-spec.mjs";
 import { resolveInside, sha256 } from "./workspace-snapshot.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+const RUNNER_DETECTION_TIMEOUT_MS = 10_000;
 
 export async function runVerification({ cwd, spec, exec, signal, timeoutMs = DEFAULT_TIMEOUT_MS, attempt = 1 }) {
   const root = await fs.realpath(cwd);
@@ -28,66 +29,190 @@ export async function runVerification({ cwd, spec, exec, signal, timeoutMs = DEF
 
   if (spec.verification.tests) {
     const project = await resolveVerificationProject(root, spec.verification.tests.project);
+    const runner = await detectDotnetTestRunner({
+      cwd: root,
+      exec,
+      signal,
+      timeoutMs: Math.min(timeoutMs, RUNNER_DETECTION_TIMEOUT_MS)
+    });
     const names = spec.verification.tests.names ?? [];
-    const patterns = names.length > 0 ? names : [null];
 
-    // Run each declared pattern independently. An OR-combined filter can hide
-    // a misspelled pattern when another pattern still matches tests.
-    for (let index = 0; index < patterns.length; index += 1) {
-      const pattern = patterns[index];
-      const testRun = await prepareTestRun(root, spec.spec_id, attempt, index);
-      const args = [
-        "test",
-        project,
-        "--no-restore",
-        "--nologo",
-        "--verbosity:minimal",
-        "--results-directory",
-        testRun.directory,
-        "--logger",
-        `trx;LogFileName=${testRun.fileName}`
-      ];
-
-      if (pattern) {
-        args.push("--filter", `FullyQualifiedName~${escapeFilterValue(pattern)}`);
-      }
-
-      const tests = await runDotnetCheck({
+    if (runner === "mtp") {
+      const mtp = await runMtpTests({
         cwd: root,
+        project,
+        projectLabel: spec.verification.tests.project,
+        expectedPatterns: names,
         exec,
         signal,
         timeoutMs,
-        kind: patterns.length === 1 ? "tests" : `tests-${index + 1}`,
-        project: spec.verification.tests.project,
-        args,
         specId: spec.spec_id,
         attempt
       });
-
-      const counters = await readTrxCounters(testRun.filePath);
-      tests.testCount = counters?.total ?? null;
-      tests.executedTestCount = counters?.executed ?? null;
-      tests.testPattern = pattern;
-      tests.resultArtifact = relativeArtifact(root, testRun.filePath);
-
-      // Exit code 0 is insufficient evidence. Require a fresh TRX proving
-      // that at least one test actually executed for every declared pattern.
-      if (tests.passed && !(typeof tests.executedTestCount === "number" && tests.executedTestCount > 0)) {
-        tests.passed = false;
-        tests.diagnostics = [
-          ...tests.diagnostics,
-          tests.executedTestCount === 0
-            ? `Test verification failed${pattern ? ` for pattern "${pattern}"` : ""}: zero tests executed.`
-            : `Test verification failed${pattern ? ` for pattern "${pattern}"` : ""}: no readable TRX execution count was produced.`
-        ].slice(0, 40);
+      results.push(mtp);
+      if (!mtp.passed) return summarize(results);
+    } else {
+      const patterns = names.length > 0 ? names : [null];
+      for (let index = 0; index < patterns.length; index += 1) {
+        const vstest = await runVstestPattern({
+          cwd: root,
+          project,
+          projectLabel: spec.verification.tests.project,
+          pattern: patterns[index],
+          patternIndex: index,
+          patternCount: patterns.length,
+          exec,
+          signal,
+          timeoutMs,
+          specId: spec.spec_id,
+          attempt
+        });
+        results.push(vstest);
+        if (!vstest.passed) return summarize(results);
       }
-
-      results.push(tests);
-      if (!tests.passed) return summarize(results);
     }
   }
 
   return summarize(results);
+}
+
+async function runVstestPattern({
+  cwd,
+  project,
+  projectLabel,
+  pattern,
+  patternIndex,
+  patternCount,
+  exec,
+  signal,
+  timeoutMs,
+  specId,
+  attempt
+}) {
+  const testRun = await prepareTestRun(cwd, specId, attempt, `vstest-${patternIndex}`);
+  const args = [
+    "test",
+    project,
+    "--no-restore",
+    "--nologo",
+    "--verbosity:minimal",
+    "--results-directory",
+    testRun.directory,
+    "--logger",
+    `trx;LogFileName=${testRun.fileName}`
+  ];
+
+  if (pattern) args.push("--filter", `FullyQualifiedName~${escapeFilterValue(pattern)}`);
+
+  const tests = await runDotnetCheck({
+    cwd,
+    exec,
+    signal,
+    timeoutMs,
+    kind: patternCount === 1 ? "tests" : `tests-${patternIndex + 1}`,
+    project: projectLabel,
+    args,
+    specId,
+    attempt
+  });
+
+  return attachTrxEvidence(tests, testRun.filePath, {
+    runner: "vstest",
+    expectedPatterns: pattern ? [pattern] : []
+  });
+}
+
+async function runMtpTests({
+  cwd,
+  project,
+  projectLabel,
+  expectedPatterns,
+  exec,
+  signal,
+  timeoutMs,
+  specId,
+  attempt
+}) {
+  const testRun = await prepareTestRun(cwd, specId, attempt, "mtp");
+  const args = [
+    "test",
+    "--project",
+    project,
+    "--no-restore",
+    "--nologo",
+    "--verbosity:minimal",
+    "--results-directory",
+    testRun.directory,
+    "--",
+    "--report-trx",
+    "--report-trx-filename",
+    testRun.fileName
+  ];
+
+  const tests = await runDotnetCheck({
+    cwd,
+    exec,
+    signal,
+    timeoutMs,
+    kind: "tests",
+    project: projectLabel,
+    args,
+    specId,
+    attempt
+  });
+
+  return attachTrxEvidence(tests, testRun.filePath, {
+    runner: "mtp",
+    expectedPatterns
+  });
+}
+
+async function attachTrxEvidence(tests, trxPath, { runner, expectedPatterns }) {
+  const evidence = await readTrxEvidence(trxPath);
+  tests.runner = runner;
+  tests.testCount = evidence?.total ?? null;
+  tests.executedTestCount = evidence?.executed ?? null;
+  tests.executedTestIdentities = evidence?.executedIdentities ?? [];
+  tests.expectedTestPatterns = expectedPatterns;
+  tests.resultArtifact = trxPath;
+
+  if (tests.passed && !(typeof tests.executedTestCount === "number" && tests.executedTestCount > 0)) {
+    tests.passed = false;
+    tests.diagnostics = [
+      ...tests.diagnostics,
+      tests.executedTestCount === 0
+        ? "Test verification failed: zero tests executed."
+        : "Test verification failed: no readable TRX execution count was produced."
+    ].slice(0, 40);
+    return tests;
+  }
+
+  if (tests.passed && expectedPatterns.length > 0 && runner === "mtp") {
+    const missing = expectedPatterns.filter((pattern) =>
+      !tests.executedTestIdentities.some((identity) => containsPattern(identity, pattern))
+    );
+    if (missing.length > 0) {
+      tests.passed = false;
+      tests.diagnostics = [
+        ...tests.diagnostics,
+        `MTP verification failed: declared test pattern(s) not found among executed TRX results: ${missing.join(", ")}`
+      ].slice(0, 40);
+    }
+  }
+
+  return tests;
+}
+
+export async function detectDotnetTestRunner({ cwd, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {
+  const help = await exec("dotnet", ["test", "--help"], { cwd, signal, timeout: timeoutMs });
+  if (help.code !== 0 || help.killed === true) {
+    throw new Error(`unable to detect dotnet test runner (exit ${String(help.code)})`);
+  }
+
+  const text = `${help.stdout ?? ""}\n${help.stderr ?? ""}`;
+  // MTP's .NET 10 driver exposes these stable option names; VSTest does not.
+  if (/--test-modules\b|--max-parallel-test-modules\b/.test(text)) return "mtp";
+  return "vstest";
 }
 
 async function runDotnetCheck({ cwd, exec, signal, timeoutMs, kind, project, args, specId, attempt }) {
@@ -117,8 +242,8 @@ async function resolveVerificationProject(root, project) {
   return real;
 }
 
-async function prepareTestRun(cwd, specId, attempt, patternIndex) {
-  const id = sha256(`${specId}:${attempt}:trx:${patternIndex}`).slice(0, 20);
+async function prepareTestRun(cwd, specId, attempt, discriminator) {
+  const id = sha256(`${specId}:${attempt}:trx:${discriminator}`).slice(0, 20);
   const directory = path.join(cwd, ".pi", "offline-engine", "test-results", id);
   await fs.rm(directory, { recursive: true, force: true });
   await fs.mkdir(directory, { recursive: true });
@@ -126,14 +251,39 @@ async function prepareTestRun(cwd, specId, attempt, patternIndex) {
   return { directory, fileName, filePath: path.join(directory, fileName) };
 }
 
-async function readTrxCounters(filePath) {
+async function readTrxEvidence(filePath) {
   try {
     const text = await fs.readFile(filePath, "utf8");
     const countersTag = text.match(/<Counters\b[^>]*>/i)?.[0];
     if (!countersTag) return null;
+
+    const executedResults = new Map();
+    const identities = new Set();
+
+    for (const match of text.matchAll(/<UnitTestResult\b([^>]*)\/?\s*>/gi)) {
+      const attrs = parseXmlAttributes(match[1]);
+      const outcome = String(attrs.outcome ?? "").toLowerCase();
+      if (outcome === "notexecuted" || outcome === "skipped") continue;
+      if (attrs.testName) identities.add(decodeXml(attrs.testName));
+      if (attrs.testId) executedResults.set(attrs.testId, true);
+    }
+
+    for (const match of text.matchAll(/<UnitTest\b([^>]*)>([\s\S]*?)<\/UnitTest>/gi)) {
+      const attrs = parseXmlAttributes(match[1]);
+      if (!attrs.id || !executedResults.has(attrs.id)) continue;
+      const methodTag = match[2].match(/<TestMethod\b([^>]*)\/?\s*>/i)?.[1];
+      if (!methodTag) continue;
+      const method = parseXmlAttributes(methodTag);
+      const className = method.className ? decodeXml(method.className) : "";
+      const name = method.name ? decodeXml(method.name) : "";
+      if (name) identities.add(name);
+      if (className && name) identities.add(`${className}.${name}`);
+    }
+
     return {
       total: readCounter(countersTag, "total"),
-      executed: readCounter(countersTag, "executed")
+      executed: readCounter(countersTag, "executed"),
+      executedIdentities: [...identities]
     };
   } catch (error) {
     if (error?.code === "ENOENT") return null;
@@ -141,9 +291,30 @@ async function readTrxCounters(filePath) {
   }
 }
 
+function parseXmlAttributes(fragment) {
+  const attrs = {};
+  for (const match of String(fragment).matchAll(/([:\w.-]+)="([^"]*)"/g)) {
+    attrs[match[1]] = match[2];
+  }
+  return attrs;
+}
+
+function decodeXml(value) {
+  return String(value)
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
+}
+
 function readCounter(tag, name) {
   const value = tag.match(new RegExp(`\\b${name}="(\\d+)"`, "i"))?.[1];
   return value === undefined ? null : Number.parseInt(value, 10);
+}
+
+function containsPattern(identity, pattern) {
+  return String(identity).toLocaleLowerCase().includes(String(pattern).toLocaleLowerCase());
 }
 
 function summarize(results) {
@@ -161,7 +332,8 @@ function extractDiagnostics(stdout = "", stderr = "") {
     /\bfailed\b/i.test(line) ||
     /\bexception\b/i.test(line) ||
     /\bassert/i.test(line) ||
-    /no test/i.test(line)
+    /no test/i.test(line) ||
+    /MTP\d+/i.test(line)
   );
   const selected = important.length ? important : lines.slice(-20);
   return selected.slice(-40);
@@ -186,10 +358,6 @@ async function writeCommandArtifact(cwd, specId, attempt, kind, result) {
   ].join("\n");
   await fs.writeFile(absolute, body, "utf8");
   return relative.replaceAll("\\", "/");
-}
-
-function relativeArtifact(cwd, absolute) {
-  return path.relative(cwd, absolute).replaceAll("\\", "/");
 }
 
 function escapeFilterValue(value) {

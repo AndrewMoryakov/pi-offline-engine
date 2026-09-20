@@ -13,10 +13,13 @@ import { buildRepairPacket } from "../src/repair-packet.mjs";
 import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 import { compactToolResult } from "../src/tool-result-compactor.mjs";
+import { buildRepoCapsule } from "../src/repo-capsule.mjs";
 
 export default function offlineEngine(pi: ExtensionAPI) {
   let savedActiveTools: string[] | null = null;
   let compactToolResults = process.env.PI_OFFLINE_COMPACT_TOOL_RESULTS !== "0";
+  let repoCapsuleEnabled = process.env.PI_OFFLINE_REPO_CAPSULE !== "0";
+  let lastRepoCapsuleFingerprint: string | null = null;
   pi.registerTool({
     name: "delegate_implementation",
     label: "Delegate implementation",
@@ -231,6 +234,48 @@ export default function offlineEngine(pi: ExtensionAPI) {
     }
   });
 
+  pi.on("session_start", async () => {
+    lastRepoCapsuleFingerprint = null;
+  });
+
+  pi.on("before_agent_start", async (_event, ctx) => {
+    if (!repoCapsuleEnabled) return;
+    const capsule = await buildRepoCapsule({
+      cwd: ctx.cwd,
+      exec: (command, args, options) => pi.exec(command, args, options)
+    });
+    if (!capsule.available || !capsule.text || capsule.fingerprint === lastRepoCapsuleFingerprint) return;
+
+    lastRepoCapsuleFingerprint = capsule.fingerprint;
+    await appendEvent(ctx.cwd, {
+      type: "repo_capsule_injected",
+      fingerprint: capsule.fingerprint,
+      dirtyFiles: capsule.facts?.dirty.length ?? 0,
+      projectFiles: capsule.facts?.projectFiles.length ?? 0
+    });
+
+    return {
+      message: {
+        customType: "pi-offline-repo-capsule",
+        content: capsule.text,
+        display: false
+      }
+    };
+  });
+
+  pi.on("context", async (event) => {
+    let latest = -1;
+    for (let index = 0; index < event.messages.length; index += 1) {
+      if ((event.messages[index] as any)?.customType === "pi-offline-repo-capsule") latest = index;
+    }
+    if (latest < 0) return;
+    return {
+      messages: event.messages.filter((message, index) =>
+        (message as any)?.customType !== "pi-offline-repo-capsule" || index === latest
+      )
+    };
+  });
+
   pi.on("tool_result", async (event, ctx) => {
     if (!compactToolResults) return;
     const compacted = await compactToolResult({
@@ -251,6 +296,23 @@ export default function offlineEngine(pi: ExtensionAPI) {
       originalLines: compacted.originalLines
     });
     return { content: compacted.content };
+  });
+
+  pi.registerCommand("offline-context", {
+    description: "Use /offline-context on|off|refresh|status for deterministic repository context",
+    handler: async (args, ctx) => {
+      const mode = String(args ?? "").trim().toLowerCase() || "status";
+      if (mode === "on") repoCapsuleEnabled = true;
+      else if (mode === "off") repoCapsuleEnabled = false;
+      else if (mode === "refresh") {
+        repoCapsuleEnabled = true;
+        lastRepoCapsuleFingerprint = null;
+      } else if (mode !== "status") {
+        ctx.ui.notify("Usage: /offline-context on|off|refresh|status", "warning");
+        return;
+      }
+      ctx.ui.notify(`Repository context capsule: ${repoCapsuleEnabled ? "on" : "off"}${mode === "refresh" ? " (will refresh on next prompt)" : ""}`, "info");
+    }
   });
 
   pi.registerCommand("offline-compact", {

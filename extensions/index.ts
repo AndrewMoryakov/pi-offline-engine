@@ -15,6 +15,7 @@ import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 import { compactToolResult } from "../src/tool-result-compactor.mjs";
 import { buildRepoCapsule } from "../src/repo-capsule.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
+import { buildRuntimeFailureOutcome } from "../src/delegation-state.mjs";
 
 const NonEmptyString = Type.String({ minLength: 1 });
 
@@ -84,7 +85,6 @@ export default function offlineEngine(pi: ExtensionAPI) {
 
       try {
         const result = await callTinyImplementer({ endpoint, model, spec: params.spec, context: params.context ?? {}, signal });
-        stage = "candidate_validation";
         const candidateCheck = validateCandidate(result.candidate, params.spec);
         await appendEvent(ctx.cwd, {
           type: "tiny_finished",
@@ -184,6 +184,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           signal
         });
 
+        stage = "candidate_validation";
         const candidateCheck = validateCandidate(result.candidate, params.spec);
         await appendEvent(ctx.cwd, {
           type: "tiny_finished",
@@ -269,45 +270,29 @@ export default function offlineEngine(pi: ExtensionAPI) {
         await appendEvent(ctx.cwd, { type: "repair_packet_created", specId: params.spec.spec_id, attempt, diagnostics: repairPacket.verification.diagnostics.length });
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          const reason = stage === "tiny_call"
-            ? "tiny_transport_failure"
-            : stage === "candidate_validation"
-              ? "tiny_invalid_candidate"
-              : stage === "verification"
-                ? "verification_execution_failure"
-                : stage === "apply"
-                  ? "candidate_apply_failure"
-                  : "delegated_runtime_failure";
+          const outcome = buildRuntimeFailureOutcome({
+            stage,
+            workspaceModified,
+            error: message,
+            attempts
+          });
 
           await appendEvent(ctx.cwd, {
             type: "delegated_implementation_runtime_failure",
             specId: params.spec.spec_id,
             attempt,
-            stage,
-            reason,
-            workspaceModified,
-            error: message
+            ...outcome
           });
 
           return {
-            content: [{
-              type: "text",
-              text: JSON.stringify({
-                status: "needs_main_model",
-                reason,
-                stage,
-                workspace_modified: workspaceModified,
-                error: message,
-                attempts
-              }, null, 2)
-            }],
+            content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
             details: {
               success: false,
               escalated: true,
-              reason,
-              stage,
-              workspaceModified,
-              error: message,
+              reason: outcome.reason,
+              stage: outcome.stage,
+              workspaceModified: outcome.workspace_modified,
+              error: outcome.error,
               attempts
             }
           };

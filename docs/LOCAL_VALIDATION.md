@@ -26,6 +26,14 @@ A successful run ends with:
 LOCAL GATE: PASS
 ```
 
+Then verify the extension against the actually installed Pi runtime:
+
+```bash
+npm run gate:pi
+```
+
+This loads only `extensions/index.ts` through Pi's real extension loader and exits without an LLM request. A successful run ends with `PI LOAD GATE: PASS`.
+
 ## What this gate establishes
 
 It establishes that the checked-out source is internally consistent at the contract/runtime level:
@@ -54,7 +62,7 @@ Those belong to the machine-level acceptance test.
 
 ## Machine acceptance
 
-After the local gate passes:
+After both `gate:local` and `gate:pi` pass:
 
 1. start the real TinyCoder llama.cpp endpoint;
 2. start Pi with this extension;

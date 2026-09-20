@@ -8,7 +8,7 @@ import { appendEvent } from "../src/event-log.mjs";
 import { snapshotAllowedFiles, resolveInside } from "../src/workspace-snapshot.mjs";
 import { saveCandidateRecord } from "../src/candidate-store.mjs";
 import { applyCandidate } from "../src/apply-candidate.mjs";
-import { runVerification } from "../src/verification.mjs";
+import { preflightVerificationInfrastructure, runVerification } from "../src/verification.mjs";
 import { buildRepairPacket } from "../src/repair-packet.mjs";
 import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
@@ -171,6 +171,44 @@ export default function offlineEngine(pi: ExtensionAPI) {
       let stage = "not_started";
       const attempts = [];
       const cumulativeChangedFiles = new Set<string>();
+
+      let verificationPreflight = null;
+      try {
+        stage = "verification_preflight";
+        verificationPreflight = await preflightVerificationInfrastructure({
+          cwd: ctx.cwd,
+          spec: params.spec,
+          exec: (command, args, options) => pi.exec(command, args, options),
+          signal
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const outcome = buildRuntimeFailureOutcome({
+          stage,
+          workspaceModified: false,
+          error: message,
+          attempts,
+          changedFiles: []
+        });
+        await appendEvent(ctx.cwd, {
+          type: "delegated_implementation_runtime_failure",
+          specId: params.spec.spec_id,
+          attempt: 0,
+          ...outcome
+        });
+        return {
+          content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
+          details: {
+            success: false,
+            escalated: true,
+            reason: outcome.reason,
+            stage: outcome.stage,
+            workspaceModified: false,
+            error: outcome.error,
+            attempts
+          }
+        };
+      }
       let nestedUsage: any = undefined;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -265,7 +303,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
           spec: params.spec,
           exec: (command, args, options) => pi.exec(command, args, options),
           signal,
-          attempt
+          attempt,
+          preflight: verificationPreflight
         });
         lastVerification = verification;
 

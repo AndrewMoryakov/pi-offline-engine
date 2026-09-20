@@ -34,6 +34,19 @@ export async function appendTrainingRecord(cwd, record) {
   return file;
 }
 
+export async function safeAppendTrainingRecord(cwd, record) {
+  try {
+    const file = await appendTrainingRecord(cwd, record);
+    return { ok: true, file, error: null };
+  } catch (error) {
+    return {
+      ok: false,
+      file: null,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
 export function makeImplementationAttemptRecord({
   runId,
   model,

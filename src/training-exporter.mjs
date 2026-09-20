@@ -26,6 +26,7 @@ export async function exportTrainingData({
   const sft = [];
   const preference = [];
   const evalRows = [];
+  const pairedGroups = new Map();
   const seen = new Set();
   let droppedSensitive = 0;
   let droppedDuplicate = 0;
@@ -49,6 +50,7 @@ export async function exportTrainingData({
     };
     const prompt = redactDeep(promptObject);
     const completion = redactDeep(raw.output.candidate);
+    const promptHash = stableHash(prompt);
     const fingerprint = stableHash({ prompt, completion });
 
     if (seen.has(fingerprint)) {
@@ -82,23 +84,51 @@ export async function exportTrainingData({
     }
 
     if (includeFailedPreference && completion?.status === "candidate") {
+      const passed = raw.supervision?.verification_passed === true;
       preference.push({
         prompt: JSON.stringify(prompt),
         completion: JSON.stringify(completion),
-        label: raw.supervision?.verification_passed === true,
+        label: passed,
         meta: commonMeta
       });
+
+      let group = pairedGroups.get(promptHash);
+      if (!group) {
+        group = { prompt, chosen: [], rejected: [] };
+        pairedGroups.set(promptHash, group);
+      }
+      (passed ? group.chosen : group.rejected).push({ completion, meta: commonMeta });
+    }
+  }
+
+  const pairedPreference = [];
+  for (const group of pairedGroups.values()) {
+    if (group.chosen.length === 0 || group.rejected.length === 0) continue;
+    for (const chosen of group.chosen) {
+      for (const rejected of group.rejected.slice(0, 3)) {
+        pairedPreference.push({
+          prompt: JSON.stringify(group.prompt),
+          chosen: JSON.stringify(chosen.completion),
+          rejected: JSON.stringify(rejected.completion),
+          meta: {
+            chosen: chosen.meta,
+            rejected: rejected.meta
+          }
+        });
+      }
     }
   }
 
   const files = {
     sft: path.join(outputDir, "sft.jsonl"),
     preference: path.join(outputDir, "unpaired-preference.jsonl"),
+    pairedPreference: path.join(outputDir, "paired-preference.jsonl"),
     eval: path.join(outputDir, "eval.jsonl")
   };
 
   await writeJsonl(files.sft, sft);
   await writeJsonl(files.preference, preference);
+  await writeJsonl(files.pairedPreference, pairedPreference);
   await writeJsonl(files.eval, evalRows);
 
   const manifest = {
@@ -108,6 +138,7 @@ export async function exportTrainingData({
     rows_read: rows.length,
     sft_examples: sft.length,
     preference_examples: preference.length,
+    paired_preference_examples: pairedPreference.length,
     eval_examples: evalRows.length,
     dropped_sensitive: droppedSensitive,
     dropped_duplicate: droppedDuplicate,

@@ -10,7 +10,7 @@ The objective is not to maximize the number of Pi tools. It is to move routine r
 
 - **pi-knowledge 0.10.2** — local-first BM25 + embeddings retrieval. Use local `multilingual-e5-small`, `low_token`, and offline mode.
 - **pi-lsp-extension 1.3.0** — live language semantics, diagnostics, definition/references, plus structural Tree-sitter fallback and code search/rewrite.
-- **pi-code-tool 0.6.1** — sandboxed Python composition over host tools so loops/filtering/aggregation do not require a model turn per primitive.
+- **pi-code-tool 0.6.1** — sandboxed Python composition over host tools so loops/filtering/aggregation do not require a model turn per primitive. In this profile it is treated as a **read-only orchestration tool**: do not use its bridged bash/edit/write calls, because the bridge constructs Pi built-ins directly and does not pass through top-level edit overrides such as pi-lean-edit.
 - **pi-lean-edit 0.3.6** — replaces `read/edit` with snapshot-backed range edits so the model does not have to reproduce old text in every edit.
 
 ### Optional

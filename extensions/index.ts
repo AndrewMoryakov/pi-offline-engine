@@ -17,6 +17,15 @@ import { buildRepoCapsule } from "../src/repo-capsule.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
 import { buildRuntimeFailureOutcome, buildTinyTerminalOutcome } from "../src/delegation-state.mjs";
 import { addPiUsage, toPiUsage } from "../src/pi-usage.mjs";
+import {
+  appendTrainingRecord,
+  createTrainingRunId,
+  hasSensitiveTrainingPath,
+  makeImplementationAttemptRecord,
+  makeInfrastructureFailureRecord,
+  trainingCaptureStatus
+} from "../src/training-recorder.mjs";
+import { exportTrainingData } from "../src/training-exporter.mjs";
 
 const NonEmptyString = Type.String({ minLength: 1 });
 
@@ -62,6 +71,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
   let compactToolResults = process.env.PI_OFFLINE_COMPACT_TOOL_RESULTS !== "0";
   let repoCapsuleEnabled = process.env.PI_OFFLINE_REPO_CAPSULE !== "0";
   let lastRepoCapsuleFingerprint: string | null = null;
+  let trainingCaptureEnabled = process.env.PI_OFFLINE_TRAINING_CAPTURE === "1";
   pi.registerTool({
     name: "delegate_implementation",
     label: "Delegate implementation",
@@ -144,6 +154,17 @@ export default function offlineEngine(pi: ExtensionAPI) {
       const endpoint = tinyEndpoint();
       const model = tinyModel();
       const maxAttempts = tinyMaxAttempts();
+      const trainingSensitive = hasSensitiveTrainingPath(params.spec);
+      const trainingRunId = trainingCaptureEnabled && !trainingSensitive
+        ? createTrainingRunId(params.spec.spec_id)
+        : null;
+
+      if (trainingCaptureEnabled && trainingSensitive) {
+        await appendEvent(ctx.cwd, {
+          type: "training_capture_skipped_sensitive_path",
+          specId: params.spec.spec_id
+        });
+      }
 
       if (!ctx.hasUI && process.env.PI_OFFLINE_ALLOW_HEADLESS_APPLY !== "1") {
         throw new Error("execute_delegated_implementation requires interactive confirmation; set PI_OFFLINE_ALLOW_HEADLESS_APPLY=1 only in a separately sandboxed workflow");
@@ -196,6 +217,16 @@ export default function offlineEngine(pi: ExtensionAPI) {
           attempt: 0,
           ...outcome
         });
+        if (trainingRunId) {
+          await appendTrainingRecord(ctx.cwd, makeInfrastructureFailureRecord({
+            runId: trainingRunId,
+            spec: params.spec,
+            attempt: 0,
+            stage,
+            reason: outcome.reason,
+            error: message
+          }));
+        }
         return {
           content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
           details: {
@@ -219,6 +250,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         const snapshot = await snapshotAllowedFiles(ctx.cwd, params.spec);
         await appendEvent(ctx.cwd, { type: "tiny_started", specId: params.spec.spec_id, model, endpoint, attempt, mode: "execute" });
 
+        const trainingRepairPacket = repairPacket;
         stage = "tiny_call";
         const result = await callTinyImplementer({
           endpoint,
@@ -245,9 +277,41 @@ export default function offlineEngine(pi: ExtensionAPI) {
           mode: "execute"
         });
 
-        if (!candidateCheck.ok) throw new Error(`Tiny implementer returned an invalid candidate: ${candidateCheck.errors.join("; ")}`);
+        if (!candidateCheck.ok) {
+          if (trainingRunId) {
+            await appendTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
+              runId: trainingRunId,
+              model,
+              attempt,
+              spec: params.spec,
+              context: params.context ?? {},
+              repairPacket: trainingRepairPacket,
+              candidate: result.candidate,
+              verification: null,
+              outcome: "invalid_candidate",
+              usage: result.usage,
+              latencyMs: result.latencyMs
+            }));
+          }
+          throw new Error(`Tiny implementer returned an invalid candidate: ${candidateCheck.errors.join("; ")}`);
+        }
 
         if (result.candidate.status !== "candidate") {
+          if (trainingRunId) {
+            await appendTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
+              runId: trainingRunId,
+              model,
+              attempt,
+              spec: params.spec,
+              context: params.context ?? {},
+              repairPacket: trainingRepairPacket,
+              candidate: result.candidate,
+              verification: null,
+              outcome: result.candidate.status,
+              usage: result.usage,
+              latencyMs: result.latencyMs
+            }));
+          }
           const outcome = buildTinyTerminalOutcome({
             terminalStatus: result.candidate.status,
             reason: result.candidate.reason ?? null,
@@ -308,6 +372,22 @@ export default function offlineEngine(pi: ExtensionAPI) {
         });
         lastVerification = verification;
 
+        if (trainingRunId) {
+          await appendTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
+            runId: trainingRunId,
+            model,
+            attempt,
+            spec: params.spec,
+            context: params.context ?? {},
+            repairPacket: trainingRepairPacket,
+            candidate: result.candidate,
+            verification,
+            outcome: verification.passed ? "verification_passed" : "verification_failed",
+            usage: result.usage,
+            latencyMs: result.latencyMs
+          }));
+        }
+
         attempts.push({
           attempt,
           usage: result.usage,
@@ -365,6 +445,16 @@ export default function offlineEngine(pi: ExtensionAPI) {
             attempt,
             ...outcome
           });
+          if (trainingRunId && stage !== "candidate_validation") {
+            await appendTrainingRecord(ctx.cwd, makeInfrastructureFailureRecord({
+              runId: trainingRunId,
+              spec: params.spec,
+              attempt,
+              stage,
+              reason: outcome.reason,
+              error: message
+            }));
+          }
 
           return {
             content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
@@ -573,6 +663,54 @@ export default function offlineEngine(pi: ExtensionAPI) {
         return;
       }
       ctx.ui.notify(`Active tools (${pi.getActiveTools().length}): ${pi.getActiveTools().join(", ")}`, "info");
+    }
+  });
+
+  pi.registerCommand("offline-training", {
+    description: "Use /offline-training on|off|status|export for opt-in local training trace capture",
+    handler: async (args, ctx) => {
+      const mode = String(args ?? "").trim().toLowerCase() || "status";
+      if (mode === "on") {
+        trainingCaptureEnabled = true;
+        ctx.ui.notify(
+          "Training capture enabled. Exact bounded specs, context, TinyCoder candidates and verification labels will be stored locally under .pi/offline-engine/training/raw.jsonl. Sensitive-path captures are blocked automatically.",
+          "warning"
+        );
+        return;
+      }
+      if (mode === "off") {
+        trainingCaptureEnabled = false;
+        ctx.ui.notify("Training capture disabled.", "info");
+        return;
+      }
+      if (mode === "export") {
+        const result = await exportTrainingData({ cwd: ctx.cwd });
+        ctx.ui.notify(
+          [
+            "Training export complete.",
+            `SFT: ${result.sft_examples}`,
+            `Unpaired preference: ${result.preference_examples}`,
+            `Eval: ${result.eval_examples}`,
+            `Dropped sensitive/duplicate/incomplete: ${result.dropped_sensitive}/${result.dropped_duplicate}/${result.dropped_incomplete}`,
+            `Manifest: ${result.manifest}`
+          ].join("\n"),
+          "info"
+        );
+        return;
+      }
+      if (mode !== "status") {
+        ctx.ui.notify("Usage: /offline-training on|off|status|export", "warning");
+        return;
+      }
+      const status = trainingCaptureStatus({ enabled: trainingCaptureEnabled });
+      ctx.ui.notify(
+        [
+          `Training capture: ${status.enabled ? "on" : "off"}`,
+          `Raw trace: ${status.rawPath}`,
+          "Capture is opt-in and stores exact bounded context; obvious secret-bearing paths are blocked."
+        ].join("\n"),
+        "info"
+      );
     }
   });
 

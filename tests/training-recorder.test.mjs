@@ -7,7 +7,8 @@ import {
   appendTrainingRecord,
   createTrainingRunId,
   hasSensitiveTrainingPath,
-  makeImplementationAttemptRecord
+  makeImplementationAttemptRecord,
+  safeAppendTrainingRecord
 } from "../src/training-recorder.mjs";
 
 test("creates stable-safe run ids", () => {
@@ -48,4 +49,15 @@ test("records a self-contained implementation attempt", async () => {
   assert.equal(rows[0].run_id, "r1");
   assert.equal(rows[0].supervision.verification_passed, false);
   assert.equal(rows[0].input.context.source, "return 1;");
+});
+
+
+test("best-effort append returns an error instead of throwing into the coding path", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-training-fail-"));
+  const blocker = path.join(cwd, ".pi");
+  await fs.writeFile(blocker, "not a directory", "utf8");
+
+  const result = await safeAppendTrainingRecord(cwd, { kind: "test" });
+  assert.equal(result.ok, false);
+  assert.equal(typeof result.error, "string");
 });

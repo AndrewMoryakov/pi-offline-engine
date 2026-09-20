@@ -81,7 +81,7 @@ After installation, configure the LSP extension for C# if it does not auto-detec
 /lsp-config csharp csharp-ls stdio
 ```
 
-Do not change a repository's target framework or `global.json` just to make the language server run.
+Do not change a repository's target framework or `global.json` just to make the language server run.\n\n## .NET 10 test runner note\n\nIf the repository opts into Microsoft.Testing.Platform through `global.json` (`test.runner = Microsoft.Testing.Platform`), pi-offline-engine uses MTP's `--report-trx` evidence path instead of VSTest's `--logger trx`. The test project must already reference or otherwise provide `Microsoft.Testing.Extensions.TrxReport`; restore it while online. `/offline-doctor` warns when MTP is detected but the TRX option is not advertised.
 
 ## Before going offline
 

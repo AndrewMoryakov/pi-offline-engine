@@ -25,10 +25,10 @@ ImplementationSpec
   -> if red: compact RepairPacket
   -> TinyCoder repair
   -> at most 3 total attempts
-  -> return verified or escalate to main model
+  -> return verification_passed evidence or escalate to main model
 ```
 
-The main 27B model is intentionally absent from the inner repair loop.
+The main 27B model is intentionally absent from the inner repair loop. A `verification_passed` result means only that the declared compiler/test checks passed; it does not mean the user task is semantically complete.
 
 ## Candidate operations
 

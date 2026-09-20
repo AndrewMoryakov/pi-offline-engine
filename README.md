@@ -240,4 +240,10 @@ GitHub Actions is informational only for this project. The canonical release-can
 npm run gate:local
 ```
 
-It is designed to run without external network access. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).
+It is designed to run without external network access. Then run:
+
+```bash
+npm run gate:pi
+```
+
+to load the extension through the actually installed Pi runtime without making an LLM request. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).

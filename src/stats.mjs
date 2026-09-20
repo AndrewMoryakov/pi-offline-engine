@@ -46,7 +46,8 @@ export function summarizeOfflineEvents(events) {
         summary.tinyInputTokens += input;
         summary.tinyOutputTokens += output;
       }
-    } else if (event.type === "delegated_implementation_succeeded") {
+    } else if (event.type === "delegated_verification_passed" || event.type === "delegated_implementation_succeeded") {
+      // Keep the legacy event for previously written local ledgers.
       summary.delegatedSuccesses += 1;
     } else if (event.type === "delegated_implementation_escalated") {
       summary.delegatedEscalations += 1;
@@ -80,7 +81,7 @@ export function formatOfflineStats(summary) {
     `TinyCoder reported tokens: in ${summary.tinyInputTokens}, out ${summary.tinyOutputTokens}`,
     `TinyCoder calls with incomplete usage: ${summary.tinyUnknownUsageCalls}`,
     `TinyCoder average latency: ${summary.averageTinyLatencyMs} ms`,
-    `Delegated successes / escalations: ${summary.delegatedSuccesses} / ${summary.delegatedEscalations}`,
+    `Delegated verification passes / escalations: ${summary.delegatedSuccesses} / ${summary.delegatedEscalations}`,
     `Verification pass / fail: ${summary.verificationPasses} / ${summary.verificationFailures}`,
     `Repair packets: ${summary.repairPackets}`,
     `Repository capsules injected: ${summary.repoCapsules}`,

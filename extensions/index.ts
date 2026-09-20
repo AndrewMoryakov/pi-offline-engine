@@ -425,7 +425,22 @@ export default function offlineEngine(pi: ExtensionAPI) {
     lastRepoCapsuleFingerprint = null;
   });
 
-  pi.on("before_agent_start", async (event, ctx) => {
+  pi.on("before_agent_start", async (event) => {
+    const codeToolActive = event.systemPromptOptions?.selectedTools?.includes("code") === true;
+    if (!codeToolActive) return;
+
+    const codePolicy = [
+      "",
+      "Pi offline-engine policy:",
+      "- Use the code tool for read-only filtering, aggregation, search composition, and mechanical analysis.",
+      "- Do not invoke bash/edit/write from inside the code tool in this profile; those bridged calls bypass top-level edit/LSP extension lifecycles.",
+      "- Perform mutations through the active top-level edit/write tools or execute_delegated_implementation."
+    ].join("\n");
+
+    return { systemPrompt: event.systemPrompt + "\n" + codePolicy };
+  });
+
+  pi.on("before_agent_start", async (_event, ctx) => {
     if (!repoCapsuleEnabled) return;
     const capsule = await buildRepoCapsule({
       cwd: ctx.cwd,
@@ -441,24 +456,12 @@ export default function offlineEngine(pi: ExtensionAPI) {
       projectFiles: capsule.facts?.projectFiles.length ?? 0
     });
 
-    const codeToolActive = event.systemPromptOptions?.selectedTools?.includes("code") === true;
-    const codePolicy = codeToolActive
-      ? [
-          "",
-          "Pi offline-engine policy:",
-          "- Use the code tool for read-only filtering, aggregation, search composition, and mechanical analysis.",
-          "- Do not invoke bash/edit/write from inside the code tool in this profile; those bridged calls bypass top-level edit/LSP extension lifecycles.",
-          "- Perform mutations through the active top-level edit/write tools or execute_delegated_implementation."
-        ].join("\n")
-      : "";
-
     return {
       message: {
         customType: "pi-offline-repo-capsule",
         content: capsule.text,
         display: false
-      },
-      systemPrompt: codePolicy ? event.systemPrompt + "\n" + codePolicy : event.systemPrompt
+      }
     };
   });
 

@@ -28,55 +28,63 @@ export async function runVerification({ cwd, spec, exec, signal, timeoutMs = DEF
 
   if (spec.verification.tests) {
     const project = await resolveVerificationProject(root, spec.verification.tests.project);
-    const testRun = await prepareTestRun(root, spec.spec_id, attempt);
-    const args = [
-      "test",
-      project,
-      "--no-restore",
-      "--nologo",
-      "--verbosity:minimal",
-      "--results-directory",
-      testRun.directory,
-      "--logger",
-      `trx;LogFileName=${testRun.fileName}`
-    ];
-
     const names = spec.verification.tests.names ?? [];
-    if (names.length) {
-      const filter = names.map((name) => `FullyQualifiedName~${escapeFilterValue(name)}`).join("|");
-      args.push("--filter", filter);
+    const patterns = names.length > 0 ? names : [null];
+
+    // Run each declared pattern independently. An OR-combined filter can hide
+    // a misspelled pattern when another pattern still matches tests.
+    for (let index = 0; index < patterns.length; index += 1) {
+      const pattern = patterns[index];
+      const testRun = await prepareTestRun(root, spec.spec_id, attempt, index);
+      const args = [
+        "test",
+        project,
+        "--no-restore",
+        "--nologo",
+        "--verbosity:minimal",
+        "--results-directory",
+        testRun.directory,
+        "--logger",
+        `trx;LogFileName=${testRun.fileName}`
+      ];
+
+      if (pattern) {
+        args.push("--filter", `FullyQualifiedName~${escapeFilterValue(pattern)}`);
+      }
+
+      const tests = await runDotnetCheck({
+        cwd: root,
+        exec,
+        signal,
+        timeoutMs,
+        kind: patterns.length === 1 ? "tests" : `tests-${index + 1}`,
+        project: spec.verification.tests.project,
+        args,
+        specId: spec.spec_id,
+        attempt
+      });
+
+      const counters = await readTrxCounters(testRun.filePath);
+      tests.testCount = counters?.total ?? null;
+      tests.executedTestCount = counters?.executed ?? null;
+      tests.testPattern = pattern;
+      tests.resultArtifact = relativeArtifact(root, testRun.filePath);
+
+      // Exit code 0 is insufficient evidence. Require a fresh TRX proving
+      // that at least one test actually executed for every declared pattern.
+      if (tests.passed && !(typeof tests.executedTestCount === "number" && tests.executedTestCount > 0)) {
+        tests.passed = false;
+        tests.diagnostics = [
+          ...tests.diagnostics,
+          tests.executedTestCount === 0
+            ? `Test verification failed${pattern ? ` for pattern "${pattern}"` : ""}: zero tests executed.`
+            : `Test verification failed${pattern ? ` for pattern "${pattern}"` : ""}: no readable TRX execution count was produced.`
+        ].slice(0, 40);
+      }
+
+      results.push(tests);
+      if (!tests.passed) return summarize(results);
     }
-
-    const tests = await runDotnetCheck({
-      cwd: root,
-      exec,
-      signal,
-      timeoutMs,
-      kind: "tests",
-      project: spec.verification.tests.project,
-      args,
-      specId: spec.spec_id,
-      attempt
-    });
-
-    const testCount = await readTrxTotal(testRun.filePath);
-    tests.testCount = testCount;
-    tests.resultArtifact = relativeArtifact(root, testRun.filePath);
-
-    // dotnet/vstest may return 0 when a filter matches no tests. A successful
-    // test verification therefore requires machine-readable evidence that at
-    // least one test actually executed.
-    if (tests.passed && !(typeof testCount === "number" && testCount > 0)) {
-      tests.passed = false;
-      tests.diagnostics = [
-        ...tests.diagnostics,
-        testCount === 0
-          ? "Test verification failed: zero tests executed."
-          : "Test verification failed: no readable TRX result was produced; test count is unknown."
-      ].slice(0, 40);
-    }
-
-    results.push(tests);
   }
 
   return summarize(results);
@@ -109,29 +117,33 @@ async function resolveVerificationProject(root, project) {
   return real;
 }
 
-async function prepareTestRun(cwd, specId, attempt) {
-  const id = sha256(`${specId}:${attempt}:trx`).slice(0, 20);
+async function prepareTestRun(cwd, specId, attempt, patternIndex) {
+  const id = sha256(`${specId}:${attempt}:trx:${patternIndex}`).slice(0, 20);
   const directory = path.join(cwd, ".pi", "offline-engine", "test-results", id);
-  // A repeated spec/attempt must never inherit a prior TRX. Otherwise a test
-  // process that exits 0 without producing a result could accidentally reuse
-  // stale evidence from an earlier run.
   await fs.rm(directory, { recursive: true, force: true });
   await fs.mkdir(directory, { recursive: true });
   const fileName = "results.trx";
   return { directory, fileName, filePath: path.join(directory, fileName) };
 }
 
-async function readTrxTotal(filePath) {
+async function readTrxCounters(filePath) {
   try {
     const text = await fs.readFile(filePath, "utf8");
     const countersTag = text.match(/<Counters\b[^>]*>/i)?.[0];
     if (!countersTag) return null;
-    const total = countersTag.match(/\btotal="(\d+)"/i)?.[1];
-    return total === undefined ? null : Number.parseInt(total, 10);
+    return {
+      total: readCounter(countersTag, "total"),
+      executed: readCounter(countersTag, "executed")
+    };
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
   }
+}
+
+function readCounter(tag, name) {
+  const value = tag.match(new RegExp(`\\b${name}="(\\d+)"`, "i"))?.[1];
+  return value === undefined ? null : Number.parseInt(value, 10);
 }
 
 function summarize(results) {

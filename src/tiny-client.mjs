@@ -9,7 +9,7 @@ const CANDIDATE_JSON_SCHEMA = {
       type: "string",
       enum: ["candidate", "insufficient_spec", "cannot_safely_implement"]
     },
-    reason: { type: ["string", "null"] },
+    reason: { type: "string" },
     changes: {
       type: "array",
       minItems: 1,
@@ -25,13 +25,7 @@ const CANDIDATE_JSON_SCHEMA = {
         }
       }
     }
-  },
-  allOf: [
-    {
-      if: { properties: { status: { const: "candidate" } } },
-      then: { required: ["changes"] }
-    }
-  ]
+  }
 };
 
 export async function callTinyImplementer({ endpoint, model, spec, context = {}, repairPacket = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {

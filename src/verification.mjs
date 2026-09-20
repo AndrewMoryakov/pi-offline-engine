@@ -6,7 +6,15 @@ import { resolveInside, sha256 } from "./workspace-snapshot.mjs";
 const DEFAULT_TIMEOUT_MS = 120_000;
 const RUNNER_DETECTION_TIMEOUT_MS = 10_000;
 
-export async function runVerification({ cwd, spec, exec, signal, timeoutMs = DEFAULT_TIMEOUT_MS, attempt = 1 }) {
+export async function runVerification({
+  cwd,
+  spec,
+  exec,
+  signal,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  attempt = 1,
+  preflight = null
+}) {
   const root = await fs.realpath(cwd);
   const results = [];
 
@@ -29,7 +37,7 @@ export async function runVerification({ cwd, spec, exec, signal, timeoutMs = DEF
 
   if (spec.verification.tests) {
     const project = await resolveVerificationProject(root, spec.verification.tests.project);
-    const testCapabilities = await inspectDotnetTestRunner({
+    const testCapabilities = preflight?.testCapabilities ?? await inspectDotnetTestRunner({
       cwd: root,
       exec,
       signal,
@@ -209,6 +217,40 @@ async function attachTrxEvidence(tests, trxPath, { runner, expectedPatterns }) {
   }
 
   return tests;
+}
+
+export async function preflightVerificationInfrastructure({
+  cwd,
+  spec,
+  exec,
+  signal,
+  timeoutMs = DEFAULT_TIMEOUT_MS
+}) {
+  const root = await fs.realpath(cwd);
+
+  if (spec.verification.build) {
+    await resolveVerificationProject(root, spec.verification.build.project);
+  }
+
+  let testCapabilities = null;
+  if (spec.verification.tests) {
+    await resolveVerificationProject(root, spec.verification.tests.project);
+    testCapabilities = await inspectDotnetTestRunner({
+      cwd: root,
+      exec,
+      signal,
+      timeoutMs: Math.min(timeoutMs, RUNNER_DETECTION_TIMEOUT_MS)
+    });
+
+    if (testCapabilities.runner === "mtp" && !testCapabilities.trxReporting) {
+      throw new Error(
+        "Microsoft.Testing.Platform is active but TRX reporting is unavailable. " +
+        "Add/enable Microsoft.Testing.Extensions.TrxReport (or an SDK profile that includes it) before offline verification."
+      );
+    }
+  }
+
+  return { root, testCapabilities };
 }
 
 export async function inspectDotnetTestRunner({ cwd, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {

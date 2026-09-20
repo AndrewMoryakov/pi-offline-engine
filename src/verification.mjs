@@ -112,6 +112,10 @@ async function resolveVerificationProject(root, project) {
 async function prepareTestRun(cwd, specId, attempt) {
   const id = sha256(`${specId}:${attempt}:trx`).slice(0, 20);
   const directory = path.join(cwd, ".pi", "offline-engine", "test-results", id);
+  // A repeated spec/attempt must never inherit a prior TRX. Otherwise a test
+  // process that exits 0 without producing a result could accidentally reuse
+  // stale evidence from an earlier run.
+  await fs.rm(directory, { recursive: true, force: true });
   await fs.mkdir(directory, { recursive: true });
   const fileName = "results.trx";
   return { directory, fileName, filePath: path.join(directory, fileName) };

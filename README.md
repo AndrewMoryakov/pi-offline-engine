@@ -142,3 +142,28 @@ After this contract is measured on real tasks:
 5. specialized code embeddings + reranking;
 6. smaller 0.5B/1.5B implementation tiers;
 7. speculative decoding experiments for the main local model.
+
+
+## Offline operations
+
+Before disconnecting from the network:
+
+```text
+/offline-doctor
+```
+
+checks the configured TinyCoder endpoint/model, `dotnet`, optional `csharp-ls`, and whether the currently loaded Pi tool set contains the expected retrieval/LSP/code-mode capabilities.
+
+For slow local models, reduce the tool schema exposed to the model:
+
+```text
+/offline-tools minimal
+```
+
+The profile prefers `code`, `knowledge_search`, and LSP tools when installed. If those are absent it retains Pi's built-in `grep/find/ls` fallbacks.
+
+Restore the previous tool set with:
+
+```text
+/offline-tools restore
+```

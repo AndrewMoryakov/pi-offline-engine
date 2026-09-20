@@ -87,14 +87,14 @@ Do not change a repository's target framework or `global.json` just to make the 
 
 While the network is still available:
 
-1. install all selected Pi packages;
-2. force the local embedding model to download by indexing a real repository with `pi-knowledge`;
-3. run `knowledge_doctor` and confirm the index is ready;
-4. start C# LSP at least once on the real solution;
-5. make sure the main GGUF and TinyCoder GGUF are local;
-6. run `dotnet restore` on the project(s) you expect to work on;
-7. disconnect networking and run `/offline-doctor`;
-8. run one real small edit/build/test task offline.
+1. install all selected Pi packages;\n2. add `/.pi/offline-engine/` to the target repository's `.git/info/exclude` so local engine artifacts cannot be accidentally staged;
+3. force the local embedding model to download by indexing a real repository with `pi-knowledge`;
+4. run `knowledge_doctor` and confirm the index is ready;
+5. start C# LSP at least once on the real solution;
+6. make sure the main GGUF and TinyCoder GGUF are local;
+7. run `dotnet restore` on the project(s) you expect to work on;
+8. disconnect networking and run `/offline-doctor`;
+9. run one real small edit/build/test task offline.
 
 For the slow main local model, then use:
 

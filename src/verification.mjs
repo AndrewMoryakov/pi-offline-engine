@@ -49,7 +49,7 @@ export async function runVerification({ cwd, spec, exec, signal, timeoutMs = DEF
 
 async function runDotnetCheck({ cwd, exec, signal, timeoutMs, kind, project, args, specId, attempt }) {
   if (!isSafeRelativePath(project)) throw new Error(`unsafe verification project path: ${project}`);
-  const result = await exec("dotnet", args, { signal, timeout: timeoutMs });
+  const result = await exec("dotnet", args, { signal, timeout: timeoutMs, cwd });
   const artifact = await writeCommandArtifact(cwd, specId, attempt, kind, result);
   return {
     kind,

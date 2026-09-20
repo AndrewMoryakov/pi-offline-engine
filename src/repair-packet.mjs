@@ -7,7 +7,8 @@ export function buildRepairPacket({ spec, attempt, candidate, verification }) {
     previous_changes: (candidate.changes ?? []).map((change) => ({
       path: change.path,
       operation: change.operation,
-      expected: change.operation === "replace_text" ? change.expected : undefined
+      expected: change.operation === "replace_text" ? change.expected : undefined,
+      content: change.content
     })),
     verification: {
       passed: verification.passed,
@@ -20,6 +21,6 @@ export function buildRepairPacket({ spec, attempt, candidate, verification }) {
         artifact: check.artifact
       }))
     },
-    instruction: "Repair only the bounded implementation. Do not expand scope. Use the current source state as the new preimage."
+    instruction: "Repair only the bounded implementation. Do not expand scope. The previous change content is the current failed source state where it was applied. Use the current source state as the new preimage."
   };
 }

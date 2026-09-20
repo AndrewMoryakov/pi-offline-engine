@@ -190,3 +190,26 @@ Compaction is enabled by default only for large dotnet build/test results. Contr
 ```
 
 or set `PI_OFFLINE_COMPACT_TOOL_RESULTS=0` before starting Pi.
+
+
+## Repository context capsule
+
+Before a local-model agent run, pi-offline-engine can inject a small deterministic Git snapshot:
+
+- repository root;
+- current branch and HEAD;
+- tracked dirty files;
+- tracked `.sln`, `.slnx`, `.csproj`, and `global.json` files.
+
+This avoids spending early model turns on basic repository orientation. The snapshot is bounded, stored as data rather than instructions, and only the latest capsule is sent in model context.
+
+It is enabled by default. Control it with:
+
+```text
+/offline-context on
+/offline-context off
+/offline-context refresh
+/offline-context status
+```
+
+Set `PI_OFFLINE_REPO_CAPSULE=0` to disable it at startup.

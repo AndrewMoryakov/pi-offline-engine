@@ -31,3 +31,13 @@ test("minimal profile keeps builtin search fallbacks when higher-level tools are
   assert.ok(selected.includes("find"));
   assert.ok(selected.includes("ls"));
 });
+
+
+test("minimal profile falls back to bash on Windows when powershell tool is absent", () => {
+  const selected = buildMinimalToolSet(tools([
+    "read", "edit", "write", "bash", "grep", "find", "ls",
+    "execute_delegated_implementation", "delegate_implementation"
+  ]), "win32");
+
+  assert.ok(selected.includes("bash"));
+});

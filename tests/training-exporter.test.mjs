@@ -5,18 +5,18 @@ import os from "node:os";
 import path from "node:path";
 import { exportTrainingData, redactString } from "../src/training-exporter.mjs";
 
-function row({ id, passed, pathName = "src/A.cs", content = "return 2;" }) {
+function row({ id, passed, pathName = "src/A.cs", content = "return 2;", specId = specId }) {
   return {
     schema_version: 1,
     kind: "implementation_attempt",
     run_id: "run-" + id,
-    spec_id: "spec-" + id,
+    spec_id: specId,
     model: "tiny",
     attempt: 1,
     input: {
       implementation_spec: {
         version: 1,
-        spec_id: "spec-" + id,
+        spec_id: specId,
         target: { file: pathName },
         scope: { allowed_files: [pathName] }
       },
@@ -71,4 +71,27 @@ test("drops sensitive paths and exact duplicate examples", async () => {
 
 test("redacts common secret assignments", () => {
   assert.equal(redactString("token=abcdefghijk"), "[REDACTED_SECRET]");
+});
+
+
+test("builds paired preference only from identical prompts", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-export-"));
+  const input = path.join(cwd, "raw.jsonl");
+  const chosen = row({ id: "good", specId: "same", passed: true, content: "return 2;" });
+  const rejected = row({ id: "bad", specId: "same", passed: false, content: "return 3;" });
+  const differentPrompt = row({ id: "other", specId: "other", passed: false, content: "return 4;" });
+  await fs.writeFile(input, [chosen, rejected, differentPrompt].map(JSON.stringify).join("\n") + "\n", "utf8");
+
+  const result = await exportTrainingData({ cwd, inputFile: input });
+  assert.equal(result.paired_preference_examples, 1);
+
+  const lines = (await fs.readFile(
+    path.join(cwd, ".pi/offline-engine/training/export/paired-preference.jsonl"),
+    "utf8"
+  )).trim().split("\n").filter(Boolean).map(JSON.parse);
+
+  assert.equal(lines.length, 1);
+  assert.match(lines[0].chosen, /return 2/);
+  assert.match(lines[0].rejected, /return 3/);
+  assert.doesNotMatch(lines[0].rejected, /return 4/);
 });

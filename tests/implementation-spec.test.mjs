@@ -9,7 +9,7 @@ const spec = {
   goal: { summary: "Propagate cancellation into delay" },
   target: { file: "src/RetryPolicy.cs", symbol: "RetryPolicy.ExecuteAsync" },
   requirements: ["Pass cancellation token to Task.Delay"],
-  scope: { allowed_files: ["src/RetryPolicy.cs"], allow_new_files: false },
+  scope: {\n    allowed_files: ["src/RetryPolicy.cs"],\n    allow_new_files: false,\n    allow_dependencies: false,\n    allow_public_api_change: false\n  },
   verification: {
     build: { project: "src/App.csproj" },
     tests: { project: "tests/App.Tests.csproj", names: ["RetryPolicyTests.Cancellation"] }

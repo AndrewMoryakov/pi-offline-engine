@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { exportTrainingData, redactString } from "../src/training-exporter.mjs";
 
-function row({ id, passed, pathName = "src/A.cs", content = "return 2;", specId = specId }) {
+function row({ id, passed, pathName = "src/A.cs", content = "return 2;", specId = "spec-" + id }) {
   return {
     schema_version: 1,
     kind: "implementation_attempt",

@@ -167,3 +167,26 @@ Restore the previous tool set with:
 ```text
 /offline-tools restore
 ```
+
+
+## Tool-result compaction
+
+Large `dotnet build` and `dotnet test` shell outputs are compacted before they enter the model context.
+
+The full output is preserved under:
+
+```text
+.pi/offline-engine/tool-results/
+```
+
+The model receives selected compiler/test diagnostics, a small tail when no diagnostics are found, and the artifact path.
+
+Compaction is enabled by default only for large dotnet build/test results. Control it with:
+
+```text
+/offline-compact on
+/offline-compact off
+/offline-compact status
+```
+
+or set `PI_OFFLINE_COMPACT_TOOL_RESULTS=0` before starting Pi.

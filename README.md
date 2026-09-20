@@ -230,3 +230,14 @@ After reviewing the package sources, apply it with:
 ```bash
 node ./scripts/bootstrap-offline-profile.mjs --apply
 ```
+
+
+## Canonical local gate
+
+GitHub Actions is informational only for this project. The canonical release-candidate check is:
+
+```bash
+npm run gate:local
+```
+
+It is designed to run without external network access. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).

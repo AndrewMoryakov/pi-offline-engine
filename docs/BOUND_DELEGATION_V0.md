@@ -67,7 +67,7 @@ v1 accepts:
 
 Pi constructs the commands itself. The model cannot inject an arbitrary verification shell command.
 
-Checks run with `--no-restore` for offline safety. Full stdout/stderr is stored under `.pi/offline-engine/artifacts/`; only compact diagnostics are sent back through model context.
+Checks run with `--no-restore` for offline safety. Test verification also requires a fresh TRX result with `total > 0`; exit code 0 with zero or unknown executed tests is treated as failure. Full stdout/stderr is stored under `.pi/offline-engine/artifacts/`; only compact diagnostics are sent back through model context.
 
 ## Repair
 

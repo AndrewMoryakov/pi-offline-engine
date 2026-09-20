@@ -10,8 +10,11 @@ import { saveCandidateRecord } from "../src/candidate-store.mjs";
 import { applyCandidate } from "../src/apply-candidate.mjs";
 import { runVerification } from "../src/verification.mjs";
 import { buildRepairPacket } from "../src/repair-packet.mjs";
+import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs";
+import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 
 export default function offlineEngine(pi: ExtensionAPI) {
+  let savedActiveTools: string[] | null = null;
   pi.registerTool({
     name: "delegate_implementation",
     label: "Delegate implementation",
@@ -223,6 +226,45 @@ export default function offlineEngine(pi: ExtensionAPI) {
         }],
         details: { success: false, escalated: true, attempts, verification: lastVerification }
       };
+    }
+  });
+
+  pi.registerCommand("offline-doctor", {
+    description: "Check local offline readiness",
+    handler: async (_args, ctx) => {
+      const report = await runOfflineDoctor({
+        cwd: ctx.cwd,
+        endpoint: tinyEndpoint(),
+        model: tinyModel(),
+        tools: pi.getAllTools(),
+        exec: (command, args, options) => pi.exec(command, args, options)
+      });
+      ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");
+    }
+  });
+
+  pi.registerCommand("offline-tools", {
+    description: "Use /offline-tools minimal|restore|status to control the local-model tool surface",
+    handler: async (args, ctx) => {
+      const mode = String(args ?? "").trim().toLowerCase() || "status";
+      if (mode === "minimal") {
+        if (!savedActiveTools) savedActiveTools = pi.getActiveTools();
+        const minimal = buildMinimalToolSet(pi.getAllTools());
+        pi.setActiveTools(minimal);
+        ctx.ui.notify(`Offline minimal tools enabled (${minimal.length}): ${minimal.join(", ")}`, "info");
+        return;
+      }
+      if (mode === "restore") {
+        if (!savedActiveTools) {
+          ctx.ui.notify("No saved tool set to restore.", "warning");
+          return;
+        }
+        pi.setActiveTools(savedActiveTools);
+        ctx.ui.notify(`Restored ${savedActiveTools.length} tools.`, "info");
+        savedActiveTools = null;
+        return;
+      }
+      ctx.ui.notify(`Active tools (${pi.getActiveTools().length}): ${pi.getActiveTools().join(", ")}`, "info");
     }
   });
 

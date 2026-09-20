@@ -84,6 +84,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
 
       try {
         const result = await callTinyImplementer({ endpoint, model, spec: params.spec, context: params.context ?? {}, signal });
+        stage = "candidate_validation";
         const candidateCheck = validateCandidate(result.candidate, params.spec);
         await appendEvent(ctx.cwd, {
           type: "tiny_finished",
@@ -270,11 +271,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
           const message = error instanceof Error ? error.message : String(error);
           const reason = stage === "tiny_call"
             ? "tiny_transport_failure"
-            : stage === "verification"
-              ? "verification_execution_failure"
-              : stage === "apply"
-                ? "candidate_apply_failure"
-                : "delegated_runtime_failure";
+            : stage === "candidate_validation"
+              ? "tiny_invalid_candidate"
+              : stage === "verification"
+                ? "verification_execution_failure"
+                : stage === "apply"
+                  ? "candidate_apply_failure"
+                  : "delegated_runtime_failure";
 
           await appendEvent(ctx.cwd, {
             type: "delegated_implementation_runtime_failure",

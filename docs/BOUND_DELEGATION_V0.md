@@ -101,3 +101,8 @@ Candidate records include generated patch content for local inspection. The even
 ## Known boundary
 
 If verification remains red after the final TinyCoder attempt, the last bounded candidate remains in the workspace and control returns to the main model. v0 does not attempt autonomous git rollback or crash-safe transactional recovery; those are separate reliability features rather than hidden behavior.
+
+
+## Companion-tool mutation policy
+
+In the recommended offline profile, the `code` tool is read-only for orchestration/search/filtering. Its bridged `bash/edit/write` calls construct Pi built-ins directly and can bypass top-level edit/LSP overrides. Mutations should use the active top-level edit/write tools or `execute_delegated_implementation`.

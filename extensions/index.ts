@@ -18,11 +18,11 @@ import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from ".
 import { buildRuntimeFailureOutcome, buildTinyTerminalOutcome } from "../src/delegation-state.mjs";
 import { addPiUsage, toPiUsage } from "../src/pi-usage.mjs";
 import {
-  appendTrainingRecord,
   createTrainingRunId,
   hasSensitiveTrainingPath,
   makeImplementationAttemptRecord,
   makeInfrastructureFailureRecord,
+  safeAppendTrainingRecord,
   trainingCaptureStatus
 } from "../src/training-recorder.mjs";
 import { exportTrainingData } from "../src/training-exporter.mjs";
@@ -218,7 +218,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           ...outcome
         });
         if (trainingRunId) {
-          await appendTrainingRecord(ctx.cwd, makeInfrastructureFailureRecord({
+          await captureTrainingRecord(ctx.cwd, makeInfrastructureFailureRecord({
             runId: trainingRunId,
             spec: params.spec,
             attempt: 0,
@@ -279,7 +279,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
 
         if (!candidateCheck.ok) {
           if (trainingRunId) {
-            await appendTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
+            await captureTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
               runId: trainingRunId,
               model,
               attempt,
@@ -298,7 +298,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
 
         if (result.candidate.status !== "candidate") {
           if (trainingRunId) {
-            await appendTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
+            await captureTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
               runId: trainingRunId,
               model,
               attempt,
@@ -373,7 +373,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         lastVerification = verification;
 
         if (trainingRunId) {
-          await appendTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
+          await captureTrainingRecord(ctx.cwd, makeImplementationAttemptRecord({
             runId: trainingRunId,
             model,
             attempt,
@@ -446,7 +446,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
             ...outcome
           });
           if (trainingRunId && stage !== "candidate_validation") {
-            await appendTrainingRecord(ctx.cwd, makeInfrastructureFailureRecord({
+            await captureTrainingRecord(ctx.cwd, makeInfrastructureFailureRecord({
               runId: trainingRunId,
               spec: params.spec,
               attempt,
@@ -764,4 +764,20 @@ async function withMutationQueues<T>(paths: string[], fn: () => Promise<T>): Pro
     wrapped = () => withFileMutationQueue(target, next);
   }
   return wrapped();
+}
+
+
+async function captureTrainingRecord(cwd: string, record: any) {
+  const result = await safeAppendTrainingRecord(cwd, record);
+  if (!result.ok) {
+    try {
+      await appendEvent(cwd, {
+        type: "training_capture_failed",
+        error: result.error
+      });
+    } catch {
+      // Training capture and its telemetry must never affect the coding task.
+    }
+  }
+  return result;
 }

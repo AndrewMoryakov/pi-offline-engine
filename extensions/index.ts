@@ -16,6 +16,45 @@ import { compactToolResult } from "../src/tool-result-compactor.mjs";
 import { buildRepoCapsule } from "../src/repo-capsule.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
 
+const NonEmptyString = Type.String({ minLength: 1 });
+
+const VerificationSchema = Type.Object({
+  build: Type.Optional(Type.Object({
+    project: NonEmptyString
+  }, { additionalProperties: false })),
+  tests: Type.Optional(Type.Object({
+    project: NonEmptyString,
+    names: Type.Optional(Type.Array(NonEmptyString))
+  }, { additionalProperties: false }))
+}, { additionalProperties: false });
+
+const ImplementationSpecSchema = Type.Object({
+  version: Type.Literal(1),
+  spec_id: NonEmptyString,
+  operation: Type.Literal("modify_symbol"),
+  goal: Type.Object({
+    summary: NonEmptyString
+  }, { additionalProperties: false }),
+  target: Type.Object({
+    file: NonEmptyString,
+    symbol: NonEmptyString
+  }, { additionalProperties: false }),
+  requirements: Type.Array(NonEmptyString, { minItems: 1 }),
+  preserve: Type.Optional(Type.Array(NonEmptyString)),
+  scope: Type.Object({
+    allowed_files: Type.Array(NonEmptyString, { minItems: 1, maxItems: 2 }),
+    allow_new_files: Type.Boolean(),
+    allow_dependencies: Type.Boolean(),
+    allow_public_api_change: Type.Boolean()
+  }, { additionalProperties: false }),
+  verification: VerificationSchema
+}, { additionalProperties: false });
+
+const DelegationParametersSchema = Type.Object({
+  spec: ImplementationSpecSchema,
+  context: Type.Optional(Type.Object({}, { additionalProperties: true }))
+}, { additionalProperties: false });
+
 export default function offlineEngine(pi: ExtensionAPI) {
   let savedActiveTools: string[] | null = null;
   let compactToolResults = process.env.PI_OFFLINE_COMPACT_TOOL_RESULTS !== "0";
@@ -31,10 +70,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
       "Include exact source snippets in delegate_implementation context when the tiny model needs to produce replace_text edits.",
       "Do not delegate architecture decisions, ambiguous work, or broad repository exploration."
     ],
-    parameters: Type.Object({
-      spec: Type.Object({}, { additionalProperties: true }),
-      context: Type.Optional(Type.Object({}, { additionalProperties: true }))
-    }),
+    parameters: DelegationParametersSchema,
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const checked = validateImplementationSpec(params.spec);
       if (!checked.ok) {
@@ -90,14 +126,11 @@ export default function offlineEngine(pi: ExtensionAPI) {
     description: "Run a bounded local TinyCoder implementation loop: candidate, guarded apply, dotnet verification, and up to two cheap repair attempts before returning control.",
     promptSnippet: "Execute a strict ImplementationSpec through the local tiny coding model and deterministic verification",
     promptGuidelines: [
-      "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
+      "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",\n      "A verification_passed result is compiler/test evidence, not authority that the user task is semantically complete.",
       "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
       "Provide exact relevant source snippets in context; the tiny model is not a repository explorer."
     ],
-    parameters: Type.Object({
-      spec: Type.Object({}, { additionalProperties: true }),
-      context: Type.Optional(Type.Object({}, { additionalProperties: true }))
-    }),
+    parameters: DelegationParametersSchema,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const checked = validateImplementationSpec(params.spec);
       if (!checked.ok) throw new Error(`ImplementationSpec rejected: ${checked.errors.join("; ")}`);
@@ -128,14 +161,19 @@ export default function offlineEngine(pi: ExtensionAPI) {
 
       let repairPacket = null;
       let lastVerification = null;
+      let workspaceModified = false;
+      let stage = "not_started";
       const attempts = [];
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
         onUpdate?.({ content: [{ type: "text", text: `Tiny implementation attempt ${attempt}/${maxAttempts}...` }], details: { attempt, maxAttempts } });
 
+        stage = "snapshot";
         const snapshot = await snapshotAllowedFiles(ctx.cwd, params.spec);
         await appendEvent(ctx.cwd, { type: "tiny_started", specId: params.spec.spec_id, model, endpoint, attempt, mode: "execute" });
 
+        stage = "tiny_call";
         const result = await callTinyImplementer({
           endpoint,
           model,
@@ -168,11 +206,14 @@ export default function offlineEngine(pi: ExtensionAPI) {
           };
         }
 
+        stage = "candidate_record";
         const record = { spec: params.spec, candidate: result.candidate, snapshot, attempt, model, usage: result.usage };
         const candidateRecord = await saveCandidateRecord(ctx.cwd, record);
         const targetPaths = uniqueAbsolutePaths(ctx.cwd, result.candidate);
 
+        stage = "apply";
         const applied = await withMutationQueues(targetPaths, () => applyCandidate(ctx.cwd, record));
+        workspaceModified = true;
         await appendEvent(ctx.cwd, {
           type: "candidate_applied",
           specId: params.spec.spec_id,
@@ -182,6 +223,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           candidateRecord
         });
 
+        stage = "verification";
         const verification = await runVerification({
           cwd: ctx.cwd,
           spec: params.spec,
@@ -210,13 +252,63 @@ export default function offlineEngine(pi: ExtensionAPI) {
         if (verification.passed) {
           await appendEvent(ctx.cwd, { type: "delegated_implementation_succeeded", specId: params.spec.spec_id, attempt });
           return {
-            content: [{ type: "text", text: JSON.stringify({ status: "verified", attempt, changedFiles: applied.changedFiles, verification }, null, 2) }],
-            details: { success: true, attempt, attempts, verification }
+            content: [{ type: "text", text: JSON.stringify({
+              status: "verification_passed",
+              task_complete: false,
+              note: "Compiler/test verification passed; the main reasoner still owns semantic completion.",
+              attempt,
+              changedFiles: applied.changedFiles,
+              verification
+            }, null, 2) }],
+            details: { success: true, taskComplete: false, attempt, attempts, verification }
           };
         }
 
         repairPacket = buildRepairPacket({ spec: params.spec, attempt, candidate: result.candidate, verification });
         await appendEvent(ctx.cwd, { type: "repair_packet_created", specId: params.spec.spec_id, attempt, diagnostics: repairPacket.verification.diagnostics.length });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          const reason = stage === "tiny_call"
+            ? "tiny_transport_failure"
+            : stage === "verification"
+              ? "verification_execution_failure"
+              : stage === "apply"
+                ? "candidate_apply_failure"
+                : "delegated_runtime_failure";
+
+          await appendEvent(ctx.cwd, {
+            type: "delegated_implementation_runtime_failure",
+            specId: params.spec.spec_id,
+            attempt,
+            stage,
+            reason,
+            workspaceModified,
+            error: message
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                status: "needs_main_model",
+                reason,
+                stage,
+                workspace_modified: workspaceModified,
+                error: message,
+                attempts
+              }, null, 2)
+            }],
+            details: {
+              success: false,
+              escalated: true,
+              reason,
+              stage,
+              workspaceModified,
+              error: message,
+              attempts
+            }
+          };
+        }
       }
 
       await appendEvent(ctx.cwd, { type: "delegated_implementation_escalated", specId: params.spec.spec_id, attempts: maxAttempts });
@@ -225,12 +317,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
           type: "text",
           text: JSON.stringify({
             status: "needs_main_model",
-            reason: "tiny implementation attempts exhausted",
+            reason: "tiny_implementation_attempts_exhausted",
+            workspace_modified: workspaceModified,
             attempts: maxAttempts,
             verification: lastVerification
           }, null, 2)
         }],
-        details: { success: false, escalated: true, attempts, verification: lastVerification }
+        details: { success: false, escalated: true, workspaceModified, attempts, verification: lastVerification }
       };
     }
   });

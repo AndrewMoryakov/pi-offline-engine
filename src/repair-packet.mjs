@@ -18,7 +18,13 @@ export function buildRepairPacket({ spec, attempt, candidate, verification }) {
         passed: check.passed,
         code: check.code,
         killed: check.killed,
-        artifact: check.artifact
+        artifact: check.artifact,
+        resultArtifact: check.resultArtifact,
+        runner: check.runner,
+        testPattern: check.testPattern,
+        expectedTestPatterns: check.expectedTestPatterns,
+        testCount: check.testCount,
+        executedTestCount: check.executedTestCount
       }))
     },
     instruction: "Repair only the bounded implementation. Do not expand scope. The previous change content is the current failed source state where it was applied. Use the current source state as the new preimage."

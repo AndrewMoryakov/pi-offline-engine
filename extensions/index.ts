@@ -16,6 +16,7 @@ import { compactToolResult } from "../src/tool-result-compactor.mjs";
 import { buildRepoCapsule } from "../src/repo-capsule.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
 import { buildRuntimeFailureOutcome, buildTinyTerminalOutcome } from "../src/delegation-state.mjs";
+import { addPiUsage, toPiUsage } from "../src/pi-usage.mjs";
 
 const NonEmptyString = Type.String({ minLength: 1 });
 
@@ -101,7 +102,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
         if (!candidateCheck.ok) {
           return {
             content: [{ type: "text", text: `Tiny implementer returned an invalid candidate: ${candidateCheck.errors.join("; ")}` }],
-            details: { accepted: false, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs, errors: candidateCheck.errors }
+            details: { accepted: false, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs, errors: candidateCheck.errors },
+            usage: toPiUsage(result.usage)
           };
         }
 
@@ -111,7 +113,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
 
         return {
           content: [{ type: "text", text: JSON.stringify(result.candidate, null, 2) }],
-          details: { accepted: true, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs }
+          details: { accepted: true, candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs },
+          usage: toPiUsage(result.usage)
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -168,6 +171,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
       let stage = "not_started";
       const attempts = [];
       const cumulativeChangedFiles = new Set<string>();
+      let nestedUsage: any = undefined;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         try {
@@ -187,6 +191,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           signal
         });
 
+        nestedUsage = addPiUsage(nestedUsage, toPiUsage(result.usage));
         stage = "candidate_validation";
         const candidateCheck = validateCandidate(result.candidate, params.spec);
         await appendEvent(ctx.cwd, {
@@ -231,7 +236,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
               usage: result.usage,
               workspaceModified: outcome.workspace_modified,
               changedFiles: outcome.changed_files
-            }
+            },
+            usage: nestedUsage
           };
         }
 
@@ -297,7 +303,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
               attempts,
               changedFiles: [...cumulativeChangedFiles].sort(),
               verification
-            }
+            },
+            usage: nestedUsage
           };
         }
 
@@ -332,7 +339,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
               changedFiles: outcome.changed_files,
               error: outcome.error,
               attempts
-            }
+            },
+            usage: nestedUsage
           };
         }
       }
@@ -357,7 +365,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
           changedFiles: [...cumulativeChangedFiles].sort(),
           attempts,
           verification: lastVerification
-        }
+        },
+        usage: nestedUsage
       };
     }
   });

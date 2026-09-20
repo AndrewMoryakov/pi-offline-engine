@@ -58,7 +58,7 @@ After the local gate passes:
 
 1. start the real TinyCoder llama.cpp endpoint;
 2. start Pi with this extension;
-3. run `/offline-doctor`;
+3. run `/offline-doctor` and resolve any MTP/TRX warning before disconnecting;
 4. switch to `/offline-tools minimal`;
 5. disconnect the network;
 6. perform one bounded C# task through `execute_delegated_implementation`;

@@ -690,6 +690,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
             "Training export complete.",
             `SFT: ${result.sft_examples}`,
             `Unpaired preference: ${result.preference_examples}`,
+            `Paired preference: ${result.paired_preference_examples}`,
             `Eval: ${result.eval_examples}`,
             `Dropped sensitive/duplicate/incomplete: ${result.dropped_sensitive}/${result.dropped_duplicate}/${result.dropped_incomplete}`,
             `Manifest: ${result.manifest}`

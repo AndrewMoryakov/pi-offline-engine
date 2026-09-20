@@ -12,9 +12,11 @@ import { runVerification } from "../src/verification.mjs";
 import { buildRepairPacket } from "../src/repair-packet.mjs";
 import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
+import { compactToolResult } from "../src/tool-result-compactor.mjs";
 
 export default function offlineEngine(pi: ExtensionAPI) {
   let savedActiveTools: string[] | null = null;
+  let compactToolResults = process.env.PI_OFFLINE_COMPACT_TOOL_RESULTS !== "0";
   pi.registerTool({
     name: "delegate_implementation",
     label: "Delegate implementation",
@@ -226,6 +228,42 @@ export default function offlineEngine(pi: ExtensionAPI) {
         }],
         details: { success: false, escalated: true, attempts, verification: lastVerification }
       };
+    }
+  });
+
+  pi.on("tool_result", async (event, ctx) => {
+    if (!compactToolResults) return;
+    const compacted = await compactToolResult({
+      cwd: ctx.cwd,
+      toolName: event.toolName,
+      toolCallId: event.toolCallId,
+      input: event.input,
+      content: event.content
+    });
+    if (!compacted) return;
+
+    await appendEvent(ctx.cwd, {
+      type: "tool_result_compacted",
+      toolCallId: event.toolCallId,
+      toolName: event.toolName,
+      artifact: compacted.artifact,
+      originalChars: compacted.originalChars,
+      originalLines: compacted.originalLines
+    });
+    return { content: compacted.content };
+  });
+
+  pi.registerCommand("offline-compact", {
+    description: "Use /offline-compact on|off|status for deterministic dotnet output compaction",
+    handler: async (args, ctx) => {
+      const mode = String(args ?? "").trim().toLowerCase() || "status";
+      if (mode === "on") compactToolResults = true;
+      else if (mode === "off") compactToolResults = false;
+      else if (mode !== "status") {
+        ctx.ui.notify("Usage: /offline-compact on|off|status", "warning");
+        return;
+      }
+      ctx.ui.notify(`Dotnet tool-result compaction: ${compactToolResults ? "on" : "off"}`, "info");
     }
   });
 

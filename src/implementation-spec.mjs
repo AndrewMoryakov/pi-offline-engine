@@ -1,6 +1,7 @@
 import path from "node:path";
 
 const ALLOWED_OPERATIONS = new Set(["replace_text", "create_file"]);
+const ALLOWED_SPEC_OPERATIONS = new Set(["modify_symbol"]);
 const ALLOWED_STATUSES = new Set(["candidate", "insufficient_spec", "cannot_safely_implement"]);
 
 export function validateImplementationSpec(spec) {
@@ -8,7 +9,7 @@ export function validateImplementationSpec(spec) {
   if (!spec || typeof spec !== "object" || Array.isArray(spec)) return { ok: false, errors: ["spec must be an object"] };
   if (spec.version !== 1) errors.push("version must be 1");
   if (!isNonEmpty(spec.spec_id)) errors.push("spec_id is required");
-  if (!isNonEmpty(spec.operation)) errors.push("operation is required");
+  if (!ALLOWED_SPEC_OPERATIONS.has(spec.operation)) errors.push("operation must be modify_symbol in v1");
   if (!spec.target || !isSafeRelativePath(spec.target.file)) errors.push("target.file must be a safe relative path");
   if (!isNonEmpty(spec.target?.symbol)) errors.push("target.symbol is required");
   if (!isNonEmpty(spec.goal?.summary)) errors.push("goal.summary is required");

@@ -520,11 +520,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
   pi.registerCommand("offline-doctor", {
     description: "Check local offline readiness",
     handler: async (_args, ctx) => {
+      const activeNames = new Set(pi.getActiveTools());
+      const activeTools = pi.getAllTools().filter((tool) => activeNames.has(tool.name));
       const report = await runOfflineDoctor({
         cwd: ctx.cwd,
         endpoint: tinyEndpoint(),
         model: tinyModel(),
-        tools: pi.getAllTools(),
+        tools: activeTools,
         exec: (command, args, options) => pi.exec(command, args, options)
       });
       ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");

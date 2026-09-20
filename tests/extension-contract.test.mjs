@@ -18,5 +18,5 @@ test("mechanical verification is not presented as semantic task completion", () 
 });
 
 test("tool guidelines contain no accidental literal newline escape between array items", () => {
-  assert.doesNotMatch(source, /decided\.",\\n\s+"\"A verification_passed/);
+  assert.equal(source.includes('decided.",\\n      "A verification_passed'), false);
 });

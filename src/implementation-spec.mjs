@@ -33,6 +33,14 @@ export function validateImplementationSpec(spec) {
     errors.push("requirements must be a non-empty array of strings");
   }
 
+  if (spec.preserve !== undefined && (!Array.isArray(spec.preserve) || spec.preserve.some((x) => !isNonEmpty(x)))) {
+    errors.push("preserve must be an array of non-empty strings when provided");
+  }
+
+  for (const field of ["allow_new_files", "allow_dependencies", "allow_public_api_change"]) {
+    if (typeof spec.scope?.[field] !== "boolean") errors.push(`scope.${field} must be boolean`);
+  }
+
   validateVerification(spec.verification, errors);
   return { ok: errors.length === 0, errors };
 }

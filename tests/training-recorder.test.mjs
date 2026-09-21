@@ -61,3 +61,26 @@ test("best-effort append returns an error instead of throwing into the coding pa
   assert.equal(result.ok, false);
   assert.equal(typeof result.error, "string");
 });
+
+
+test("candidate paths are included in sensitive-path detection", () => {
+  const spec = {
+    target: { file: "src/A.cs" },
+    scope: { allowed_files: ["src/A.cs"] }
+  };
+  assert.equal(hasSensitiveTrainingPath(spec, {
+    status: "candidate",
+    changes: [{ path: ".env", operation: "create_file", content: "x" }]
+  }), true);
+});
+
+test("best-effort raw capture skips a sensitive candidate path", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-training-sensitive-"));
+  const result = await safeAppendTrainingRecord(cwd, {
+    input: { implementation_spec: { target: { file: "src/A.cs" }, scope: { allowed_files: ["src/A.cs"] } } },
+    output: { candidate: { changes: [{ path: "keys/private.pem" }] } }
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.skipped, true);
+  assert.equal(result.error, "sensitive_path");
+});

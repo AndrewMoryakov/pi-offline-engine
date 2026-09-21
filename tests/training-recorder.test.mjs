@@ -84,3 +84,17 @@ test("best-effort raw capture skips a sensitive candidate path", async () => {
   assert.equal(result.skipped, true);
   assert.equal(result.error, "sensitive_path");
 });
+
+
+test("blocks candidate-introduced secret-bearing paths", () => {
+  assert.equal(hasSensitiveTrainingPath(
+    {
+      target: { file: "src/A.cs" },
+      scope: { allowed_files: ["src/A.cs"] }
+    },
+    {
+      status: "candidate",
+      changes: [{ path: ".env", operation: "create_file", content: "x" }]
+    }
+  ), true);
+});

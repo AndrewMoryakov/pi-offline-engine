@@ -1,12 +1,13 @@
-export function canRetryModelOutput({ attempt, maxAttempts, workspaceModified }) {
-  return !workspaceModified && attempt < maxAttempts;
+export function canRetryModelOutput({ attempt, maxAttempts }) {
+  return attempt < maxAttempts;
 }
 
 export function buildModelOutputRepairPacket({
   attempt,
   candidate = null,
   validationErrors = [],
-  error = null
+  error = null,
+  priorRepairPacket = null
 }) {
   return {
     version: 1,
@@ -15,6 +16,7 @@ export function buildModelOutputRepairPacket({
     previous_candidate: candidate,
     validation_errors: validationErrors,
     error: error ? String(error) : null,
+    prior_repair_packet: priorRepairPacket,
     instruction: [
       "Return a corrected bounded implementation response.",
       "Do not expand scope or redesign the task.",

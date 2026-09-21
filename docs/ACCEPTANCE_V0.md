@@ -37,7 +37,7 @@ Change into the printed fixture directory and run:
 
 ```bash
 dotnet build src/Acceptance.Core/Acceptance.Core.csproj --no-restore
-dotnet test tests/Acceptance.Tests/Acceptance.Tests.csproj --no-restore
+dotnet test --project tests/Acceptance.Tests/Acceptance.Tests.csproj --no-restore
 ```
 
 Expected:
@@ -93,7 +93,7 @@ And from the shell:
 ```bash
 git status --short
 git diff
-dotnet test tests/Acceptance.Tests/Acceptance.Tests.csproj --no-restore
+dotnet test --project tests/Acceptance.Tests/Acceptance.Tests.csproj --no-restore
 ```
 
 Record:

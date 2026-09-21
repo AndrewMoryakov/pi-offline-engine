@@ -1,4 +1,4 @@
-name: contract-ci
+name: release-gates
 
 on:
   pull_request:
@@ -8,16 +8,22 @@ on:
       - "feat/**"
 
 jobs:
-  test:
+  test-and-integrate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-      - name: Unit tests
-        run: node --test
-      - name: Runtime syntax
-        run: npm run check
-      - name: Extension TypeScript syntax
-        run: node --experimental-strip-types --check extensions/index.ts
+          node-version: "22.19.0"
+          cache: npm
+      - name: Install the locked development and production tree
+        run: npm ci
+      - name: Local contract gate
+        run: npm run gate:local
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Load through the pinned Pi runtime
+        run: npm run gate:pi
+      - name: Verify isolated Pi package installation and companion extensions
+        run: npm run gate:install -- --package-dir .

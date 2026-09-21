@@ -1,9 +1,12 @@
 {
   "name": "pi-offline-engine",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "private": true,
   "type": "module",
   "description": "Offline-first Pi extension for bounded local coding delegation.",
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "keywords": [
     "pi-package"
   ],
@@ -30,11 +33,15 @@
     "pi-lsp-extension"
   ],
   "overrides": {
+    "sharp": "0.35.4",
     "vscode-languageserver-protocol": "3.17.5"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.86.1"
   },
   "pi": {
     "extensions": [

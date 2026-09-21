@@ -108,7 +108,9 @@ test("VSTest runs every declared pattern independently and requires execution ev
   assert.equal(result.passed, true);
   assert.equal(calls.length, 4); // build + runner help + 2 targeted test runs
   assert.equal(calls[0][1][0], "build");
-  assert.deepEqual(calls[1][1], ["test", "--help"]);
+  assert.deepEqual(calls[1][1].slice(0, 3), ["test", "--help", "--project"]);
+  assert.equal(path.basename(calls[1][1][3]), "App.Tests.csproj");
+  assert.equal(path.basename(path.dirname(calls[1][1][3])), "tests");
   assert.equal(calls[2][1][0], "test");
   assert.equal(calls[3][1][0], "test");
   assert.ok(calls[2][1].includes("--filter"));
@@ -144,9 +146,12 @@ test("MTP uses report-trx and validates every expected identity from one execute
   assert.ok(testArgs.includes("--project"));
   assert.ok(testArgs.includes("--report-trx"));
   assert.ok(testArgs.includes("--report-trx-filename"));
-  assert.ok(testArgs.includes("--"));
+  assert.equal(testArgs.includes("--"), false);
   assert.equal(testArgs.includes("--logger"), false);
   assert.equal(testArgs.includes("--filter"), false);
+  assert.equal(testArgs.includes("--nologo"), false);
+  assert.equal(testArgs.includes("--no-logo"), false);
+  assert.equal(testArgs.some((arg) => String(arg).startsWith("--verbosity")), false);
   assert.equal(result.checks[1].runner, "mtp");
   assert.equal(result.checks[1].executedTestCount, 2);
 });

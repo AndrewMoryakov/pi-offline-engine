@@ -48,7 +48,7 @@ test("doctor fails required readiness when tiny endpoint is unavailable", async 
 });
 
 
-test("warns when MTP lacks the TRX report extension", async () => {
+test("defers MTP TRX reporting checks to the declared project preflight", async () => {
   const fetchFn = async (url) => {
     const pathname = new URL(url).pathname;
     if (pathname === "/health") return { ok: true, async json() { return {}; } };
@@ -76,8 +76,8 @@ test("warns when MTP lacks the TRX report extension", async () => {
   });
 
   assert.equal(report.ready, true);
-  assert.ok(report.warnings.includes("dotnet_test_runner"));
-  assert.match(formatDoctorReport(report), /Microsoft\.Testing\.Extensions\.TrxReport/);
+  assert.equal(report.warnings.includes("dotnet_test_runner"), false);
+  assert.match(formatDoctorReport(report), /verified against the declared test project/);
 });
 
 

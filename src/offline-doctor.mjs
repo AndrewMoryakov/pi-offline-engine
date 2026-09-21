@@ -253,11 +253,15 @@ async function checkDotnetTestCapabilities({ exec, cwd, timeoutMs }) {
     return {
       id: "dotnet_test_runner",
       required: false,
-      ok: hasTrx,
-      status: hasTrx ? "ok" : "warn",
+      // MTP extensions are project-scoped. Generic help at the repository root
+      // may omit --report-trx even when the declared test project provides it.
+      // The mutating tool performs a required, project-qualified preflight and
+      // fails closed before calling TinyCoder if TRX is really unavailable.
+      ok: true,
+      status: "ok",
       message: hasTrx
         ? "Microsoft.Testing.Platform mode detected; TRX reporter is available"
-        : "Microsoft.Testing.Platform mode detected, but --report-trx is not advertised; test verification needs Microsoft.Testing.Extensions.TrxReport restored before going offline"
+        : "Microsoft.Testing.Platform mode detected; TRX reporter will be verified against the declared test project before delegation"
     };
   } catch (error) {
     return {

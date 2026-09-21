@@ -21,7 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { commandNames, extensionErrors, notifications, runPiRpc, runPiSync, shellArg } from "./lib/pi-rpc.mjs";
+import { commandInvocation, commandNames, extensionErrors, notifications, runPiRpc, runPiSync } from "./lib/pi-rpc.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const isWindows = process.platform === "win32";
@@ -160,9 +160,9 @@ function isolatedEnv(agentDir) {
 function runLogged(command, args, cwd, logFile) {
   return new Promise((resolve) => {
     const out = fs.openSync(logFile, "w");
-    const child = spawn(command, isWindows ? args.map(shellArg) : args, {
+    const invocation = commandInvocation(command, args);
+    const child = spawn(invocation.command, invocation.args, {
       cwd,
-      shell: isWindows,
       stdio: ["ignore", out, out]
     });
     child.on("error", (error) => {

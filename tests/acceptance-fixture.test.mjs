@@ -10,10 +10,15 @@ import { fileURLToPath } from "node:url";
 const implementation = await fs.readFile(new URL("../fixtures/dotnet-boundary-v0/src/Acceptance.Core/LoyaltyDiscount.cs", import.meta.url), "utf8");
 const tests = await fs.readFile(new URL("../fixtures/dotnet-boundary-v0/tests/Acceptance.Tests/LoyaltyDiscountTests.cs", import.meta.url), "utf8");
 const task = await fs.readFile(new URL("../fixtures/dotnet-boundary-v0/ACCEPTANCE_TASK.md", import.meta.url), "utf8");
+const globalJson = JSON.parse(await fs.readFile(new URL("../fixtures/dotnet-boundary-v0/global.json", import.meta.url), "utf8"));
 
 test("acceptance fixture keeps its intentional boundary bug", () => {
   assert.match(implementation, /total >= 100m/);
   assert.match(task, /strictly greater than 100/);
+});
+
+test("acceptance fixture opts .NET 10+ into Microsoft.Testing.Platform", () => {
+  assert.equal(globalJson.test?.runner, "Microsoft.Testing.Platform");
 });
 
 test("acceptance fixture keeps all four verification tests", () => {

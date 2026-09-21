@@ -45,15 +45,23 @@ test("optional and deferred packages stay out of the automatic install", () => {
   }
 });
 
-test("pins vscode-languageserver-protocol below its exports map", () => {
+test("pins compatibility and security-sensitive transitive dependencies", () => {
   // pi-lsp-extension@1.3.0 asks for ^3.17.5 and imports the file path
   // "vscode-languageserver-protocol/node.js". 3.18.0 added an `exports` map
   // exposing only "./node", so a fresh install resolves 3.18.x and the
-  // extension dies at load with:
-  //   Package subpath './node.js' is not defined by "exports"
-  // 3.17.5 is the last version without that map and it ships a root node.js.
-  // There is no newer pi-lsp-extension to upgrade to (1.3.0 is latest).
+  // extension dies at load. 3.17.5 is the last compatible release.
   assert.equal(manifest.overrides?.["vscode-languageserver-protocol"], "3.17.5");
+
+  // pi-knowledge -> @huggingface/transformers@3.8.1 asks for ^0.34.1,
+  // whose latest release is affected by published libvips/libheif advisories.
+  // sharp 0.35.4 contains the fixes and retains the API used by transformers.
+  assert.equal(manifest.overrides?.sharp, "0.35.4");
+});
+
+test("declares the minimum runtime and pins the Pi used by integration gates", () => {
+  assert.equal(manifest.engines?.node, ">=22.19.0");
+  assert.equal(manifest.devDependencies?.["@earendil-works/pi-coding-agent"], "0.86.1");
+  assert.equal(manifest.peerDependencies?.["@earendil-works/pi-coding-agent"], "*");
 });
 
 test("ships the resolved tree that was actually verified", () => {
@@ -63,6 +71,8 @@ test("ships the resolved tree that was actually verified", () => {
   const lock = JSON.parse(fs.readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
   assert.ok(lock.lockfileVersion >= 3);
   assert.equal(lock.packages["node_modules/vscode-languageserver-protocol"].version, "3.17.5");
+  assert.equal(lock.packages["node_modules/sharp"].version, "0.35.4");
+  assert.equal(lock.packages["node_modules/@earendil-works/pi-coding-agent"].version, "0.86.1");
   for (const [name, version] of Object.entries(manifest.dependencies)) {
     assert.equal(lock.packages[`node_modules/${name}`]?.version, version, `${name} missing or mismatched in lockfile`);
   }

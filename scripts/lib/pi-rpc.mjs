@@ -4,9 +4,9 @@ import process from "node:process";
 const isWindows = process.platform === "win32";
 
 // `pi.cmd` is a batch shim; since the CVE-2024-27980 fix Node refuses to spawn
-// .cmd/.bat without a shell (EINVAL). With `shell: true` cmd.exe re-parses the
-// command line, so every argument is quoted here and callers pass only fixed
-// literals or filesystem paths.
+// .cmd/.bat directly (EINVAL). Invoke cmd.exe explicitly rather than using
+// `shell: true`: this avoids Node's unsafe implicit argument concatenation and
+// keeps the command construction in one reviewed helper.
 export function piCommand() {
   return isWindows ? "pi.cmd" : "pi";
 }
@@ -16,9 +16,18 @@ export function shellArg(value) {
   return /[\s"&|<>^()]/.test(value) ? `"${String(value).replace(/"/g, '""')}"` : value;
 }
 
+export function commandInvocation(command, args = []) {
+  if (!isWindows) return { command, args };
+  const line = [command, ...args].map(shellArg).join(" ");
+  return {
+    command: process.env.ComSpec || "cmd.exe",
+    args: ["/d", "/s", "/c", line]
+  };
+}
+
 export function runPiSync(args, options = {}) {
-  return spawnSync(piCommand(), isWindows ? args.map(shellArg) : args, {
-    shell: isWindows,
+  const invocation = commandInvocation(piCommand(), args);
+  return spawnSync(invocation.command, invocation.args, {
     encoding: "utf8",
     ...options
   });
@@ -31,10 +40,10 @@ export function runPiSync(args, options = {}) {
 export function runPiRpc({ args = [], requests = [], until, cwd, env = process.env, timeoutMs = 120_000 }) {
   return new Promise((resolve) => {
     const fullArgs = ["--mode", "rpc", ...args];
-    const child = spawn(piCommand(), isWindows ? fullArgs.map(shellArg) : fullArgs, {
+    const invocation = commandInvocation(piCommand(), fullArgs);
+    const child = spawn(invocation.command, invocation.args, {
       cwd,
       env,
-      shell: isWindows,
       stdio: ["pipe", "pipe", "pipe"]
     });
 

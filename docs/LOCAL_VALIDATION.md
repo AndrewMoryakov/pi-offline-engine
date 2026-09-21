@@ -1,14 +1,21 @@
 # Local validation
 
-GitHub Actions is not a release gate for this project. The canonical v0 gate is local and network-independent.
+GitHub Actions runs the locked install, local contract gate, production dependency audit, pinned-Pi load gate, and isolated package install gate. The first gate remains network-independent and can be run locally at any time.
 
 ## One command
 
 From the repository root:
 
 ```bash
+npm ci
 npm run gate:local
+npm audit --omit=dev --audit-level=high
 ```
+
+`npm ci` reproduces the reviewed lockfile, including Pi 0.86.1 used by the
+integration gate and the security override for `sharp@0.35.4`. The audit is a
+release check and requires npm registry access; `gate:local` itself remains
+fully offline.
 
 The gate executes:
 
@@ -25,7 +32,9 @@ A successful run ends with:
 LOCAL GATE: PASS
 ```
 
-Then verify the extension against the actually installed Pi runtime:
+Then verify the extension against Pi. After `npm ci`, this resolves the
+repository-pinned Pi 0.86.1; outside an npm script it may use the installed Pi
+from `PATH`:
 
 ```bash
 npm run gate:pi
@@ -42,6 +51,15 @@ npm run gate:install
 ```
 
 This one needs network access and is not part of `gate:local`. It stages the working tree the way a clone would see it, runs the exact `npm install --omit=dev` pi runs for git packages (raw output goes to a log whose path is printed first; the step is deliberately not time-bounded), checks every manifest extension exists on disk, runs `pi install` into a throwaway `PI_CODING_AGENT_DIR` — your own `~/.pi` is never touched — and finally starts pi in RPC mode and runs `/offline-doctor`, requiring the tools of all four bundled companion extensions to be active. Pass `--keep` to keep the work directory, or `--package-dir <dir>` to reuse an already installed staging directory. A successful run ends with `INSTALL GATE: PASS`.
+
+CI also runs the install gate against the already locked tree:
+
+```bash
+npm run gate:install -- --package-dir .
+```
+
+This form avoids a second install while retaining the isolated Pi agent-dir
+and RPC checks.
 
 ## What this gate establishes
 

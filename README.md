@@ -36,6 +36,19 @@ One command installs the engine **and** its companion stack:
 pi install git:github.com/AndrewMoryakov/pi-offline-engine
 ```
 
+For reproducible team or travel installations, use a reviewed release tag or
+commit instead of the moving default branch:
+
+```bash
+pi install git:github.com/AndrewMoryakov/pi-offline-engine@<release-tag-or-commit>
+```
+
+This is a Git-distributed Pi package (`private: true`); it is not published to
+npm. The verified host baseline is **Pi 0.86.1** on **Node.js 22.19.0 or newer**.
+The package keeps Pi core modules as `"*"` peer dependencies, as required by
+Pi's package loader, while development and CI pin Pi 0.86.1 for reproducible
+integration tests.
+
 pi clones the repository and runs `npm install`, which brings in the four bundled companion extensions — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool`, `pi-lean-edit` — at exact pinned versions, all loaded through this package's manifest. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for what each one does and which optional packages stay opt-in. Do not `pi install` the bundled four separately; that would register duplicate tools.
 
 Then start the TinyCoder server and open pi:
@@ -288,11 +301,18 @@ node ./scripts/bootstrap-offline-profile.mjs --apply
 
 ## Canonical local gate
 
-GitHub Actions is informational only for this project. The canonical release-candidate check is:
+GitHub Actions runs the release gates on pushes and pull requests. Run the same checks locally, starting with:
 
 ```bash
+npm ci
 npm run gate:local
+npm audit --omit=dev --audit-level=high
 ```
+
+The production tree currently overrides `sharp` to the audited 0.35.4 release
+because the latest `pi-knowledge` still reaches an affected 0.34.x release
+through `@huggingface/transformers`. The lockfile and packaging tests enforce
+that override; do not remove it until the upstream dependency catches up.
 
 It is designed to run without external network access. Then run:
 

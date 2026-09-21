@@ -48,7 +48,7 @@ const lines = [
   "",
   "Then validate the intended baseline:",
   "  dotnet build src/Acceptance.Core/Acceptance.Core.csproj --no-restore",
-  "  dotnet test tests/Acceptance.Tests/Acceptance.Tests.csproj --no-restore",
+  "  dotnet test --project tests/Acceptance.Tests/Acceptance.Tests.csproj --no-restore",
   "",
   "Open Pi from this directory and use ACCEPTANCE_TASK.md.",
   ""

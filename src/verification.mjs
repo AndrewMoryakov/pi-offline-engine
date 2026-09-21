@@ -39,6 +39,7 @@ export async function runVerification({
     const project = await resolveVerificationProject(root, spec.verification.tests.project);
     const testCapabilities = preflight?.testCapabilities ?? await inspectDotnetTestRunner({
       cwd: root,
+      project,
       exec,
       signal,
       timeoutMs: Math.min(timeoutMs, RUNNER_DETECTION_TIMEOUT_MS)
@@ -155,11 +156,8 @@ async function runMtpTests({
     "--project",
     project,
     "--no-restore",
-    "--nologo",
-    "--verbosity:minimal",
     "--results-directory",
     testRun.directory,
-    "--",
     "--report-trx",
     "--report-trx-filename",
     testRun.fileName
@@ -234,9 +232,10 @@ export async function preflightVerificationInfrastructure({
 
   let testCapabilities = null;
   if (spec.verification.tests) {
-    await resolveVerificationProject(root, spec.verification.tests.project);
+    const project = await resolveVerificationProject(root, spec.verification.tests.project);
     testCapabilities = await inspectDotnetTestRunner({
       cwd: root,
+      project,
       exec,
       signal,
       timeoutMs: Math.min(timeoutMs, RUNNER_DETECTION_TIMEOUT_MS)
@@ -253,8 +252,13 @@ export async function preflightVerificationInfrastructure({
   return { root, testCapabilities };
 }
 
-export async function inspectDotnetTestRunner({ cwd, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {
-  const help = await exec("dotnet", ["test", "--help"], { cwd, signal, timeout: timeoutMs });
+export async function inspectDotnetTestRunner({ cwd, project = null, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {
+  // MTP extensions (including TRX reporting) are contributed by the test
+  // project. Asking for generic help at a repository root detects MTP itself
+  // but omits those project-scoped options and causes a false preflight
+  // failure. VSTest accepts the project-qualified help shape as well.
+  const args = project ? ["test", "--help", "--project", project] : ["test", "--help"];
+  const help = await exec("dotnet", args, { cwd, signal, timeout: timeoutMs });
   if (help.code !== 0 || help.killed === true) {
     throw new Error(`unable to detect dotnet test runner (exit ${String(help.code)})`);
   }

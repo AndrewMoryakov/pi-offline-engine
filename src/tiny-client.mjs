@@ -1,4 +1,4 @@
-const DEFAULT_TIMEOUT_MS = 120_000;
+import { resolveEndpointUrl } from "./endpoint-url.mjs";\n\nconst DEFAULT_TIMEOUT_MS = 120_000;
 
 const CANDIDATE_JSON_SCHEMA = {
   type: "object",
@@ -35,7 +35,8 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error("tiny implementer timeout")), timeoutMs);
   const abort = () => controller.abort(signal?.reason ?? new Error("aborted"));
-  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) abort();
+  else signal?.addEventListener("abort", abort, { once: true });
 
   const startedAt = Date.now();
   try {
@@ -114,7 +115,7 @@ function buildMessages(spec, context, repairPacket) {
 }
 
 async function postCompletion(endpoint, body, signal) {
-  const response = await fetch(new URL("/v1/chat/completions", ensureTrailingSlash(endpoint)), {
+  const response = await fetch(resolveEndpointUrl(endpoint, "v1/chat/completions"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     signal,
@@ -123,8 +124,11 @@ async function postCompletion(endpoint, body, signal) {
   return { ok: response.ok, status: response.status, raw: await response.text() };
 }
 
-function looksLikeStructuredOutputUnsupported(raw) {
-  return /json_schema|response_format|structured|grammar|unsupported|unknown/i.test(String(raw));
+export function looksLikeStructuredOutputUnsupported(raw) {
+  const text = String(raw);
+  const feature = /\b(?:json_schema|response_format)\b/i;
+  const unsupported = /\b(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type))\b/i;
+  return feature.test(text) && unsupported.test(text);
 }
 
 function parseJsonObject(text) {
@@ -158,7 +162,4 @@ function normalizeUsage(usage = {}) {
 function finiteOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
-
-function ensureTrailingSlash(endpoint) {
-  return endpoint.endsWith("/") ? endpoint : endpoint + "/";
-}
+\n

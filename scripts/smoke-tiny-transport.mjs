@@ -25,6 +25,43 @@ const spec = {
 
 assert.equal(validateImplementationSpec(spec).ok, true);
 
+// --live drives the configured endpoint for real instead of the stub below.
+// This is the only way to exercise a hosted router (OpenRouter), which needs
+// a key this repository never contains:
+//   PI_OFFLINE_TINY_ENDPOINT=https://openrouter.ai/api/v1 \
+//   PI_OFFLINE_TINY_MODEL=qwen/qwen3-coder-30b-a3b-instruct \
+//   PI_OFFLINE_TINY_API_KEY=sk-or-v1-... \
+//   node scripts/smoke-tiny-transport.mjs --live
+if (process.argv.includes("--live")) {
+  const endpoint = process.env.PI_OFFLINE_TINY_ENDPOINT;
+  const model = process.env.PI_OFFLINE_TINY_MODEL;
+  const apiKey = process.env.PI_OFFLINE_TINY_API_KEY ?? process.env.OPENROUTER_API_KEY ?? null;
+  if (!endpoint || !model) {
+    console.error("--live requires PI_OFFLINE_TINY_ENDPOINT and PI_OFFLINE_TINY_MODEL");
+    process.exit(2);
+  }
+
+  const live = await callTinyImplementer({
+    endpoint,
+    model,
+    spec,
+    context: { relevant_source: "class A { int Run() { return 1; } }" },
+    apiKey,
+    timeoutMs: 120_000
+  });
+
+  const liveCheck = validateCandidate(live.candidate, spec);
+  console.log(`endpoint:          ${endpoint}`);
+  console.log(`model:             ${model}`);
+  console.log(`auth:              ${apiKey ? "bearer key sent" : "none"}`);
+  console.log(`structured output: ${live.structuredOutputMode}`);
+  console.log(`candidate status:  ${live.candidate?.status ?? "none"}`);
+  console.log(`candidate valid:   ${liveCheck.ok}${liveCheck.ok ? "" : ` (${liveCheck.errors.join("; ")})`}`);
+  console.log(`latency:           ${live.latencyMs}ms`);
+  process.stdout.write(liveCheck.ok ? "TINY TRANSPORT LIVE: PASS\n" : "TINY TRANSPORT LIVE: FAIL\n");
+  process.exit(liveCheck.ok ? 0 : 1);
+}
+
 let observedBody = null;
 const server = http.createServer(async (req, res) => {
   if (req.method !== "POST" || req.url !== "/v1/chat/completions") {

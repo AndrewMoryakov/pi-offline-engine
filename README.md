@@ -54,7 +54,29 @@ export PI_OFFLINE_TINY_MAX_ATTEMPTS=3
 
 Then run Pi normally. If the endpoint includes a reverse-proxy path prefix, that prefix is preserved when resolving `health`, `v1/models`, and `v1/chat/completions`.
 
-`/offline-status` shows the active local settings.
+`/offline-status` shows the active settings, including whether the endpoint is local and whether a key is configured.
+
+### Hosted OpenAI-compatible routers (OpenRouter)
+
+The implementer slot accepts any OpenAI-compatible endpoint. A hosted router differs only in requiring a bearer token, so there is no provider switch — set a key and the `Authorization` header is sent:
+
+```bash
+export PI_OFFLINE_TINY_ENDPOINT=https://openrouter.ai/api/v1
+export PI_OFFLINE_TINY_MODEL=qwen/qwen3-coder-30b-a3b-instruct
+export PI_OFFLINE_TINY_API_KEY=sk-or-v1-...   # OPENROUTER_API_KEY is also honoured
+```
+
+Use the exact model id from `https://openrouter.ai/api/v1/models`; `/offline-doctor` verifies the configured id against that catalog. OpenRouter exposes no `/health`, so reachability rests on the model catalog alone.
+
+Verify a real key end to end without touching a repository:
+
+```bash
+node scripts/smoke-tiny-transport.mjs --live
+```
+
+**This is not an offline configuration.** Prompts, spec text and the source excerpts in `context.relevant_source` are sent to a third party and on to whichever provider serves the model. `/offline-doctor` reports this as an `endpoint_locality` warning naming the receiving host; it is a warning rather than a readiness failure because the configuration is deliberate. Note that the locality check draws the line at your network, not at this machine — loopback, RFC1918 addresses and bare hostnames all count as local, so a LAN server is not flagged.
+
+The key is only ever sent as an `Authorization` header. It is not written to `events.jsonl`, candidate records or training data, and a `401` body that quotes the key back is redacted before it is persisted. Redaction still applies only to what this engine writes to disk — it says nothing about what the router does with the source you send it.
 
 ## ImplementationSpec v1
 

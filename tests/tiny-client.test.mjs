@@ -295,3 +295,98 @@ test("classifies malformed assistant JSON as a model-output error", async () => 
     await once(server, "close");
   }
 });
+
+test("sends a bearer header only when an api key is configured", async () => {
+  const seen = [];
+  const server = http.createServer(async (req, res) => {
+    for await (const chunk of req) void chunk;
+    seen.push(req.headers.authorization ?? null);
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        status: "candidate",
+        changes: [{ path: "src/A.cs", operation: "replace_text", expected: "return 1;", content: "return 2;" }]
+      }) } }]
+    }));
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+
+  try {
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    await callTinyImplementer({ endpoint, model: "m", spec, timeoutMs: 5000 });
+    await callTinyImplementer({ endpoint, model: "m", spec, apiKey: "sk-or-v1-testkey", timeoutMs: 5000 });
+    await callTinyImplementer({ endpoint, model: "m", spec, apiKey: "   ", timeoutMs: 5000 });
+
+    assert.deepEqual(seen, [undefined ?? null, "Bearer sk-or-v1-testkey", null]);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
+test("redacts credentials echoed by a rejecting router", async () => {
+  const server = http.createServer(async (req, res) => {
+    for await (const chunk of req) void chunk;
+    res.statusCode = 401;
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ error: { message: "bad key: Bearer sk-or-v1-0123456789abcdef0123456789abcdef" } }));
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+
+  try {
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    await assert.rejects(
+      () => callTinyImplementer({ endpoint, model: "m", spec, apiKey: "sk-or-v1-0123456789abcdef0123456789abcdef", timeoutMs: 5000 }),
+      (error) => {
+        assert.match(error.message, /tiny endpoint HTTP 401/);
+        assert.doesNotMatch(error.message, /sk-or-v1-0123/);
+        return true;
+      }
+    );
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
+test("never surfaces the api key when a router rejects and echoes the credential", async () => {
+  const key = "sk-or-v1-leakcanary0123456789abcdef0123456789abcdef";
+  const server = http.createServer(async (req, res) => {
+    for await (const chunk of req) void chunk;
+    // A hosted router commonly quotes back the credential it refused.
+    res.statusCode = 401;
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ error: { message: `No auth credentials found for ${key}`, code: 401 } }));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const endpoint = `http://127.0.0.1:${server.address().port}`;
+
+  try {
+    let thrown = null;
+    await assert.rejects(
+      callTinyImplementer({
+        endpoint,
+        model: "m",
+        spec: { version: 1, spec_id: "s", operation: "modify_symbol" },
+        apiKey: key,
+        timeoutMs: 5000
+      }),
+      (error) => { thrown = error; return true; }
+    );
+
+    // The body reaches events.jsonl verbatim, so the raw key must not be in it.
+    const serialized = `${thrown.message}\n${thrown.stack}\n${JSON.stringify(thrown, Object.getOwnPropertyNames(thrown))}`;
+    assert.equal(serialized.includes(key), false, "raw api key leaked into the error");
+    assert.equal(serialized.includes("leakcanary"), false);
+    assert.match(thrown.message, /REDACTED/);
+    assert.match(thrown.message, /HTTP 401/);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});

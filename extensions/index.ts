@@ -10,7 +10,7 @@ import { saveCandidateRecord } from "../src/candidate-store.mjs";
 import { applyCandidate } from "../src/apply-candidate.mjs";
 import { preflightVerificationInfrastructure, runVerification } from "../src/verification.mjs";
 import { buildRepairPacket } from "../src/repair-packet.mjs";
-import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs";
+import { runOfflineDoctor, formatDoctorReport, checkEndpointLocality } from "../src/offline-doctor.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 import { compactToolResult } from "../src/tool-result-compactor.mjs";
 import { buildRepoCapsule } from "../src/repo-capsule.mjs";
@@ -101,7 +101,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
       await appendEvent(ctx.cwd, { type: "tiny_started", specId: params.spec.spec_id, model, endpoint, mode: "candidate_only" });
 
       try {
-        const result = await callTinyImplementer({ endpoint, model, spec: params.spec, context: params.context ?? {}, signal });
+        const result = await callTinyImplementer({ endpoint, model, spec: params.spec, context: params.context ?? {}, apiKey: tinyApiKey(), signal });
         const candidateCheck = validateCandidate(result.candidate, params.spec);
         await appendEvent(ctx.cwd, {
           type: "tiny_finished",
@@ -264,6 +264,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           spec: params.spec,
           context: params.context ?? {},
           repairPacket,
+          apiKey: tinyApiKey(),
           signal
         });
 
@@ -727,6 +728,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         cwd: ctx.cwd,
         endpoint: tinyEndpoint(),
         model: tinyModel(),
+        apiKey: tinyApiKey(),
         tools: activeTools,
         exec: (command, args, options) => pi.exec(command, args, options)
       });
@@ -822,6 +824,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
       ctx.ui.notify(
         [
           `Tiny implementer: ${tinyModel()} @ ${tinyEndpoint()}`,
+          `Endpoint locality: ${checkEndpointLocality(tinyEndpoint()).message}`,
+          `Implementer auth: ${tinyApiKey() ? "bearer key configured" : "none (local endpoint)"}`,
           `Bounded execute attempts: ${tinyMaxAttempts()}`,
           "Candidate apply: exact replace_text/create_file with stale preimage protection",
           "Verification: declared dotnet build/tests, --no-restore",
@@ -839,6 +843,13 @@ function tinyEndpoint() {
 
 function tinyModel() {
   return process.env.PI_OFFLINE_TINY_MODEL ?? "qwen2.5-coder-3b-instruct";
+}
+
+// Empty when the implementer is a local llama.cpp. OPENROUTER_API_KEY is
+// honoured so an already-exported key needs no duplication.
+function tinyApiKey() {
+  const key = process.env.PI_OFFLINE_TINY_API_KEY ?? process.env.OPENROUTER_API_KEY ?? "";
+  return key.trim() || null;
 }
 
 function tinyMaxAttempts() {

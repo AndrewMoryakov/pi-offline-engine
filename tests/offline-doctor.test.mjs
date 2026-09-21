@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { runOfflineDoctor, formatDoctorReport } from "../src/offline-doctor.mjs";
+import { runOfflineDoctor, formatDoctorReport, checkEndpointLocality } from "../src/offline-doctor.mjs";
 
 test("doctor reports ready with endpoint, dotnet and core tool", async () => {
   const fetchFn = async (url) => {
@@ -203,4 +203,101 @@ test("fails readiness when health works but model catalog is unavailable", async
   assert.ok(report.requiredFailures.includes("tiny_endpoint"));
   assert.deepEqual(seen.slice(0, 2), ["/proxy/health", "/proxy/v1/models"]);
   assert.match(formatDoctorReport(report), /model catalog is unavailable/);
+});
+
+test("warns without blocking readiness when the implementer endpoint is remote", async () => {
+  const seenHeaders = [];
+  const fetchFn = async (url, options) => {
+    seenHeaders.push(options?.headers?.authorization ?? null);
+    const pathname = new URL(url).pathname;
+    if (pathname === "/api/v1/models") {
+      return { ok: true, async json() { return { data: [{ id: "qwen/qwen3-coder-30b-a3b-instruct" }] }; } };
+    }
+    return { ok: false, async json() { return {}; } };
+  };
+
+  const exec = async (command) => {
+    if (command === "dotnet") return { code: 0, killed: false, stdout: ".NET SDK 10.0", stderr: "" };
+    throw new Error("missing");
+  };
+
+  const report = await runOfflineDoctor({
+    cwd: "/tmp",
+    endpoint: "https://openrouter.ai/api/v1",
+    model: "qwen/qwen3-coder-30b-a3b-instruct",
+    apiKey: "sk-or-v1-testkey",
+    tools: [{ name: "execute_delegated_implementation", sourceInfo: { source: "extension" } }],
+    exec,
+    fetchFn
+  });
+
+  // A hosted router has no /health; v1/models alone must carry reachability.
+  assert.equal(report.checks.find((x) => x.id === "tiny_endpoint").ok, true);
+  assert.equal(report.ready, true);
+  assert.ok(report.warnings.includes("endpoint_locality"));
+  assert.match(formatDoctorReport(report), /prompts and source excerpts leave your network/);
+  assert.deepEqual([...new Set(seenHeaders)], ["Bearer sk-or-v1-testkey"]);
+});
+
+test("treats loopback and private endpoints as local", () => {
+  for (const endpoint of ["http://127.0.0.1:8081", "http://localhost:8081", "http://192.168.1.5:8081", "http://[::1]:8081", "http://workstation:8081"]) {
+    assert.equal(checkEndpointLocality(endpoint).ok, true, endpoint);
+  }
+  for (const endpoint of ["https://openrouter.ai/api/v1", "https://api.example.com"]) {
+    assert.equal(checkEndpointLocality(endpoint).ok, false, endpoint);
+  }
+});
+
+test("truncates a large hosted catalog when the configured model is missing", async () => {
+  const data = Array.from({ length: 446 }, (_, i) => ({ id: `vendor/model-${i}` }));
+  const fetchFn = async (url) => {
+    const pathname = new URL(url).pathname;
+    if (pathname === "/api/v1/models") return { ok: true, async json() { return { data }; } };
+    return { ok: false, async json() { return {}; } };
+  };
+
+  const report = await runOfflineDoctor({
+    cwd: "/tmp",
+    endpoint: "https://openrouter.ai/api/v1",
+    model: "vendor/absent-model",
+    tools: [{ name: "execute_delegated_implementation", sourceInfo: { source: "extension" } }],
+    exec: async () => { throw new Error("missing"); },
+    fetchFn
+  });
+
+  const check = report.checks.find((x) => x.id === "tiny_endpoint");
+  assert.equal(check.ok, false);
+  assert.match(check.message, /not listed among 446 available/);
+  assert.match(check.message, /\(\+438 more\)/);
+  assert.ok(check.message.length < 400);
+});
+
+test("survives HTML error pages instead of JSON and never echoes the key", async () => {
+  const key = "sk-or-v1-doctorcanary0123456789abcdef0123456789ab";
+  // OpenRouter has no /health: it serves a 404 HTML page, so res.json() rejects.
+  const html = () => ({
+    ok: false,
+    status: 404,
+    async json() { throw new SyntaxError("Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"); },
+    async text() { return "<!DOCTYPE html><html>404</html>"; }
+  });
+
+  const report = await runOfflineDoctor({
+    cwd: "/tmp",
+    endpoint: "https://openrouter.ai",           // the classic misconfiguration: no /api/v1
+    model: "qwen/qwen3-coder-30b-a3b-instruct",
+    apiKey: key,
+    tools: [{ name: "execute_delegated_implementation", sourceInfo: { source: "extension" } }],
+    exec: async () => { throw new Error("missing"); },
+    fetchFn: async () => html()
+  });
+
+  const check = report.checks.find((x) => x.id === "tiny_endpoint");
+  assert.equal(check.ok, false);
+  assert.match(check.message, /unreachable/);
+  assert.equal(report.ready, false);
+
+  const serialized = JSON.stringify(report) + formatDoctorReport(report);
+  assert.equal(serialized.includes(key), false, "api key leaked into the doctor report");
+  assert.equal(serialized.includes("doctorcanary"), false);
 });

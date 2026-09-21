@@ -1,4 +1,5 @@
 import { resolveEndpointUrl } from "./endpoint-url.mjs";
+import { redactString } from "./training-exporter.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 
@@ -38,7 +39,7 @@ const CANDIDATE_JSON_SCHEMA = {
   }
 };
 
-export async function callTinyImplementer({ endpoint, model, spec, context = {}, repairPacket = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+export async function callTinyImplementer({ endpoint, model, spec, context = {}, repairPacket = null, apiKey = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   if (!endpoint) throw new Error("tiny endpoint is required");
   if (!model) throw new Error("tiny model is required");
 
@@ -66,7 +67,7 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
           schema: CANDIDATE_JSON_SCHEMA
         }
       }
-    }, controller.signal);
+    }, controller.signal, apiKey);
 
     let structuredOutputMode = "json_schema";
 
@@ -80,12 +81,14 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
       response = await postCompletion(endpoint, {
         ...base,
         response_format: { type: "json_object" }
-      }, controller.signal);
+      }, controller.signal, apiKey);
       structuredOutputMode = "json_object_fallback";
     }
 
     if (!response.ok) {
-      throw new Error(`tiny endpoint HTTP ${response.status}: ${response.raw.slice(0, 500)}`);
+      // The body reaches events.jsonl. A remote router answering 401/403 may
+      // echo the credential it rejected, so redact before it is persisted.
+      throw new Error(`tiny endpoint HTTP ${response.status}: ${redactString(response.raw).slice(0, 500)}`);
     }
 
     let envelope;
@@ -133,14 +136,24 @@ function buildMessages(spec, context, repairPacket) {
   ];
 }
 
-async function postCompletion(endpoint, body, signal) {
+async function postCompletion(endpoint, body, signal, apiKey) {
   const response = await fetch(resolveEndpointUrl(endpoint, "v1/chat/completions"), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: buildAuthHeaders(apiKey, { "content-type": "application/json" }),
     signal,
     body: JSON.stringify(body)
   });
   return { ok: response.ok, status: response.status, raw: await response.text() };
+}
+
+// Hosted OpenAI-compatible routers (OpenRouter and friends) need a bearer
+// token; a local llama.cpp needs none. This is the only transport difference,
+// so there is no provider switch anywhere -- an absent key simply means the
+// header is not sent.
+export function buildAuthHeaders(apiKey, headers = {}) {
+  const key = typeof apiKey === "string" ? apiKey.trim() : "";
+  if (!key) return { ...headers };
+  return { ...headers, authorization: `Bearer ${key}` };
 }
 
 export function looksLikeStructuredOutputUnsupported(raw) {

@@ -61,3 +61,16 @@ test("uses structured prompt guidelines for code policy to preserve prompt cachi
   assert.match(source, /pi-offline-engine:/);
   assert.doesNotMatch(source, /return \{ systemPrompt: event\.systemPrompt \+/);
 });
+
+
+test("training capture is opt-in and exposes explicit controls", () => {
+  assert.match(source, /PI_OFFLINE_TRAINING_CAPTURE === "1"/);
+  assert.match(source, /pi\.registerCommand\("offline-training"/);
+  assert.match(source, /trainingCaptureEnabled = true/);
+  assert.match(source, /trainingCaptureEnabled = false/);
+});
+
+test("training recording is best-effort and not a coding-state authority", () => {
+  assert.match(source, /safeAppendTrainingRecord/);
+  assert.match(source, /Training capture and its telemetry must never affect the coding task/);
+});

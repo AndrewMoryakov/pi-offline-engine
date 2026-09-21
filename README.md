@@ -247,3 +247,19 @@ npm run gate:pi
 ```
 
 to load the extension through the actually installed Pi runtime without making an LLM request. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).
+
+
+## Training-data capture
+
+Verified TinyCoder attempts can be captured locally for future SFT, preference training and evaluation.
+
+Capture is **off by default**:
+
+```text
+/offline-training on
+/offline-training status
+/offline-training export
+/offline-training off
+```
+
+See [docs/TRAINING_DATA.md](docs/TRAINING_DATA.md) before enabling it: raw traces may contain private source code.

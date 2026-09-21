@@ -1,5 +1,13 @@
 import { resolveEndpointUrl } from "./endpoint-url.mjs";\n\nconst DEFAULT_TIMEOUT_MS = 120_000;
 
+export class TinyModelOutputError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "TinyModelOutputError";
+    this.code = "tiny_model_output_invalid";
+  }
+}
+
 const CANDIDATE_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -74,9 +82,14 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
       throw new Error(`tiny endpoint HTTP ${response.status}: ${response.raw.slice(0, 500)}`);
     }
 
-    const envelope = JSON.parse(response.raw);
+    let envelope;
+    try {
+      envelope = JSON.parse(response.raw);
+    } catch {
+      throw new TinyModelOutputError("tiny endpoint returned invalid JSON envelope");
+    }
     const text = envelope?.choices?.[0]?.message?.content;
-    if (typeof text !== "string") throw new Error("tiny endpoint returned no assistant content");
+    if (typeof text !== "string") throw new TinyModelOutputError("tiny endpoint returned no assistant content");
 
     return {
       candidate: parseJsonObject(text),
@@ -136,8 +149,12 @@ function parseJsonObject(text) {
   try { return JSON.parse(trimmed); } catch {}
   const first = trimmed.indexOf("{");
   const last = trimmed.lastIndexOf("}");
-  if (first < 0 || last <= first) throw new Error("tiny model did not return a JSON object");
-  return JSON.parse(trimmed.slice(first, last + 1));
+  if (first < 0 || last <= first) throw new TinyModelOutputError("tiny model did not return a JSON object");
+  try {
+    return JSON.parse(trimmed.slice(first, last + 1));
+  } catch {
+    throw new TinyModelOutputError("tiny model returned malformed JSON candidate");
+  }
 }
 
 function normalizeUsage(usage = {}) {

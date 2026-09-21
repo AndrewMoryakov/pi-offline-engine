@@ -10,7 +10,7 @@ const SECRET_RULES = [
   [/\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_OPENAI_KEY]"],
   [/\b(?:ghp_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,})\b/g, "[REDACTED_GITHUB_TOKEN]"],
   [/([A-Za-z0-9_.-]*(?:API[_-]?KEY|ACCESS[_-]?KEY|TOKEN|SECRET|PASSWORD|PRIVATE[_-]?KEY)[A-Za-z0-9_.-]*)\s*=\s*([^\s"'\`;}{]+)/gi, "$1=[REDACTED_SECRET]"],
-  [/(["']?[A-Za-z0-9_.-]*(?:api[_-]?key|access[_-]?key|token|secret|password|private[_-]?key)[A-Za-z0-9_.-]*["']?)\s*:\s*["']([^"'\r\n]{6,})["']/gi, '$1:"[REDACTED_SECRET]"']
+  [/(["']?[A-Za-z0-9_.-]*(?:api[_-]?key|access[_-]?key|token|secret|password|private[_-]?key)[A-Za-z0-9_.-]*["']?)\s*:\s*(?:"[^"\r\n]{6,}"|'[^'\r\n]{6,}'|[^\s,;}{]{6,})/gi, "$1:[REDACTED_SECRET]"]
 ];
 
 const SENSITIVE_PATH_PATTERNS = [

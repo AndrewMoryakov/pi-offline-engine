@@ -880,7 +880,7 @@ async function captureTrainingRecord(cwd: string, record: any) {
   if (!result.ok) {
     try {
       await appendEvent(cwd, {
-        type: "training_capture_failed",
+        type: result.skipped ? "training_capture_skipped_sensitive_path" : "training_capture_failed",
         error: result.error
       });
     } catch {

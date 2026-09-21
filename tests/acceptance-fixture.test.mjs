@@ -4,7 +4,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { spawnSync } from "node:child_process";\nimport { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const implementation = await fs.readFile(new URL("../fixtures/dotnet-boundary-v0/src/Acceptance.Core/LoyaltyDiscount.cs", import.meta.url), "utf8");
 const tests = await fs.readFile(new URL("../fixtures/dotnet-boundary-v0/tests/Acceptance.Tests/LoyaltyDiscountTests.cs", import.meta.url), "utf8");

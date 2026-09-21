@@ -180,3 +180,28 @@ Also solid: `verifySnapshot` against a stale candidate, `replace_text` requiring
 - `escapeFilterValue` escaping only `|` — a malformed `--filter` makes `dotnet test` exit nonzero, so it fails closed.
 - The mtp-vs-vstest expected-pattern asymmetry at `verification.mjs:206` — vstest runs one filtered invocation per pattern, and zero-executed is already caught at `:195`.
 - The duplicate `before_agent_start` registration (`extensions/index.ts:518` and `:536`) — whether the host keeps one handler per event could not be verified here (`node_modules` absent).
+
+
+---
+
+## Resolution status
+
+Rechecked against `main` at `9902484` and the follow-up hardening branch.
+
+| # | Status | Resolution |
+|---|---|---|
+| 1 | Fixed | The malformed compactor test is valid JS and executes. |
+| 2 | Fixed | Compaction recognizes only a direct single `dotnet build/test` invocation (plus a safe trailing `2>&1`). |
+| 3 | Fixed | Shell composition/pipelines/substitutions are fail-closed and remain uncompressed. |
+| 4 | Fixed | `replace_text` uses a replacement function so model output is inserted literally. |
+| 5 | Fixed | Acceptance output deletion requires a prior fixture marker and rejects cwd/repo/root/home/ancestor paths. |
+| 6 | Fixed | Training redaction covers common env/JSON/Bearer/cloud/URL credential forms; candidate paths are checked too. |
+| 7 | Fixed | Invalid/malformed TinyCoder output has a distinct model-output retry path. The follow-up branch allows retries through the bounded attempt limit even after an earlier applied attempt, while preserving the prior verification RepairPacket. |
+| 8 | Fixed | A pre-aborted caller signal aborts the TinyCoder controller before fetch starts. |
+| 9 | Fixed | Doctor fails readiness when the model catalog cannot verify the configured model. |
+| 10 | Fixed | `npm run check` recursively syntax-checks `src/`, `scripts/`, `tests/`, and `extensions/`. |
+| 11 | Fixed | Endpoint route resolution preserves configured path prefixes. |
+| 12 | Fixed | Structured-output fallback requires an explicit response-format/json-schema rejection signal; unrelated model errors do not downgrade. |
+| 13 | Addressed | Critical semantics were extracted into behavior-tested helpers. `extension-contract.test.mjs` remains intentionally as static wiring guards and is now labeled as such; real extension loading is covered by `gate:pi`. |
+
+GitHub Actions had no workflow/status result for `9902484`, so platform CI is not evidence for this resolution. The canonical executable checks remain `npm test`, `npm run check`, `npm run gate:local`, and `npm run gate:pi` on the target machine.

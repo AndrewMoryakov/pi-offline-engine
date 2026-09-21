@@ -6,10 +6,10 @@ import {
   canRetryModelOutput
 } from "../src/delegation-retry.mjs";
 
-test("model-output failures retry only before mutation and before max attempt", () => {
-  assert.equal(canRetryModelOutput({ attempt: 1, maxAttempts: 3, workspaceModified: false }), true);
-  assert.equal(canRetryModelOutput({ attempt: 3, maxAttempts: 3, workspaceModified: false }), false);
-  assert.equal(canRetryModelOutput({ attempt: 1, maxAttempts: 3, workspaceModified: true }), false);
+test("model-output failures retry through the bounded attempt limit", () => {
+  assert.equal(canRetryModelOutput({ attempt: 1, maxAttempts: 3 }), true);
+  assert.equal(canRetryModelOutput({ attempt: 2, maxAttempts: 3 }), true);
+  assert.equal(canRetryModelOutput({ attempt: 3, maxAttempts: 3 }), false);
 });
 
 test("retry packet gives bounded corrective feedback without changing task scope", () => {
@@ -36,4 +36,15 @@ test("terminal model-output failure escalates separately from infrastructure", (
   assert.equal(outcome.status, "needs_main_model");
   assert.equal(outcome.reason, "tiny_invalid_candidate");
   assert.equal(outcome.workspace_modified, false);
+});
+
+
+test("model-output retry preserves prior verification context", () => {
+  const prior = { kind: "verification_failure", diagnostics: ["CS1002"] };
+  const packet = buildModelOutputRepairPacket({
+    attempt: 2,
+    error: "malformed JSON",
+    priorRepairPacket: prior
+  });
+  assert.deepEqual(packet.prior_repair_packet, prior);
 });

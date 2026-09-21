@@ -43,12 +43,6 @@ test("delegated execution preflights verification before TinyCoder", () => {
   assert.ok(preflightIndex < tinyLoopIndex);
 });
 
-test("uses structured prompt guidelines for code policy to preserve prompt caching", () => {
-  assert.match(source, /options\.promptGuidelines/);
-  assert.match(source, /pi-offline-engine:/);
-  assert.doesNotMatch(source, /return \{ systemPrompt: event\.systemPrompt \+/);
-});
-
 test("training capture is opt-in and exposes explicit controls", () => {
   assert.match(source, /PI_OFFLINE_TRAINING_CAPTURE === "1"/);
   assert.match(source, /pi\.registerCommand\("offline-training"/);

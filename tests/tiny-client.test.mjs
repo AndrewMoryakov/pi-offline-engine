@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { once } from "node:events";
-import { callTinyImplementer } from "../src/tiny-client.mjs";
+import { callTinyImplementer, TinyModelOutputError } from "../src/tiny-client.mjs";
 
 const spec = {
   version: 1,
@@ -193,6 +193,34 @@ test("honors a caller signal that is already aborted", async () => {
       })
     );
     assert.equal(requests, 0);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
+
+test("classifies malformed assistant JSON as a model-output error", async () => {
+  const server = http.createServer(async (_req, res) => {
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({
+      choices: [{ message: { content: "not json at all" } }]
+    }));
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const { port } = server.address();
+    await assert.rejects(
+      () => callTinyImplementer({
+        endpoint: `http://127.0.0.1:${port}`,
+        model: "tiny",
+        spec,
+        timeoutMs: 5000
+      }),
+      (error) => error instanceof TinyModelOutputError
+    );
   } finally {
     server.close();
     await once(server, "close");

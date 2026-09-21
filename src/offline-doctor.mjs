@@ -1,4 +1,6 @@
-import { resolveEndpointUrl } from "./endpoint-url.mjs";\n\nconst DEFAULT_TIMEOUT_MS = 5000;
+import { resolveEndpointUrl } from "./endpoint-url.mjs";
+
+const DEFAULT_TIMEOUT_MS = 5000;
 
 export async function runOfflineDoctor({
   cwd,
@@ -260,4 +262,4 @@ function formatSource(sourceInfo) {
 
 function firstNonEmpty(value) {
   return String(value ?? "").split(/\r?\n/).map((x) => x.trim()).find(Boolean);
-}\n
+}}

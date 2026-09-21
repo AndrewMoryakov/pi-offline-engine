@@ -10,10 +10,15 @@ import {
   summarizeDotnetOutput
 } from "../src/tool-result-compactor.mjs";
 
-test("recognizes dotnet build and test shell commands", () => {
+test("recognizes only direct dotnet build and test shell commands", () => {
   assert.equal(isDotnetBuildOrTest("dotnet build src/App.csproj --no-restore"), true);
+  assert.equal(isDotnetBuildOrTest("dotnet test App.Tests.csproj"), true);
   assert.equal(isDotnetBuildOrTest("cd src && dotnet test App.Tests.csproj"), false);
-  assert.equal(isDotnetBuildOrTest("git status"), false);\n  assert.equal(isDotnetBuildOrTest("dotnet test && git status"), false);\n  assert.equal(isDotnetBuildOrTest("dotnet build | tee build.log"), false);
+  assert.equal(isDotnetBuildOrTest("echo dotnet build"), false);
+  assert.equal(isDotnetBuildOrTest("rm -rf / ; dotnet build"), false);
+  assert.equal(isDotnetBuildOrTest("dotnet test && git status"), false);
+  assert.equal(isDotnetBuildOrTest("dotnet build | tee build.log"), false);
+  assert.equal(isDotnetBuildOrTest("dotnet test $(echo App.Tests.csproj)"), false);
 });
 
 test("extracts text blocks only", () => {

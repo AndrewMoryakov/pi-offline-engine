@@ -163,7 +163,12 @@ export function looksLikeStructuredOutputUnsupported(raw) {
   // `response_format type must be one of "text" or "json_object"`. Keep it out
   // of `feature`: the allowed-value list names json_object, and matching on
   // that would fire the fallback in the wrong direction.
-  const reason = String.raw`(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type)|must be one of|only supports?)`;
+  // `conversion failed` covers llama-server's wrapper around every
+  // json_schema_to_grammar error (`"json_schema": JSON schema conversion
+  // failed:\n...`, HTTP 500); most inner reasons carry no keyword above.
+  // "Cannot use both json_schema and grammar" is deliberately absent: a
+  // json_object retry keeps the same grammar conflict and cannot succeed.
+  const reason = String.raw`(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type)|must be one of|only supports?|conversion failed)`;
   return new RegExp(feature + String.raw`[\s\S]{0,96}` + reason, "i").test(text) ||
     new RegExp(reason + String.raw`[\s\S]{0,96}` + feature, "i").test(text);
 }

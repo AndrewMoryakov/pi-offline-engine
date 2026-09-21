@@ -30,6 +30,27 @@ test("detects structured-output rejection across backend phrasings", () => {
   }
 });
 
+test("detects llama.cpp-family schema-to-grammar conversion failures", () => {
+  // llama-server wraps every json_schema_to_grammar error as
+  // `"json_schema": JSON schema conversion failed:\n<reason>` and answers 500.
+  // The inner reasons (verbatim from common/json-schema-to-grammar.cpp) mostly
+  // carry no generic rejection keyword, so the wrapper itself is the signal.
+  const reasons = [
+    "Unbalanced parentheses",
+    "Pattern must start with '^' and end with '$'",
+    "Rule foo not known",
+    "At least one of min_value or max_value must be set",
+    "Error resolving ref #/$defs/a: a not in {}"
+  ];
+
+  for (const reason of reasons) {
+    const raw = JSON.stringify({
+      error: { code: 500, message: `"json_schema": JSON schema conversion failed:\n${reason}` }
+    });
+    assert.equal(looksLikeStructuredOutputUnsupported(raw), true, reason);
+  }
+});
+
 const spec = {
   version: 1,
   spec_id: "tiny-client-test",

@@ -70,7 +70,7 @@ test("drops sensitive paths and exact duplicate examples", async () => {
 });
 
 test("redacts common secret assignments", () => {
-  assert.equal(redactString("token=abcdefghijk"), "[REDACTED_SECRET]");
+  assert.equal(redactString("token=abcdefghijk"), "token=[REDACTED_SECRET]");
 });
 
 

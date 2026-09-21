@@ -350,11 +350,12 @@ export default function offlineEngine(pi: ExtensionAPI) {
             verificationPassed: false
           });
 
-          if (canRetryModelOutput({ attempt, maxAttempts, workspaceModified })) {
+          if (canRetryModelOutput({ attempt, maxAttempts })) {
             repairPacket = buildModelOutputRepairPacket({
               attempt,
               candidate: result.candidate,
-              validationErrors: candidateCheck.errors
+              validationErrors: candidateCheck.errors,
+              priorRepairPacket: trainingRepairPacket
             });
             await appendEvent(ctx.cwd, {
               type: "tiny_model_retry_scheduled",
@@ -531,10 +532,11 @@ export default function offlineEngine(pi: ExtensionAPI) {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
 
-          if (error instanceof TinyModelOutputError && canRetryModelOutput({ attempt, maxAttempts, workspaceModified })) {
+          if (error instanceof TinyModelOutputError && canRetryModelOutput({ attempt, maxAttempts })) {
             repairPacket = buildModelOutputRepairPacket({
               attempt,
-              error: message
+              error: message,
+              priorRepairPacket: trainingRepairPacket
             });
             attempts.push({
               attempt,

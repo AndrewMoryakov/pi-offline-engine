@@ -226,3 +226,64 @@ test("classifies malformed assistant JSON as a model-output error", async () => 
     await once(server, "close");
   }
 });
+
+
+test("does not downgrade unknown-model errors to json_object", async () => {
+  let requests = 0;
+  const server = http.createServer(async (_req, res) => {
+    requests += 1;
+    res.statusCode = 400;
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ error: "unknown model tiny-missing" }));
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const { port } = server.address();
+    await assert.rejects(
+      () => callTinyImplementer({
+        endpoint: `http://127.0.0.1:${port}`,
+        model: "tiny-missing",
+        spec,
+        timeoutMs: 5000
+      }),
+      /HTTP 400/
+    );
+    assert.equal(requests, 1);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
+test("honors a caller signal that is already aborted", async () => {
+  let requests = 0;
+  const server = http.createServer((_req, res) => {
+    requests += 1;
+    res.end("{}");
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled before tiny call"));
+    const { port } = server.address();
+
+    await assert.rejects(
+      () => callTinyImplementer({
+        endpoint: `http://127.0.0.1:${port}`,
+        model: "tiny",
+        spec,
+        signal: controller.signal,
+        timeoutMs: 5000
+      }),
+      /cancelled before tiny call|aborted/i
+    );
+    assert.equal(requests, 0);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});

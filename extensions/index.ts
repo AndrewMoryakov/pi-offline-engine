@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { validateImplementationSpec, validateCandidate } from "../src/implementation-spec.mjs";
 import { callTinyImplementer, TinyModelOutputError } from "../src/tiny-client.mjs";
@@ -32,6 +32,33 @@ import {
 } from "../src/training-recorder.mjs";
 import { exportTrainingData } from "../src/training-exporter.mjs";
 import { applyCodeToolPolicy, selectActiveToolObjects } from "../src/extension-policy.mjs";
+import { engineConfigPath, readEngineConfig, resolveEngineSettings, writeEngineConfig } from "../src/engine-config.mjs";
+import { discoverEndpoints, probeEndpoint } from "../src/endpoint-discovery.mjs";
+import {
+  autoConfigureIfNeeded,
+  configureFromSetupArgs,
+  describeDiscoveryFailure,
+  formatEngineStatus,
+  parseSetupArgs
+} from "../src/engine-setup.mjs";
+
+// User-level engine config (endpoint/model chosen by /offline-setup or by the
+// first-run discovery). Environment variables still override it.
+const engineConfigFile = engineConfigPath(getAgentDir());
+let engineConfigState = readEngineConfig(engineConfigFile);
+
+function reloadEngineConfig() {
+  engineConfigState = readEngineConfig(engineConfigFile);
+}
+
+function engineSettings() {
+  return resolveEngineSettings({ env: process.env, config: engineConfigState.config });
+}
+
+function saveEngineConfig(patch: Record<string, unknown>) {
+  writeEngineConfig(engineConfigFile, patch);
+  reloadEngineConfig();
+}
 
 const NonEmptyString = Type.String({ minLength: 1 });
 
@@ -78,6 +105,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
   let repoCapsuleEnabled = process.env.PI_OFFLINE_REPO_CAPSULE !== "0";
   let lastRepoCapsuleFingerprint: string | null = null;
   let trainingCaptureEnabled = process.env.PI_OFFLINE_TRAINING_CAPTURE === "1";
+  let autoSetupAttempted = false;
+
+  // The bundled pi-knowledge reads its settings lazily from the environment.
+  // Apply the profile's slow-local-model search default unless the user chose
+  // one. PI_KNOWLEDGE_OFFLINE is deliberately not forced: it would block the
+  // first download of the local embedding model.
+  process.env.PI_KNOWLEDGE_SEARCH_PROFILE ??= "low_token";
   pi.registerTool({
     name: "delegate_implementation",
     label: "Delegate implementation",
@@ -613,6 +647,26 @@ export default function offlineEngine(pi: ExtensionAPI) {
     lastRepoCapsuleFingerprint = null;
   });
 
+  // First-run setup: while no endpoint is configured (neither env nor config
+  // file), look for a local OpenAI-compatible server and persist it. Not
+  // awaited, so a filtered port can never delay pi's startup; runs once per
+  // process because session switches re-emit session_start.
+  pi.on("session_start", async (_event, ctx) => {
+    if (autoSetupAttempted) return;
+    autoSetupAttempted = true;
+    void autoConfigureIfNeeded({
+      settings: engineSettings(),
+      discover: () => discoverEndpoints(),
+      save: saveEngineConfig
+    }).then((result) => {
+      if (result.action === "skipped" || !result.message || !ctx.hasUI) return;
+      ctx.ui.notify(result.message, result.action === "configured" ? "info" : "warning");
+    }).catch(() => {
+      // Discovery failures are reported by /offline-setup and /offline-doctor;
+      // they must never surface as an unhandled rejection during startup.
+    });
+  });
+
   pi.on("session_compact", async () => {
     // Compaction can remove the prior hidden capsule from replay context.
     // Force a fresh deterministic capsule on the next user prompt.
@@ -720,19 +774,83 @@ export default function offlineEngine(pi: ExtensionAPI) {
     }
   });
 
+  async function notifyDoctorReport(ctx: any) {
+    const activeTools = selectActiveToolObjects(pi.getAllTools(), pi.getActiveTools());
+    const report = await runOfflineDoctor({
+      cwd: ctx.cwd,
+      endpoint: tinyEndpoint(),
+      model: tinyModel(),
+      apiKey: tinyApiKey(),
+      tools: activeTools,
+      exec: (command, args, options) => pi.exec(command, args, options)
+    });
+    ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");
+  }
+
   pi.registerCommand("offline-doctor", {
     description: "Check local offline readiness",
     handler: async (_args, ctx) => {
-      const activeTools = selectActiveToolObjects(pi.getAllTools(), pi.getActiveTools());
-      const report = await runOfflineDoctor({
-        cwd: ctx.cwd,
-        endpoint: tinyEndpoint(),
-        model: tinyModel(),
-        apiKey: tinyApiKey(),
-        tools: activeTools,
-        exec: (command, args, options) => pi.exec(command, args, options)
-      });
-      ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");
+      await notifyDoctorReport(ctx);
+    }
+  });
+
+  pi.registerCommand("offline-setup", {
+    description: "Configure the TinyCoder endpoint: /offline-setup [reset | <endpoint-url> [model]]",
+    handler: async (args, ctx) => {
+      const request = parseSetupArgs(args);
+
+      if (request.mode === "invalid") {
+        ctx.ui.notify(request.message, "warning");
+        return;
+      }
+
+      if (request.mode === "reset") {
+        saveEngineConfig({ endpoint: null, model: null, backend: null, configuredBy: null, configuredAt: null });
+        ctx.ui.notify(`Engine config cleared: ${engineConfigFile}`, "info");
+        return;
+      }
+
+      if (request.mode === "manual") {
+        const result = await configureFromSetupArgs({ request, probe: probeEndpoint, save: saveEngineConfig });
+        ctx.ui.notify(result.message, result.ok ? "info" : "warning");
+        if (!result.ok) return;
+      } else {
+        const discovery = await discoverEndpoints();
+        if (discovery.usable.length === 0) {
+          ctx.ui.notify(describeDiscoveryFailure(discovery), "warning");
+          return;
+        }
+
+        let chosen = discovery.selected;
+        if (discovery.usable.length > 1 && ctx.hasUI) {
+          const options = discovery.usable.map((x: any) => `${x.model} @ ${x.endpoint} (${x.label})`);
+          const picked = await ctx.ui.select("Choose the TinyCoder backend", options);
+          const index = options.indexOf(picked);
+          if (index < 0) {
+            ctx.ui.notify("Setup cancelled; nothing was saved.", "info");
+            return;
+          }
+          chosen = discovery.usable[index];
+        }
+
+        saveEngineConfig({
+          endpoint: chosen.endpoint,
+          model: chosen.model,
+          backend: chosen.label,
+          configuredBy: "offline-setup",
+          configuredAt: new Date().toISOString()
+        });
+        ctx.ui.notify(`Saved TinyCoder ${chosen.model} @ ${chosen.endpoint} (${chosen.label}).`, "info");
+      }
+
+      const sources = engineSettings().sources;
+      if (sources.endpoint === "env" || sources.model === "env") {
+        ctx.ui.notify(
+          "Note: PI_OFFLINE_TINY_ENDPOINT / PI_OFFLINE_TINY_MODEL are set in the environment and still override the saved config.",
+          "warning"
+        );
+      }
+      await notifyDoctorReport(ctx);
     }
   });
 
@@ -823,7 +941,11 @@ export default function offlineEngine(pi: ExtensionAPI) {
     handler: async (_args, ctx) => {
       ctx.ui.notify(
         [
-          `Tiny implementer: ${tinyModel()} @ ${tinyEndpoint()}`,
+          formatEngineStatus({
+            settings: engineSettings(),
+            configFile: engineConfigFile,
+            configError: engineConfigState.error
+          }),
           `Endpoint locality: ${checkEndpointLocality(tinyEndpoint()).message}`,
           `Implementer auth: ${tinyApiKey() ? "bearer key configured" : "none (local endpoint)"}`,
           `Bounded execute attempts: ${tinyMaxAttempts()}`,
@@ -837,24 +959,25 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 }
 
+// Precedence for all four: environment > engine config file > built-in default
+// (see src/engine-config.mjs).
 function tinyEndpoint() {
-  return process.env.PI_OFFLINE_TINY_ENDPOINT ?? "http://127.0.0.1:8081";
+  return engineSettings().endpoint;
 }
 
 function tinyModel() {
-  return process.env.PI_OFFLINE_TINY_MODEL ?? "qwen2.5-coder-3b-instruct";
+  return engineSettings().model;
 }
 
 // Empty when the implementer is a local llama.cpp. OPENROUTER_API_KEY is
-// honoured so an already-exported key needs no duplication.
+// honoured so an already-exported key needs no duplication. Keys are read from
+// the environment only; the config file never stores them.
 function tinyApiKey() {
-  const key = process.env.PI_OFFLINE_TINY_API_KEY ?? process.env.OPENROUTER_API_KEY ?? "";
-  return key.trim() || null;
+  return engineSettings().apiKey;
 }
 
 function tinyMaxAttempts() {
-  const raw = Number.parseInt(process.env.PI_OFFLINE_TINY_MAX_ATTEMPTS ?? "3", 10);
-  return Number.isFinite(raw) ? Math.min(3, Math.max(1, raw)) : 3;
+  return engineSettings().maxAttempts;
 }
 
 function uniqueAbsolutePaths(cwd: string, candidate: any) {

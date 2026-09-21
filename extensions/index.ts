@@ -31,6 +31,7 @@ import {
   trainingCaptureStatus
 } from "../src/training-recorder.mjs";
 import { exportTrainingData } from "../src/training-exporter.mjs";
+import { applyCodeToolPolicy, selectActiveToolObjects } from "../src/extension-policy.mjs";
 
 const NonEmptyString = Type.String({ minLength: 1 });
 
@@ -623,21 +624,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.on("before_agent_start", async (event) => {
-    const options = event.systemPromptOptions;
-    const codeToolActive = options?.selectedTools?.includes("code") === true;
-    if (!codeToolActive) return;
-
-    const guidelines = options.promptGuidelines ?? (options.promptGuidelines = []);
-    const prefix = "pi-offline-engine:";
-    const desired = [
-      `${prefix} Use the code tool for read-only filtering, aggregation, search composition, and mechanical analysis.`,
-      `${prefix} Do not invoke bash/edit/write from inside the code tool in this profile; those bridged calls bypass top-level edit/LSP extension lifecycles.`,
-      `${prefix} Perform mutations through the active top-level edit/write tools or execute_delegated_implementation.`
-    ];
-
-    for (const guideline of desired) {
-      if (!guidelines.includes(guideline)) guidelines.push(guideline);
-    }
+    applyCodeToolPolicy(event.systemPromptOptions);
   });
 
   pi.on("before_agent_start", async (_event, ctx) => {
@@ -735,8 +722,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
   pi.registerCommand("offline-doctor", {
     description: "Check local offline readiness",
     handler: async (_args, ctx) => {
-      const activeNames = new Set(pi.getActiveTools());
-      const activeTools = pi.getAllTools().filter((tool) => activeNames.has(tool.name));
+      const activeTools = selectActiveToolObjects(pi.getAllTools(), pi.getActiveTools());
       const report = await runOfflineDoctor({
         cwd: ctx.cwd,
         endpoint: tinyEndpoint(),

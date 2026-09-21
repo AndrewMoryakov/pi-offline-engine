@@ -95,3 +95,23 @@ test("apply implementation registers each target for rollback before writing", a
   assert.ok(writeIndex >= 0);
   assert.ok(pushIndex < writeIndex, "rollback registration precedes the actual write");
 });
+
+
+test("replacement content is inserted literally without String.replace expansion", async () => {
+  const cwd = await workspace();
+  const s = spec();
+  const snapshot = await snapshotAllowedFiles(cwd, s);
+  const candidate = {
+    status: "candidate",
+    changes: [{
+      path: "src/A.cs",
+      operation: "replace_text",
+      expected: "=> 1",
+      content: '=> "P$\'Q $$ $&"'
+    }]
+  };
+
+  await applyCandidate(cwd, { spec: s, candidate, snapshot });
+  const text = await fs.readFile(path.join(cwd, "src", "A.cs"), "utf8");
+  assert.match(text, /P\$'Q \$\$ \$&/);
+});

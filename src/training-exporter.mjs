@@ -4,8 +4,18 @@ import path from "node:path";
 
 const SECRET_RULES = [
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, "[REDACTED_PRIVATE_KEY]"],
-  [/\b(?:api[_-]?key|token|secret|password)\s*[:=]\s*["']?[^\s"',;}{]{6,}/gi, "[REDACTED_SECRET]"],
-  [/\b(?:sk|ghp|github_pat)_[A-Za-z0-9_\-]{16,}\b/g, "[REDACTED_TOKEN]"]
+  [/\bAuthorization\s*:\s*Bearer\s+[^\s"',;}{]+/gi, "Authorization: Bearer [REDACTED_TOKEN]"],
+  [/\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis):\/\/([^:\s/@]+):([^@\s/]+)@/gi, (match, user) => match.replace(/\/\/[^:]+:[^@]+@/, `//${user}:[REDACTED_PASSWORD]@`)],
+  [/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g, "[REDACTED_AWS_ACCESS_KEY_ID]"],
+  [/\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_OPENAI_KEY]"],
+  [/\b(?:ghp_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,})\b/g, "[REDACTED_GITHUB_TOKEN]"],
+  [/([A-Za-z0-9_.-]*(?:API[_-]?KEY|ACCESS[_-]?KEY|TOKEN|SECRET|PASSWORD|PRIVATE[_-]?KEY)[A-Za-z0-9_.-]*)\s*=\s*([^\s"'\`;}{]+)/gi, "$1=[REDACTED_SECRET]"],
+  [
+    /(["']?[A-Za-z0-9_.-]*(?:api[_-]?key|access[_-]?key|token|secret|password|private[_-]?key)[A-Za-z0-9_.-]*["']?)\s*:\s*(?:(["'])([^"'\r\n]{6,})\2|([^\s,;}{]{6,}))/gi,
+    (_match, key, quote) => quote
+      ? `${key}:${quote}[REDACTED_SECRET]${quote}`
+      : `${key}:[REDACTED_SECRET]`
+  ]
 ];
 
 const SENSITIVE_PATH_PATTERNS = [
@@ -38,7 +48,7 @@ export async function exportTrainingData({
       droppedIncomplete += 1;
       continue;
     }
-    if (hasSensitivePath(raw.input.implementation_spec)) {
+    if (hasSensitivePath(raw.input.implementation_spec, raw.output.candidate)) {
       droppedSensitive += 1;
       continue;
     }
@@ -169,10 +179,11 @@ export function redactString(value) {
   return result;
 }
 
-function hasSensitivePath(spec) {
+function hasSensitivePath(spec, candidate = null) {
   const paths = [
     spec?.target?.file,
-    ...(Array.isArray(spec?.scope?.allowed_files) ? spec.scope.allowed_files : [])
+    ...(Array.isArray(spec?.scope?.allowed_files) ? spec.scope.allowed_files : []),
+    ...(Array.isArray(candidate?.changes) ? candidate.changes.map((change) => change?.path) : [])
   ].filter(Boolean);
   return paths.some((value) => SENSITIVE_PATH_PATTERNS.some((pattern) => pattern.test(String(value).replaceAll("\\", "/"))));
 }

@@ -52,7 +52,7 @@ export PI_OFFLINE_TINY_MODEL=qwen2.5-coder-3b-instruct
 export PI_OFFLINE_TINY_MAX_ATTEMPTS=3
 ```
 
-Then run Pi normally.
+Then run Pi normally. If the endpoint includes a reverse-proxy path prefix, that prefix is preserved when resolving `health`, `v1/models`, and `v1/chat/completions`.
 
 `/offline-status` shows the active local settings.
 

@@ -13,10 +13,11 @@ export function createTrainingRunId(specId = "run") {
   return `${sanitizeId(specId)}-${suffix}`;
 }
 
-export function hasSensitiveTrainingPath(spec) {
+export function hasSensitiveTrainingPath(spec, candidate = null) {
   const paths = [
     spec?.target?.file,
-    ...(Array.isArray(spec?.scope?.allowed_files) ? spec.scope.allowed_files : [])
+    ...(Array.isArray(spec?.scope?.allowed_files) ? spec.scope.allowed_files : []),
+    ...(Array.isArray(candidate?.changes) ? candidate.changes.map((change) => change?.path) : [])
   ].filter(Boolean);
   return paths.some((value) => SENSITIVE_PATH_PATTERNS.some((pattern) => pattern.test(normalizePath(value))));
 }
@@ -35,12 +36,19 @@ export async function appendTrainingRecord(cwd, record) {
 }
 
 export async function safeAppendTrainingRecord(cwd, record) {
+  const spec = record?.input?.implementation_spec ?? null;
+  const candidate = record?.output?.candidate ?? null;
+  if (hasSensitiveTrainingPath(spec, candidate)) {
+    return { ok: false, skipped: true, file: null, error: "sensitive_path" };
+  }
+
   try {
     const file = await appendTrainingRecord(cwd, record);
-    return { ok: true, file, error: null };
+    return { ok: true, skipped: false, file, error: null };
   } catch (error) {
     return {
       ok: false,
+      skipped: false,
       file: null,
       error: error instanceof Error ? error.message : String(error)
     };

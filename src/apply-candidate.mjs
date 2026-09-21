@@ -35,7 +35,7 @@ export async function planCandidateApplication(cwd, { spec, candidate, snapshot 
       if (!entry.existed || typeof entry.next !== "string") throw new Error(`replace_text target does not exist: ${change.path}`);
       const count = countOccurrences(entry.next, change.expected);
       if (count !== 1) throw new Error(`replace_text expected text must occur exactly once in ${change.path}; found ${count}`);
-      entry.next = entry.next.replace(change.expected, change.content);
+      entry.next = entry.next.replace(change.expected, () => change.content);
       continue;
     }
 

@@ -70,7 +70,7 @@ test("drops sensitive paths and exact duplicate examples", async () => {
 });
 
 test("redacts common secret assignments", () => {
-  assert.equal(redactString("token=abcdefghijk"), "[REDACTED_SECRET]");
+  assert.equal(redactString("token=abcdefghijk"), "token=[REDACTED_SECRET]");
 });
 
 
@@ -94,4 +94,36 @@ test("builds paired preference only from identical prompts", async () => {
   assert.match(lines[0].chosen, /return 2/);
   assert.match(lines[0].rejected, /return 3/);
   assert.doesNotMatch(lines[0].rejected, /return 4/);
+});
+
+
+test("redacts common env, JSON, bearer, cloud and URL credential forms", () => {
+  const probes = [
+    ["api_key: abcdef123456", "abcdef123456"],
+    ["MY_API_KEY=abcdef123456789", "abcdef123456789"],
+    ["AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY", "wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY"],
+    ["DB_PASSWORD=hunter2hunter2", "hunter2hunter2"],
+    ['{"api_key":"abcdef1234567890"}', "abcdef1234567890"],
+    ["Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.synthetic", "eyJhbGciOiJIUzI1NiJ9.synthetic"],
+    ["AKIAIOSFODNN7EXAMPLE", "AKIAIOSFODNN7EXAMPLE"],
+    ["postgres://user:s3cretpw@host/db", "s3cretpw"],
+    ["sk-proj-AbCdEfGhIjKlMnOpQrSt", "sk-proj-AbCdEfGhIjKlMnOpQrSt"]
+  ];
+
+  for (const [probe, secret] of probes) {
+    const redacted = redactString(probe);
+    assert.equal(redacted.includes(secret), false, probe);
+  }
+});
+
+test("drops records whose candidate path itself is sensitive", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-export-"));
+  const input = path.join(cwd, "raw.jsonl");
+  const record = row({ id: "candidate-secret", passed: false });
+  record.output.candidate.changes[0].path = ".env.production";
+  await fs.writeFile(input, JSON.stringify(record) + "\n", "utf8");
+
+  const result = await exportTrainingData({ cwd, inputFile: input });
+  assert.equal(result.eval_examples, 0);
+  assert.equal(result.dropped_sensitive, 1);
 });

@@ -1,3 +1,5 @@
+import { resolveEndpointUrl } from "./endpoint-url.mjs";
+
 const DEFAULT_TIMEOUT_MS = 5000;
 
 export async function runOfflineDoctor({
@@ -86,13 +88,13 @@ async function checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs) {
   try {
     let healthOk = false;
     try {
-      const health = await fetchFn(new URL("/health", withSlash(endpoint)), { signal: controller.signal });
+      const health = await fetchFn(resolveEndpointUrl(endpoint, "health"), { signal: controller.signal });
       healthOk = health.ok;
     } catch {}
 
     let models = [];
     try {
-      const response = await fetchFn(new URL("/v1/models", withSlash(endpoint)), { signal: controller.signal });
+      const response = await fetchFn(resolveEndpointUrl(endpoint, "v1/models"), { signal: controller.signal });
       if (response.ok) {
         const json = await response.json();
         models = Array.isArray(json?.data) ? json.data.map((x) => String(x.id ?? x.model ?? "")).filter(Boolean) : [];
@@ -100,18 +102,22 @@ async function checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs) {
     } catch {}
 
     const reachable = healthOk || models.length > 0;
-    const exactModel = models.length === 0 || models.includes(model);
+    const catalogAvailable = models.length > 0;
+    const exactModel = catalogAvailable && models.includes(model);
+    const ok = reachable && exactModel;
 
     return {
       id: "tiny_endpoint",
       required: true,
-      ok: reachable && exactModel,
-      status: reachable && exactModel ? "ok" : "error",
+      ok,
+      status: ok ? "ok" : "error",
       message: !reachable
         ? `unreachable: ${endpoint}`
-        : exactModel
-          ? `reachable; model ${model}${models.length ? " present" : " catalog unavailable"}`
-          : `reachable, but configured model ${model} not listed: ${models.join(", ")}`
+        : !catalogAvailable
+          ? `reachable, but model catalog is unavailable; cannot verify configured model ${model}`
+          : exactModel
+            ? `reachable; model ${model} present`
+            : `reachable, but configured model ${model} not listed: ${models.join(", ")}`
     };
   } finally {
     clearTimeout(timeout);
@@ -256,8 +262,4 @@ function formatSource(sourceInfo) {
 
 function firstNonEmpty(value) {
   return String(value ?? "").split(/\r?\n/).map((x) => x.trim()).find(Boolean);
-}
-
-function withSlash(endpoint) {
-  return endpoint.endsWith("/") ? endpoint : endpoint + "/";
-}
+}}

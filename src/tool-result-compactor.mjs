@@ -72,7 +72,15 @@ export function summarizeDotnetOutput(text, { command = "", artifact = "" } = {}
 }
 
 export function isDotnetBuildOrTest(command) {
-  return typeof command === "string" && /(?:^|[;&|()]|\s)dotnet\s+(?:build|test)\b/i.test(command);
+  if (typeof command !== "string") return false;
+  const trimmed = command.trim();
+  if (!/^dotnet\s+(?:build|test)\b/i.test(trimmed)) return false;
+
+  // Fail closed: compaction is safe only when the shell result belongs to one
+  // direct dotnet invocation. Any shell composition/pipeline/substitution may
+  // contain unrelated output that must remain visible to the model.
+  if (/[;&|<>\r\n`]/.test(trimmed) || /\$\(/.test(trimmed)) return false;
+  return true;
 }
 
 export function extractTextContent(content) {

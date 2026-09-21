@@ -1,4 +1,14 @@
+import { resolveEndpointUrl } from "./endpoint-url.mjs";
+
 const DEFAULT_TIMEOUT_MS = 120_000;
+
+export class TinyModelOutputError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "TinyModelOutputError";
+    this.code = "tiny_model_output_invalid";
+  }
+}
 
 const CANDIDATE_JSON_SCHEMA = {
   type: "object",
@@ -35,7 +45,8 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error("tiny implementer timeout")), timeoutMs);
   const abort = () => controller.abort(signal?.reason ?? new Error("aborted"));
-  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) abort();
+  else signal?.addEventListener("abort", abort, { once: true });
 
   const startedAt = Date.now();
   try {
@@ -73,9 +84,14 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
       throw new Error(`tiny endpoint HTTP ${response.status}: ${response.raw.slice(0, 500)}`);
     }
 
-    const envelope = JSON.parse(response.raw);
+    let envelope;
+    try {
+      envelope = JSON.parse(response.raw);
+    } catch {
+      throw new TinyModelOutputError("tiny endpoint returned invalid JSON envelope");
+    }
     const text = envelope?.choices?.[0]?.message?.content;
-    if (typeof text !== "string") throw new Error("tiny endpoint returned no assistant content");
+    if (typeof text !== "string") throw new TinyModelOutputError("tiny endpoint returned no assistant content");
 
     return {
       candidate: parseJsonObject(text),
@@ -114,7 +130,7 @@ function buildMessages(spec, context, repairPacket) {
 }
 
 async function postCompletion(endpoint, body, signal) {
-  const response = await fetch(new URL("/v1/chat/completions", ensureTrailingSlash(endpoint)), {
+  const response = await fetch(resolveEndpointUrl(endpoint, "v1/chat/completions"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     signal,
@@ -123,8 +139,12 @@ async function postCompletion(endpoint, body, signal) {
   return { ok: response.ok, status: response.status, raw: await response.text() };
 }
 
-function looksLikeStructuredOutputUnsupported(raw) {
-  return /json_schema|response_format|structured|grammar|unsupported|unknown/i.test(String(raw));
+export function looksLikeStructuredOutputUnsupported(raw) {
+  const text = String(raw);
+  const feature = String.raw`(?:json_schema|response_format)`;
+  const reason = String.raw`(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type))`;
+  return new RegExp(feature + String.raw`[\s\S]{0,96}` + reason, "i").test(text) ||
+    new RegExp(reason + String.raw`[\s\S]{0,96}` + feature, "i").test(text);
 }
 
 function parseJsonObject(text) {
@@ -132,8 +152,12 @@ function parseJsonObject(text) {
   try { return JSON.parse(trimmed); } catch {}
   const first = trimmed.indexOf("{");
   const last = trimmed.lastIndexOf("}");
-  if (first < 0 || last <= first) throw new Error("tiny model did not return a JSON object");
-  return JSON.parse(trimmed.slice(first, last + 1));
+  if (first < 0 || last <= first) throw new TinyModelOutputError("tiny model did not return a JSON object");
+  try {
+    return JSON.parse(trimmed.slice(first, last + 1));
+  } catch {
+    throw new TinyModelOutputError("tiny model returned malformed JSON candidate");
+  }
 }
 
 function normalizeUsage(usage = {}) {
@@ -157,8 +181,4 @@ function normalizeUsage(usage = {}) {
 
 function finiteOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function ensureTrailingSlash(endpoint) {
-  return endpoint.endsWith("/") ? endpoint : endpoint + "/";
 }

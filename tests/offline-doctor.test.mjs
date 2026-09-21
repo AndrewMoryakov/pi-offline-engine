@@ -117,3 +117,90 @@ test("warns when runtime state is not ignored by Git", async () => {
   assert.ok(report.warnings.includes("runtime_state_ignore"));
   assert.match(formatDoctorReport(report), /\.git\/info\/exclude/);
 });
+
+
+test("fails required readiness when model catalog is unavailable", async () => {
+  const fetchFn = async (url) => {
+    const pathname = new URL(url).pathname;
+    if (pathname === "/health") return { ok: true, async json() { return {}; } };
+    if (pathname === "/v1/models") return { ok: false, async json() { return {}; } };
+    return { ok: false, async json() { return {}; } };
+  };
+  const exec = async (command, args) => {
+    if (command === "dotnet") return { code: 0, killed: false, stdout: args[0] === "test" ? "--logger" : ".NET", stderr: "" };
+    throw new Error("missing");
+  };
+
+  const report = await runOfflineDoctor({
+    cwd: "/tmp",
+    endpoint: "http://127.0.0.1:8081",
+    model: "tiny",
+    tools: [{ name: "execute_delegated_implementation" }],
+    exec,
+    fetchFn
+  });
+
+  assert.equal(report.ready, false);
+  assert.ok(report.requiredFailures.includes("tiny_endpoint"));
+  assert.match(formatDoctorReport(report), /model catalog is unavailable/);
+});
+
+test("preserves endpoint path prefixes in doctor probes", async () => {
+  const paths = [];
+  const fetchFn = async (url) => {
+    const pathname = new URL(url).pathname;
+    paths.push(pathname);
+    if (pathname === "/proxy/health") return { ok: true, async json() { return {}; } };
+    if (pathname === "/proxy/v1/models") return { ok: true, async json() { return { data: [{ id: "tiny" }] }; } };
+    return { ok: false, async json() { return {}; } };
+  };
+  const exec = async (command, args) => {
+    if (command === "dotnet") return { code: 0, killed: false, stdout: args[0] === "test" ? "--logger" : ".NET", stderr: "" };
+    throw new Error("missing");
+  };
+
+  const report = await runOfflineDoctor({
+    cwd: "/tmp",
+    endpoint: "http://127.0.0.1:8081/proxy",
+    model: "tiny",
+    tools: [{ name: "execute_delegated_implementation" }],
+    exec,
+    fetchFn
+  });
+
+  assert.equal(report.ready, true);
+  assert.ok(paths.includes("/proxy/health"));
+  assert.ok(paths.includes("/proxy/v1/models"));
+});
+
+
+test("fails readiness when health works but model catalog is unavailable", async () => {
+  const seen = [];
+  const fetchFn = async (url) => {
+    seen.push(new URL(url).pathname);
+    const pathname = new URL(url).pathname;
+    if (pathname === "/proxy/health") return { ok: true, async json() { return {}; } };
+    if (pathname === "/proxy/v1/models") return { ok: false, async json() { return {}; } };
+    return { ok: false, async json() { return {}; } };
+  };
+  const exec = async (command, args) => {
+    if (command === "dotnet" && args[0] === "--info") return { code: 0, killed: false, stdout: ".NET", stderr: "" };
+    if (command === "dotnet" && args[0] === "test") return { code: 0, killed: false, stdout: "--logger\n--filter", stderr: "" };
+    if (command === "git") return { code: 1, killed: false, stdout: "", stderr: "" };
+    throw new Error("missing");
+  };
+
+  const report = await runOfflineDoctor({
+    cwd: "/tmp",
+    endpoint: "http://127.0.0.1:8081/proxy",
+    model: "tiny",
+    tools: [{ name: "execute_delegated_implementation" }],
+    exec,
+    fetchFn
+  });
+
+  assert.equal(report.ready, false);
+  assert.ok(report.requiredFailures.includes("tiny_endpoint"));
+  assert.deepEqual(seen.slice(0, 2), ["/proxy/health", "/proxy/v1/models"]);
+  assert.match(formatDoctorReport(report), /model catalog is unavailable/);
+});

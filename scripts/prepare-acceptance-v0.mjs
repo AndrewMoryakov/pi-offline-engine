@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { ACCEPTANCE_MARKER, prepareAcceptanceOutputDirectory } from "../src/acceptance-output.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const template = path.join(root, "fixtures", "dotnet-boundary-v0");
@@ -16,8 +17,9 @@ const output = outIndex >= 0 && args[outIndex + 1]
   ? path.resolve(args[outIndex + 1])
   : path.join(os.tmpdir(), "pi-offline-acceptance-v0");
 
-await fs.rm(output, { recursive: true, force: true });
+await prepareAcceptanceOutputDirectory({ output, cwd: process.cwd(), repoRoot: root });
 await fs.cp(template, output, { recursive: true });
+await fs.writeFile(path.join(output, ACCEPTANCE_MARKER), "v0\n", "utf8");
 
 run("git", ["init"], output);
 run("git", ["config", "user.email", "pi-offline-acceptance@example.invalid"], output);
@@ -59,3 +61,4 @@ function run(command, commandArgs, cwd) {
     process.exit(result.status ?? 1);
   }
 }
+

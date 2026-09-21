@@ -1,0 +1,11 @@
+<Project Sdk="MSTest.Sdk/4.4.1">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Acceptance.Core/Acceptance.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -263,3 +263,16 @@ Capture is **off by default**:
 ```
 
 See [docs/TRAINING_DATA.md](docs/TRAINING_DATA.md) before enabling it: raw traces may contain private source code.
+
+
+## First real acceptance run
+
+A controlled disposable .NET fixture is included so the first TinyCoder run tests the pipeline rather than an arbitrary repository.
+
+Prepare it while online:
+
+```bash
+npm run acceptance:prepare -- --restore
+```
+
+Then follow [docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md).

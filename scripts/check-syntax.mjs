@@ -11,6 +11,17 @@ for (const root of roots) {
   await collect(path.resolve(root));
 }
 
+// A missing root is tolerated (the walker is also used on partial trees), but
+// finding nothing at all means the check ran against the wrong directory.
+// Passing vacuously here would let `npm run check` certify an empty result.
+if (files.length === 0) {
+  process.stderr.write(
+    "Syntax check found no .mjs/.ts files under " + roots.join(", ") +
+    " relative to " + process.cwd() + "\n"
+  );
+  process.exit(1);
+}
+
 files.sort();
 for (const file of files) {
   const isTs = file.endsWith(".ts");

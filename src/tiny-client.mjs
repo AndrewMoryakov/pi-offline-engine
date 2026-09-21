@@ -71,8 +71,12 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
     let structuredOutputMode = "json_schema";
 
     // Keep compatibility with OpenAI-compatible local servers that implement
-    // json_object but not the newer json_schema response format.
-    if ((response.status === 400 || response.status === 422) && looksLikeStructuredOutputUnsupported(response.raw)) {
+    // json_object but not the newer json_schema response format. The status is
+    // not part of the signal: llama.cpp reports this rejection as HTTP 500, so
+    // gating on 400/422 made the fallback unreachable for it. Any failed
+    // response whose body names the feature and a rejection reason is retried
+    // once -- the request already failed, so a second attempt costs nothing.
+    if (!response.ok && looksLikeStructuredOutputUnsupported(response.raw)) {
       response = await postCompletion(endpoint, {
         ...base,
         response_format: { type: "json_object" }
@@ -142,7 +146,11 @@ async function postCompletion(endpoint, body, signal) {
 export function looksLikeStructuredOutputUnsupported(raw) {
   const text = String(raw);
   const feature = String.raw`(?:json_schema|response_format)`;
-  const reason = String.raw`(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type))`;
+  // `must be one of` covers llama.cpp, which rejects json_schema with
+  // `response_format type must be one of "text" or "json_object"`. Keep it out
+  // of `feature`: the allowed-value list names json_object, and matching on
+  // that would fire the fallback in the wrong direction.
+  const reason = String.raw`(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type)|must be one of|only supports?)`;
   return new RegExp(feature + String.raw`[\s\S]{0,96}` + reason, "i").test(text) ||
     new RegExp(reason + String.raw`[\s\S]{0,96}` + feature, "i").test(text);
 }

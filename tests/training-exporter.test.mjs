@@ -73,6 +73,37 @@ test("redacts common secret assignments", () => {
   assert.equal(redactString("token=abcdefghijk"), "token=[REDACTED_SECRET]");
 });
 
+test("redacts quoted secret values", () => {
+  const probes = [
+    ['const password = "hunter2hunter2";', "hunter2hunter2"],
+    ['export API_KEY="abcdef123456"', "abcdef123456"],
+    ["private_key = 'abcdef123456789'", "abcdef123456789"],
+    ['{"Authorization":"Bearer eyJhbGciOiJIUzI1NiJ9.synthetic"}', "eyJhbGciOiJIUzI1NiJ9.synthetic"],
+    ['headers: { Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.synthetic" }', "eyJhbGciOiJIUzI1NiJ9.synthetic"]
+  ];
+
+  for (const [probe, secret] of probes) {
+    assert.equal(redactString(probe).includes(secret), false, probe);
+  }
+});
+
+test("leaves ordinary source and numeric settings byte-identical", () => {
+  const probes = [
+    "Run(CancellationToken cancellationToken = default)",
+    "int maxTokens = 512;",
+    "var token = CancellationToken.None;",
+    "const maxTokens = 4096;",
+    '"max_tokens": 100000',
+    '"maxTokens": 512,',
+    "password: null",
+    "int secretCount = 0;"
+  ];
+
+  for (const probe of probes) {
+    assert.equal(redactString(probe), probe, probe);
+  }
+});
+
 
 test("builds paired preference only from identical prompts", async () => {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-export-"));

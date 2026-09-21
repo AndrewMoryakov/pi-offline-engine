@@ -2,19 +2,65 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+// Key names that mark the right-hand side as credential-shaped. The fragment is
+// deliberately permissive (it also matches `cancellationToken`, `maxTokens`);
+// whether a match is actually redacted is decided by `looksLikeSecretValue`,
+// not by the key alone. Tightening this fragment instead is what previously
+// broke quoted-secret redaction while still mangling ordinary dotnet source.
+const SECRET_KEY_FRAGMENT =
+  String.raw`[A-Za-z0-9_.-]*(?:api[_-]?key|access[_-]?key|token|secret|password|passwd|private[_-]?key)[A-Za-z0-9_.-]*`;
+
+// Exact values (case-insensitive) that are language literals rather than
+// credentials. Exact-match only, so this can never un-redact a real secret
+// unless the secret is literally one of these strings.
+const NON_SECRET_VALUES = new Set([
+  "default", "null", "nullptr", "none", "nil", "true", "false", "undefined",
+  "empty", "string.empty", "cancellationtoken.none", "guid.empty",
+  "readonly", "required", "value", "example", "changeme", "redacted"
+]);
+
+function looksLikeSecretValue(value, quoted) {
+  const trimmed = String(value).trim();
+  if (trimmed.length < (quoted ? 4 : 6)) return false;
+  if (NON_SECRET_VALUES.has(trimmed.toLowerCase())) return false;
+  // Numeric settings such as `"max_tokens": 100000` or `int maxTokens = 512`.
+  if (/^[+-]?[\d_][\d_.,]*$/.test(trimmed)) return false;
+  if (/^0[xXbB][0-9a-fA-F_]+$/.test(trimmed)) return false;
+  if (/^\[REDACTED_[A-Z_]+\]$/.test(trimmed)) return false;
+  return /[A-Za-z0-9]/.test(trimmed);
+}
+
+function redactAssignment(match, key, separator, quote, quotedValue, bareValue) {
+  const isQuoted = Boolean(quote);
+  const value = isQuoted ? quotedValue : bareValue;
+  if (!looksLikeSecretValue(value, isQuoted)) return match;
+  return isQuoted
+    ? `${key}${separator}${quote}[REDACTED_SECRET]${quote}`
+    : `${key}${separator}[REDACTED_SECRET]`;
+}
+
 const SECRET_RULES = [
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, "[REDACTED_PRIVATE_KEY]"],
-  [/\bAuthorization\s*:\s*Bearer\s+[^\s"',;}{]+/gi, "Authorization: Bearer [REDACTED_TOKEN]"],
+  // Covers both `Authorization: Bearer x` and the JSON/JS header object form
+  // `{"Authorization": "Bearer x"}` without rewriting the surrounding syntax.
+  [/(\bAuthorization["']?\s*:\s*["']?\s*Bearer\s+)[^\s"',;}{]+/gi, "$1[REDACTED_TOKEN]"],
   [/\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis):\/\/([^:\s/@]+):([^@\s/]+)@/gi, (match, user) => match.replace(/\/\/[^:]+:[^@]+@/, `//${user}:[REDACTED_PASSWORD]@`)],
   [/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g, "[REDACTED_AWS_ACCESS_KEY_ID]"],
   [/\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_OPENAI_KEY]"],
   [/\b(?:ghp_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,})\b/g, "[REDACTED_GITHUB_TOKEN]"],
-  [/([A-Za-z0-9_.-]*(?:API[_-]?KEY|ACCESS[_-]?KEY|TOKEN|SECRET|PASSWORD|PRIVATE[_-]?KEY)[A-Za-z0-9_.-]*)\s*=\s*([^\s"'\`;}{]+)/gi, "$1=[REDACTED_SECRET]"],
   [
-    /(["']?[A-Za-z0-9_.-]*(?:api[_-]?key|access[_-]?key|token|secret|password|private[_-]?key)[A-Za-z0-9_.-]*["']?)\s*:\s*(?:(["'])([^"'\r\n]{6,})\2|([^\s,;}{]{6,}))/gi,
-    (_match, key, quote) => quote
-      ? `${key}:${quote}[REDACTED_SECRET]${quote}`
-      : `${key}:[REDACTED_SECRET]`
+    new RegExp(
+      String.raw`(${SECRET_KEY_FRAGMENT})(\s*=\s*)(?:(["'\`])([^"'\`\r\n]*)\3|([^\s"'\`;,}{()\[\]]+))`,
+      "gi"
+    ),
+    redactAssignment
+  ],
+  [
+    new RegExp(
+      String.raw`(["']?${SECRET_KEY_FRAGMENT}["']?)(\s*:\s*)(?:(["'])([^"'\r\n]*)\3|([^\s,;}{()\[\]]+))`,
+      "gi"
+    ),
+    redactAssignment
   ]
 ];
 

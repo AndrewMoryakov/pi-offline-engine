@@ -2,7 +2,33 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { once } from "node:events";
-import { callTinyImplementer, TinyModelOutputError } from "../src/tiny-client.mjs";
+import {
+  callTinyImplementer,
+  looksLikeStructuredOutputUnsupported,
+  TinyModelOutputError
+} from "../src/tiny-client.mjs";
+
+test("detects structured-output rejection across backend phrasings", () => {
+  const rejections = [
+    JSON.stringify({ error: { message: 'response_format type must be one of "text" or "json_object"' } }),
+    JSON.stringify({ error: "unsupported response_format json_schema" }),
+    JSON.stringify({ error: { message: "unrecognized field response_format" } }),
+    JSON.stringify({ error: { message: "json_schema is not supported by this model" } })
+  ];
+
+  for (const raw of rejections) {
+    assert.equal(looksLikeStructuredOutputUnsupported(raw), true, raw);
+  }
+
+  const unrelated = [
+    JSON.stringify({ error: { message: "model not found" } }),
+    JSON.stringify({ error: { message: "temperature must be one of the supported values" } })
+  ];
+
+  for (const raw of unrelated) {
+    assert.equal(looksLikeStructuredOutputUnsupported(raw), false, raw);
+  }
+});
 
 const spec = {
   version: 1,
@@ -59,6 +85,49 @@ test("uses json_schema structured output when supported", async () => {
     assert.equal(result.usage.cacheReadTokens, 3);
     assert.equal(result.usage.outputTokens, 4);
     assert.equal(result.usage.totalTokens, 14);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
+test("falls back to json_object when llama.cpp rejects json_schema with HTTP 500", async () => {
+  const bodies = [];
+  const server = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    bodies.push(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+
+    res.setHeader("content-type", "application/json");
+    if (bodies.length === 1) {
+      res.statusCode = 500;
+      res.end(JSON.stringify({
+        error: { message: 'response_format type must be one of "text" or "json_object"' }
+      }));
+      return;
+    }
+
+    res.end(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        status: "candidate",
+        changes: [{ path: "src/A.cs", operation: "replace_text", expected: "1", content: "2" }]
+      }) } }]
+    }));
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const { port } = server.address();
+    const result = await callTinyImplementer({
+      endpoint: `http://127.0.0.1:${port}`,
+      model: "tiny",
+      spec,
+      timeoutMs: 5000
+    });
+    assert.equal(result.structuredOutputMode, "json_object_fallback");
+    assert.equal(bodies.length, 2);
+    assert.equal(bodies[1].response_format.type, "json_object");
   } finally {
     server.close();
     await once(server, "close");

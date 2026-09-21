@@ -76,10 +76,15 @@ export function isDotnetBuildOrTest(command) {
   const trimmed = command.trim();
   if (!/^dotnet\s+(?:build|test)\b/i.test(trimmed)) return false;
 
+  // A trailing stderr merge still describes exactly one dotnet invocation, and
+  // agents emit it constantly for build/test. The `$` anchor is the safety
+  // property: `dotnet build 2>&1 | tee log` keeps its pipeline and stays out.
+  const withoutStderrMerge = trimmed.replace(/\s+2>&1$/, "");
+
   // Fail closed: compaction is safe only when the shell result belongs to one
   // direct dotnet invocation. Any shell composition/pipeline/substitution may
   // contain unrelated output that must remain visible to the model.
-  if (/[;&|<>\r\n`]/.test(trimmed) || /\$\(/.test(trimmed)) return false;
+  if (/[;&|<>\r\n`]/.test(withoutStderrMerge) || /\$\(/.test(withoutStderrMerge)) return false;
   return true;
 }
 

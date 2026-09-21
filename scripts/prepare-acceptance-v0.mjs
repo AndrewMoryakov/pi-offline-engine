@@ -18,8 +18,15 @@ const output = outIndex >= 0 && args[outIndex + 1]
   : path.join(os.tmpdir(), "pi-offline-acceptance-v0");
 
 await prepareAcceptanceOutputDirectory({ output, cwd: process.cwd(), repoRoot: root });
-await fs.cp(template, output, { recursive: true });
+
+// Write the marker before anything else lands in the directory. If `fs.cp` or a
+// later git/dotnet step fails, the half-built directory still carries the marker
+// and the next run can clean it up; otherwise every rerun is refused with
+// "Refusing to delete existing output without acceptance marker" until the user
+// deletes it by hand.
+await fs.mkdir(output, { recursive: true });
 await fs.writeFile(path.join(output, ACCEPTANCE_MARKER), "v0\n", "utf8");
+await fs.cp(template, output, { recursive: true });
 
 run("git", ["init"], output);
 run("git", ["config", "user.email", "pi-offline-acceptance@example.invalid"], output);

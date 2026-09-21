@@ -21,6 +21,14 @@ test("recognizes only direct dotnet build and test shell commands", () => {
   assert.equal(isDotnetBuildOrTest("dotnet test $(echo App.Tests.csproj)"), false);
 });
 
+test("allows a trailing stderr merge but not a pipeline after it", () => {
+  assert.equal(isDotnetBuildOrTest("dotnet build src/App.csproj 2>&1"), true);
+  assert.equal(isDotnetBuildOrTest("dotnet test App.Tests.csproj 2>&1"), true);
+  assert.equal(isDotnetBuildOrTest("dotnet build 2>&1 | tee build.log"), false);
+  assert.equal(isDotnetBuildOrTest("dotnet build 2>&1 && git status"), false);
+  assert.equal(isDotnetBuildOrTest("dotnet build > build.log 2>&1"), false);
+});
+
 test("extracts text blocks only", () => {
   assert.equal(extractTextContent([
     { type: "text", text: "a" },

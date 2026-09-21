@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { ACCEPTANCE_MARKER, prepareAcceptanceOutputDirectory } from "../src/acceptance-output.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const template = path.join(root, "fixtures", "dotnet-boundary-v0");
@@ -16,9 +17,9 @@ const output = outIndex >= 0 && args[outIndex + 1]
   ? path.resolve(args[outIndex + 1])
   : path.join(os.tmpdir(), "pi-offline-acceptance-v0");
 
-await prepareOutputDirectory(output);
+await prepareAcceptanceOutputDirectory({ output, cwd: process.cwd(), repoRoot: root });
 await fs.cp(template, output, { recursive: true });
-await fs.writeFile(path.join(output, ".pi-offline-acceptance-fixture"), "v0\n", "utf8");
+await fs.writeFile(path.join(output, ACCEPTANCE_MARKER), "v0\n", "utf8");
 
 run("git", ["init"], output);
 run("git", ["config", "user.email", "pi-offline-acceptance@example.invalid"], output);
@@ -61,47 +62,3 @@ function run(command, commandArgs, cwd) {
   }
 }
 
-
-async function prepareOutputDirectory(output) {
-  const resolved = path.resolve(output);
-  const cwd = path.resolve(process.cwd());
-  const repoRoot = path.resolve(root);
-  const fsRoot = path.parse(resolved).root;
-  const home = path.resolve(os.homedir());
-
-  if (
-    resolved === cwd ||
-    resolved === repoRoot ||
-    resolved === fsRoot ||
-    resolved === home ||
-    isAncestor(resolved, cwd) ||
-    isAncestor(resolved, repoRoot) ||
-    isAncestor(resolved, home)
-  ) {
-    throw new Error("Refusing to use a destructive acceptance output path: " + resolved);
-  }
-
-  try {
-    const stat = await fs.stat(resolved);
-    if (!stat.isDirectory()) {
-      throw new Error("Acceptance output exists and is not a directory: " + resolved);
-    }
-    const marker = path.join(resolved, ".pi-offline-acceptance-fixture");
-    try {
-      await fs.access(marker);
-    } catch {
-      throw new Error(
-        "Refusing to delete existing output without acceptance marker: " + resolved
-      );
-    }
-    await fs.rm(resolved, { recursive: true, force: true });
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-  }
-}
-
-
-function isAncestor(parent, child) {
-  const relative = path.relative(parent, child);
-  return relative !== "" && relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative);
-}

@@ -16,8 +16,9 @@ const output = outIndex >= 0 && args[outIndex + 1]
   ? path.resolve(args[outIndex + 1])
   : path.join(os.tmpdir(), "pi-offline-acceptance-v0");
 
-await fs.rm(output, { recursive: true, force: true });
+await prepareOutputDirectory(output);
 await fs.cp(template, output, { recursive: true });
+await fs.writeFile(path.join(output, ".pi-offline-acceptance-fixture"), "v0\n", "utf8");
 
 run("git", ["init"], output);
 run("git", ["config", "user.email", "pi-offline-acceptance@example.invalid"], output);
@@ -57,5 +58,35 @@ function run(command, commandArgs, cwd) {
   if (result.status !== 0) {
     process.stderr.write("Command failed: " + command + " " + commandArgs.join(" ") + "\n");
     process.exit(result.status ?? 1);
+  }
+}
+
+
+async function prepareOutputDirectory(output) {
+  const resolved = path.resolve(output);
+  const cwd = path.resolve(process.cwd());
+  const repoRoot = path.resolve(root);
+  const fsRoot = path.parse(resolved).root;
+
+  if (resolved === cwd || resolved === repoRoot || resolved === fsRoot) {
+    throw new Error("Refusing to use a destructive acceptance output path: " + resolved);
+  }
+
+  try {
+    const stat = await fs.stat(resolved);
+    if (!stat.isDirectory()) {
+      throw new Error("Acceptance output exists and is not a directory: " + resolved);
+    }
+    const marker = path.join(resolved, ".pi-offline-acceptance-fixture");
+    try {
+      await fs.access(marker);
+    } catch {
+      throw new Error(
+        "Refusing to delete existing output without acceptance marker: " + resolved
+      );
+    }
+    await fs.rm(resolved, { recursive: true, force: true });
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
   }
 }

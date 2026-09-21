@@ -99,19 +99,19 @@ test("builds paired preference only from identical prompts", async () => {
 
 test("redacts common env, JSON, bearer, cloud and URL credential forms", () => {
   const probes = [
-    "MY_API_KEY=abcdef123456789",
-    "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY",
-    "DB_PASSWORD=hunter2hunter2",
-    '{"api_key":"abcdef1234567890"}',
-    "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.synthetic",
-    "AKIAIOSFODNN7EXAMPLE",
-    "postgres://user:s3cretpw@host/db",
-    "sk-proj-AbCdEfGhIjKlMnOpQrSt"
+    ["MY_API_KEY=abcdef123456789", "abcdef123456789"],
+    ["AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY", "wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY"],
+    ["DB_PASSWORD=hunter2hunter2", "hunter2hunter2"],
+    ['{"api_key":"abcdef1234567890"}', "abcdef1234567890"],
+    ["Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.synthetic", "eyJhbGciOiJIUzI1NiJ9.synthetic"],
+    ["AKIAIOSFODNN7EXAMPLE", "AKIAIOSFODNN7EXAMPLE"],
+    ["postgres://user:s3cretpw@host/db", "s3cretpw"],
+    ["sk-proj-AbCdEfGhIjKlMnOpQrSt", "sk-proj-AbCdEfGhIjKlMnOpQrSt"]
   ];
 
-  for (const probe of probes) {
+  for (const [probe, secret] of probes) {
     const redacted = redactString(probe);
-    assert.notEqual(redacted, probe, probe);
+    assert.equal(redacted.includes(secret), false, probe);
   }
 });
 

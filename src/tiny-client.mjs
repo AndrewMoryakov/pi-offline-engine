@@ -141,9 +141,10 @@ async function postCompletion(endpoint, body, signal) {
 
 export function looksLikeStructuredOutputUnsupported(raw) {
   const text = String(raw);
-  const feature = /\b(?:json_schema|response_format)\b/i;
-  const unsupported = /\b(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type))\b/i;
-  return feature.test(text) && unsupported.test(text);
+  const feature = String.raw`(?:json_schema|response_format)`;
+  const reason = String.raw`(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type))`;
+  return new RegExp(feature + String.raw`[\s\S]{0,96}` + reason, "i").test(text) ||
+    new RegExp(reason + String.raw`[\s\S]{0,96}` + feature, "i").test(text);
 }
 
 function parseJsonObject(text) {

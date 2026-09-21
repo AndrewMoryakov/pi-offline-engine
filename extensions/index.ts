@@ -3,7 +3,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { validateImplementationSpec, validateCandidate } from "../src/implementation-spec.mjs";
-import { callTinyImplementer } from "../src/tiny-client.mjs";
+import { callTinyImplementer, TinyModelOutputError } from "../src/tiny-client.mjs";
 import { appendEvent } from "../src/event-log.mjs";
 import { snapshotAllowedFiles, resolveInside } from "../src/workspace-snapshot.mjs";
 import { saveCandidateRecord } from "../src/candidate-store.mjs";
@@ -16,6 +16,11 @@ import { compactToolResult } from "../src/tool-result-compactor.mjs";
 import { buildRepoCapsule } from "../src/repo-capsule.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
 import { buildRuntimeFailureOutcome, buildTinyTerminalOutcome } from "../src/delegation-state.mjs";
+import {
+  buildModelOutputEscalation,
+  buildModelOutputRepairPacket,
+  canRetryModelOutput
+} from "../src/delegation-retry.mjs";
 import { addPiUsage, toPiUsage } from "../src/pi-usage.mjs";
 import {
   createTrainingRunId,
@@ -293,7 +298,58 @@ export default function offlineEngine(pi: ExtensionAPI) {
               latencyMs: result.latencyMs
             }));
           }
-          throw new Error(`Tiny implementer returned an invalid candidate: ${candidateCheck.errors.join("; ")}`);
+
+          attempts.push({
+            attempt,
+            usage: result.usage,
+            latencyMs: result.latencyMs,
+            candidateValid: false,
+            verificationPassed: false
+          });
+
+          if (canRetryModelOutput({ attempt, maxAttempts, workspaceModified })) {
+            repairPacket = buildModelOutputRepairPacket({
+              attempt,
+              candidate: result.candidate,
+              validationErrors: candidateCheck.errors
+            });
+            await appendEvent(ctx.cwd, {
+              type: "tiny_model_retry_scheduled",
+              specId: params.spec.spec_id,
+              attempt,
+              reason: "invalid_candidate",
+              validationErrors: candidateCheck.errors
+            });
+            continue;
+          }
+
+          const outcome = buildModelOutputEscalation({
+            reason: "tiny_invalid_candidate",
+            stage: "candidate_validation",
+            attempt,
+            workspaceModified,
+            changedFiles: [...cumulativeChangedFiles],
+            attempts,
+            error: candidateCheck.errors.join("; ")
+          });
+          await appendEvent(ctx.cwd, {
+            type: "delegated_implementation_escalated",
+            specId: params.spec.spec_id,
+            ...outcome
+          });
+          return {
+            content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
+            details: {
+              success: false,
+              escalated: true,
+              reason: outcome.reason,
+              stage: outcome.stage,
+              workspaceModified: outcome.workspace_modified,
+              changedFiles: outcome.changed_files,
+              attempts
+            },
+            usage: nestedUsage
+          };
         }
 
         if (result.candidate.status !== "candidate") {
@@ -431,6 +487,57 @@ export default function offlineEngine(pi: ExtensionAPI) {
         await appendEvent(ctx.cwd, { type: "repair_packet_created", specId: params.spec.spec_id, attempt, diagnostics: repairPacket.verification.diagnostics.length });
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
+
+          if (error instanceof TinyModelOutputError && canRetryModelOutput({ attempt, maxAttempts, workspaceModified })) {
+            repairPacket = buildModelOutputRepairPacket({
+              attempt,
+              error: message
+            });
+            attempts.push({
+              attempt,
+              modelOutputValid: false,
+              verificationPassed: false
+            });
+            await appendEvent(ctx.cwd, {
+              type: "tiny_model_retry_scheduled",
+              specId: params.spec.spec_id,
+              attempt,
+              reason: "invalid_model_output",
+              error: message
+            });
+            continue;
+          }
+
+          if (error instanceof TinyModelOutputError) {
+            const outcome = buildModelOutputEscalation({
+              reason: "tiny_invalid_output",
+              stage: "tiny_call",
+              attempt,
+              workspaceModified,
+              changedFiles: [...cumulativeChangedFiles],
+              attempts,
+              error: message
+            });
+            await appendEvent(ctx.cwd, {
+              type: "delegated_implementation_escalated",
+              specId: params.spec.spec_id,
+              ...outcome
+            });
+            return {
+              content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
+              details: {
+                success: false,
+                escalated: true,
+                reason: outcome.reason,
+                stage: outcome.stage,
+                workspaceModified: outcome.workspace_modified,
+                changedFiles: outcome.changed_files,
+                attempts
+              },
+              usage: nestedUsage
+            };
+          }
+
           const outcome = buildRuntimeFailureOutcome({
             stage,
             workspaceModified,

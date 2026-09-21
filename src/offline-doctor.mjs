@@ -260,5 +260,4 @@ function formatSource(sourceInfo) {
 
 function firstNonEmpty(value) {
   return String(value ?? "").split(/\r?\n/).map((x) => x.trim()).find(Boolean);
-}
-\n
+}\n

@@ -5,19 +5,14 @@ import process from "node:process";
 const node = process.execPath;
 const steps = [
   {
-    name: "unit tests",
-    command: node,
-    args: ["--test"]
-  },
-  {
-    name: "runtime syntax",
+    name: "repository syntax",
     command: process.platform === "win32" ? "npm.cmd" : "npm",
     args: ["run", "check"]
   },
   {
-    name: "extension syntax",
+    name: "unit tests",
     command: node,
-    args: ["--experimental-strip-types", "--check", "extensions/index.ts"]
+    args: ["--test"]
   },
   {
     name: "offline profile dry-run",

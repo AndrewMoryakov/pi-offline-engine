@@ -99,6 +99,7 @@ test("builds paired preference only from identical prompts", async () => {
 
 test("redacts common env, JSON, bearer, cloud and URL credential forms", () => {
   const probes = [
+    ["api_key: abcdef123456", "abcdef123456"],
     ["MY_API_KEY=abcdef123456789", "abcdef123456789"],
     ["AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY", "wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY"],
     ["DB_PASSWORD=hunter2hunter2", "hunter2hunter2"],

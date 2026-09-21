@@ -30,9 +30,30 @@ The main model does not participate in the cheap repair loop.
 
 ## Install
 
+One command installs the engine **and** its companion stack:
+
 ```bash
 pi install git:github.com/AndrewMoryakov/pi-offline-engine
 ```
+
+pi clones the repository and runs `npm install`, which brings in the four bundled companion extensions — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool`, `pi-lean-edit` — at exact pinned versions, all loaded through this package's manifest. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for what each one does and which optional packages stay opt-in. Do not `pi install` the bundled four separately; that would register duplicate tools.
+
+Then start the TinyCoder server and open pi:
+
+```bash
+llama-server -m qwen2.5-coder-3b-instruct-q4_k_m.gguf   # llama.cpp / ik_llama.cpp, listens on :8080
+pi
+```
+
+On the first session start the engine looks for a local OpenAI-compatible server on `127.0.0.1` ports **8080** (llama-server), **8081**, **1234** (LM Studio) and **11434** (Ollama), picks the first one serving a chat model — embedding and reranking models are skipped, coder models preferred — and saves it. You get one line saying what was configured, or what to start if nothing answered. Only loopback addresses are probed, so auto-configuration never points the engine at a remote host.
+
+Confirm readiness:
+
+```text
+/offline-doctor
+```
+
+Pi extensions execute with user permissions. Review source before installation.
 
 During development from a clone:
 
@@ -40,11 +61,20 @@ During development from a clone:
 pi -e ./extensions/index.ts
 ```
 
-Pi extensions execute with user permissions. Review source before installation.
-
 ## Tiny implementer
 
-Run an OpenAI-compatible local endpoint, for example llama.cpp serving Qwen2.5-Coder-3B-Instruct:
+The endpoint and model resolve in this order: **environment variable > saved config > built-in default** (`http://127.0.0.1:8080`, `qwen2.5-coder-3b-instruct`).
+
+Saved config lives in `<pi agent dir>/pi-offline-engine/config.json` (normally `~/.pi/agent/pi-offline-engine/config.json`; `PI_CODING_AGENT_DIR` is honoured). It never stores API keys. Manage it with:
+
+```text
+/offline-setup                          # re-run discovery; asks which one if several servers answer
+/offline-setup http://127.0.0.1:9000    # explicit endpoint, verified before it is saved
+/offline-setup http://127.0.0.1:9000 my-model
+/offline-setup reset                    # forget the saved endpoint/model
+```
+
+Each setup ends with the `/offline-doctor` report. Environment variables still win over the saved config — useful for scripts and one-off runs:
 
 ```bash
 export PI_OFFLINE_TINY_ENDPOINT=http://127.0.0.1:8081
@@ -52,9 +82,11 @@ export PI_OFFLINE_TINY_MODEL=qwen2.5-coder-3b-instruct
 export PI_OFFLINE_TINY_MAX_ATTEMPTS=3
 ```
 
-Then run Pi normally. If the endpoint includes a reverse-proxy path prefix, that prefix is preserved when resolving `health`, `v1/models`, and `v1/chat/completions`.
+If the endpoint includes a reverse-proxy path prefix, that prefix is preserved when resolving `health`, `v1/models`, and `v1/chat/completions`.
 
-`/offline-status` shows the active settings, including whether the endpoint is local and whether a key is configured.
+`/offline-status` shows the effective settings and where each value came from (environment, config file or default), whether the endpoint is local and whether a key is configured.
+
+The implementer requests structured output with `response_format: json_schema`. llama-server (llama.cpp and ik_llama.cpp) supports it by compiling the schema to a grammar; if that conversion fails the server answers HTTP 500 with `JSON schema conversion failed`, and the engine retries once with `json_object`.
 
 ### Hosted OpenAI-compatible routers (OpenRouter)
 
@@ -268,7 +300,13 @@ It is designed to run without external network access. Then run:
 npm run gate:pi
 ```
 
-to load the extension through the actually installed Pi runtime without making an LLM request. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).
+to load the extension through the actually installed Pi runtime without making an LLM request. It drives `pi --mode rpc` and requires the engine's commands to be registered, so an extension that throws while loading fails the gate. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).
+
+To check the whole turnkey path — the same `npm install --omit=dev` pi runs for a git package, then `pi install` into a throwaway agent dir, then `/offline-doctor` over RPC asserting the bundled companion tools are active — run (needs network for the npm step; your own `~/.pi` is not touched):
+
+```bash
+npm run gate:install
+```
 
 
 ## Training-data capture

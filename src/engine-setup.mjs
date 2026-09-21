@@ -95,7 +95,7 @@ export function recordFor(selected, { backend, configuredBy, now }) {
   };
 }
 
-export function formatEngineStatus({ settings, configFile, configError }) {
+export function formatEngineStatus({ settings, configFile, configError, companionEnv = [] }) {
   const lines = [
     `Tiny implementer: ${settings.model} @ ${settings.endpoint}`,
     `  endpoint: ${SOURCE_LABELS[settings.sources.endpoint]}`,
@@ -104,6 +104,12 @@ export function formatEngineStatus({ settings, configFile, configError }) {
     `Config file: ${configFile}`
   ];
   if (configError) lines.push(`Config file problem: ${configError}`);
+  // The engine sets a few defaults for the bundled companion extensions.
+  // Report them: a silent write into another package's environment is the
+  // kind of thing that gets rediscovered later as a bug.
+  for (const entry of companionEnv) {
+    lines.push(`Companion setting: ${entry.name}=${entry.value} (${SOURCE_LABELS[entry.source] ?? entry.source})`);
+  }
   return lines.join("\n");
 }
 

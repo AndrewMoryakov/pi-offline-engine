@@ -167,6 +167,29 @@ test("status shows where each effective value came from", () => {
   assert.match(text, /C:\/cfg\/config\.json/);
 });
 
+test("status reports settings the engine applies to bundled companions", () => {
+  // The engine writes PI_KNOWLEDGE_SEARCH_PROFILE into the environment of
+  // another package; that must be visible, not silent.
+  const settings = resolveEngineSettings({ env: {}, config: {} });
+  const applied = formatEngineStatus({
+    settings,
+    configFile: "c.json",
+    configError: null,
+    companionEnv: [{ name: "PI_KNOWLEDGE_SEARCH_PROFILE", value: "low_token", source: "default" }]
+  });
+  assert.match(applied, /PI_KNOWLEDGE_SEARCH_PROFILE=low_token \(built-in default\)/);
+
+  const chosen = formatEngineStatus({
+    settings,
+    configFile: "c.json",
+    configError: null,
+    companionEnv: [{ name: "PI_KNOWLEDGE_SEARCH_PROFILE", value: "precision", source: "env" }]
+  });
+  assert.match(chosen, /PI_KNOWLEDGE_SEARCH_PROFILE=precision \(environment\)/);
+
+  assert.doesNotMatch(formatEngineStatus({ settings, configFile: "c.json", configError: null }), /Companion setting/);
+});
+
 test("status surfaces a broken config file", () => {
   const settings = resolveEngineSettings({ env: {}, config: {} });
   const text = formatEngineStatus({ settings, configFile: "x.json", configError: "invalid JSON in x.json" });

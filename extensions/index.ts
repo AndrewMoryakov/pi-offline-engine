@@ -110,8 +110,15 @@ export default function offlineEngine(pi: ExtensionAPI) {
   // The bundled pi-knowledge reads its settings lazily from the environment.
   // Apply the profile's slow-local-model search default unless the user chose
   // one. PI_KNOWLEDGE_OFFLINE is deliberately not forced: it would block the
-  // first download of the local embedding model.
+  // first download of the local embedding model. /offline-status reports this,
+  // so the write into another package's environment is never silent.
+  const knowledgeProfileSource = process.env.PI_KNOWLEDGE_SEARCH_PROFILE === undefined ? "default" : "env";
   process.env.PI_KNOWLEDGE_SEARCH_PROFILE ??= "low_token";
+  const companionEnv = [{
+    name: "PI_KNOWLEDGE_SEARCH_PROFILE",
+    value: process.env.PI_KNOWLEDGE_SEARCH_PROFILE,
+    source: knowledgeProfileSource
+  }];
   pi.registerTool({
     name: "delegate_implementation",
     label: "Delegate implementation",
@@ -944,7 +951,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
           formatEngineStatus({
             settings: engineSettings(),
             configFile: engineConfigFile,
-            configError: engineConfigState.error
+            configError: engineConfigState.error,
+            companionEnv
           }),
           `Endpoint locality: ${checkEndpointLocality(tinyEndpoint()).message}`,
           `Implementer auth: ${tinyApiKey() ? "bearer key configured" : "none (local endpoint)"}`,

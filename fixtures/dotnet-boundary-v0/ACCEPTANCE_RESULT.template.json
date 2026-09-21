@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "fixture": "dotnet-boundary-v0",
+  "runId": "",
+  "timestamp": "",
+  "mode": "main_to_spec_to_tiny",
+  "mainModel": "",
+  "tinyModel": "",
+  "offline": true,
+  "gates": {
+    "local": null,
+    "piLoad": null,
+    "doctorBeforeDisconnect": null,
+    "doctorOffline": null
+  },
+  "baseline": {
+    "buildPassed": null,
+    "failingTestsBefore": []
+  },
+  "result": {
+    "status": "",
+    "taskCompleteByMain": null,
+    "changedFiles": [],
+    "buildPassed": null,
+    "testsPassed": null,
+    "repairAttempts": 0,
+    "escalatedToMain": false,
+    "networkRequired": false
+  },
+  "metrics": {
+    "wallTimeMs": null,
+    "mainInputTokens": null,
+    "mainOutputTokens": null,
+    "tinyCalls": null,
+    "tinyInputTokens": null,
+    "tinyOutputTokens": null,
+    "tinyAverageLatencyMs": null,
+    "toolCharsAvoided": null
+  },
+  "notes": ""
+}

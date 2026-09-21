@@ -127,3 +127,34 @@ test("drops records whose candidate path itself is sensitive", async () => {
   assert.equal(result.eval_examples, 0);
   assert.equal(result.dropped_sensitive, 1);
 });
+
+
+test("redacts common env, JSON, bearer, cloud and URL secret shapes", () => {
+  const samples = [
+    "MY_API_KEY=examplevalue123456789",
+    "AWS_SECRET_ACCESS_KEY=examplevalue123456789",
+    "DB_PASSWORD=examplepassword123",
+    '{"api_key":"examplevalue123456789"}',
+    ["Authorization: Bearer", "example.jwt.tokenvalue"].join(" "),
+    ["AKIA", "IOSFODNN7EXAMPLE"].join(""),
+    ["postgres://demo:", "examplepass123", "@localhost/db"].join(""),
+    ["sk", "proj", "ExampleTokenValue123456"].join("-")
+  ];
+
+  for (const sample of samples) {
+    const redacted = redactString(sample);
+    assert.notEqual(redacted, sample, `expected redaction for ${sample}`);
+  }
+});
+
+test("drops records whose candidate itself names a sensitive path", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-export-"));
+  const input = path.join(cwd, "raw.jsonl");
+  const unsafe = row({ id: "candidate-secret", passed: false });
+  unsafe.output.candidate.changes[0].path = ".env.production";
+  await fs.writeFile(input, JSON.stringify(unsafe) + "\n", "utf8");
+
+  const result = await exportTrainingData({ cwd, inputFile: input });
+  assert.equal(result.eval_examples, 0);
+  assert.equal(result.dropped_sensitive, 1);
+});

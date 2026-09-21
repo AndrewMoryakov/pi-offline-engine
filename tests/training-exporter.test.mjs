@@ -95,3 +95,34 @@ test("builds paired preference only from identical prompts", async () => {
   assert.match(lines[0].rejected, /return 3/);
   assert.doesNotMatch(lines[0].rejected, /return 4/);
 });
+
+
+test("redacts common env, JSON, bearer, cloud and URL credential forms", () => {
+  const probes = [
+    "MY_API_KEY=abcdef123456789",
+    "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI_K7MDENG_bPxRfiCYEXAMPLEKEY",
+    "DB_PASSWORD=hunter2hunter2",
+    '{"api_key":"abcdef1234567890"}',
+    "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.synthetic",
+    "AKIAIOSFODNN7EXAMPLE",
+    "postgres://user:s3cretpw@host/db",
+    "sk-proj-AbCdEfGhIjKlMnOpQrSt"
+  ];
+
+  for (const probe of probes) {
+    const redacted = redactString(probe);
+    assert.notEqual(redacted, probe, probe);
+  }
+});
+
+test("drops records whose candidate path itself is sensitive", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-export-"));
+  const input = path.join(cwd, "raw.jsonl");
+  const record = row({ id: "candidate-secret", passed: false });
+  record.output.candidate.changes[0].path = ".env.production";
+  await fs.writeFile(input, JSON.stringify(record) + "\n", "utf8");
+
+  const result = await exportTrainingData({ cwd, inputFile: input });
+  assert.equal(result.eval_examples, 0);
+  assert.equal(result.dropped_sensitive, 1);
+});

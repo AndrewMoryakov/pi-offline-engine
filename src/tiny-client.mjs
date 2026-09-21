@@ -1,4 +1,6 @@
-import { resolveEndpointUrl } from "./endpoint-url.mjs";\n\nconst DEFAULT_TIMEOUT_MS = 120_000;
+import { resolveEndpointUrl } from "./endpoint-url.mjs";
+
+const DEFAULT_TIMEOUT_MS = 120_000;
 
 export class TinyModelOutputError extends Error {
   constructor(message) {
@@ -179,4 +181,3 @@ function normalizeUsage(usage = {}) {
 function finiteOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
-\n

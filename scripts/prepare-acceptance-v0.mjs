@@ -67,8 +67,17 @@ async function prepareOutputDirectory(output) {
   const cwd = path.resolve(process.cwd());
   const repoRoot = path.resolve(root);
   const fsRoot = path.parse(resolved).root;
+  const home = path.resolve(os.homedir());
 
-  if (resolved === cwd || resolved === repoRoot || resolved === fsRoot) {
+  if (
+    resolved === cwd ||
+    resolved === repoRoot ||
+    resolved === fsRoot ||
+    resolved === home ||
+    isAncestor(resolved, cwd) ||
+    isAncestor(resolved, repoRoot) ||
+    isAncestor(resolved, home)
+  ) {
     throw new Error("Refusing to use a destructive acceptance output path: " + resolved);
   }
 
@@ -89,4 +98,10 @@ async function prepareOutputDirectory(output) {
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
+}
+
+
+function isAncestor(parent, child) {
+  const relative = path.relative(parent, child);
+  return relative !== "" && relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative);
 }

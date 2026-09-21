@@ -1,17 +1,36 @@
 {
   "name": "pi-offline-engine",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "private": true,
   "type": "module",
   "description": "Offline-first Pi extension for bounded local coding delegation.",
+  "keywords": [
+    "pi-package"
+  ],
   "scripts": {
     "test": "node --test",
     "check": "node ./scripts/check-syntax.mjs",
     "profile:offline": "node ./scripts/bootstrap-offline-profile.mjs",
     "gate:local": "node ./scripts/local-gate.mjs",
     "gate:pi": "node ./scripts/pi-load-gate.mjs",
+    "gate:install": "node ./scripts/install-gate.mjs",
     "training:export": "node ./scripts/export-training-data.mjs",
     "acceptance:prepare": "node ./scripts/prepare-acceptance-v0.mjs"
+  },
+  "dependencies": {
+    "pi-code-tool": "0.6.1",
+    "pi-knowledge": "0.10.2",
+    "pi-lean-edit": "0.3.6",
+    "pi-lsp-extension": "1.3.0"
+  },
+  "bundledDependencies": [
+    "pi-code-tool",
+    "pi-knowledge",
+    "pi-lean-edit",
+    "pi-lsp-extension"
+  ],
+  "overrides": {
+    "vscode-languageserver-protocol": "3.17.5"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
@@ -19,7 +38,11 @@
   },
   "pi": {
     "extensions": [
-      "./extensions/index.ts"
+      "./extensions/index.ts",
+      "node_modules/pi-knowledge/extension.js",
+      "node_modules/pi-lsp-extension/src/index.ts",
+      "node_modules/pi-code-tool/extensions/index.js",
+      "node_modules/pi-lean-edit/index.ts"
     ]
   }
 }

@@ -14,16 +14,29 @@ const includeOptional = args.has("--include-optional");
 const includeDeferred = args.has("--include-deferred");
 const installCsharpLs = args.has("--install-csharp-ls");
 
-const tiers = new Set(["required"]);
+// "bundled" packages arrive with pi-offline-engine itself (package.json
+// dependencies + pi manifest) and are never installed from here: a second
+// `pi install` would register a duplicate copy of the same tools.
+const tiers = new Set();
 if (includeOptional) tiers.add("optional");
 if (includeDeferred) tiers.add("deferred");
 
+const bundled = profile.packages.filter((pkg) => pkg.tier === "bundled");
 const selected = profile.packages.filter((pkg) => tiers.has(pkg.tier));
-const piCommand = process.platform === "win32" ? "pi.cmd" : "pi";
+const isWindows = process.platform === "win32";
+const piCommand = isWindows ? "pi.cmd" : "pi";
 
 console.log(`Profile: ${profile.name}`);
 console.log(`Mode: ${apply ? "APPLY" : "DRY RUN"}`);
 console.log("");
+
+console.log("Bundled with pi-offline-engine (installed automatically, nothing to do):");
+for (const pkg of bundled) console.log(`  ${pkg.name}@${pkg.version} — ${pkg.purpose}`);
+console.log("");
+
+if (selected.length === 0) {
+  console.log("No optional packages selected (--include-optional / --include-deferred).");
+}
 
 for (const pkg of selected) {
   const spec = `npm:${pkg.name}@${pkg.version}`;
@@ -31,18 +44,21 @@ for (const pkg of selected) {
   console.log(`  ${pkg.purpose}`);
   if (!apply) continue;
 
-  const result = spawnSync(piCommand, ["install", spec], { stdio: "inherit" });
-  if (result.status !== 0) {
+  // pi.cmd is a batch shim: Node refuses to spawn it without a shell (EINVAL).
+  // `spec` is built from the reviewed, pinned profile, never from user input.
+  const result = spawnSync(piCommand, ["install", spec], { stdio: "inherit", shell: isWindows });
+  if (result.error || result.status !== 0) {
     console.error(`Failed to install ${spec}; stopping.`);
     process.exit(result.status ?? 1);
   }
 }
 
 console.log("");
-console.log("Recommended offline environment:");
+console.log("Optional environment for fully offline work:");
 for (const [key, value] of Object.entries(profile.environment)) {
   console.log(`  ${key}=${value}`);
 }
+if (profile.notes?.environment) console.log(`  (${profile.notes.environment})`);
 
 if (installCsharpLs) {
   const dotnet = spawnSync("dotnet", ["--list-sdks"], { encoding: "utf8" });

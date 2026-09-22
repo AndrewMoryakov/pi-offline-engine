@@ -1,4 +1,9 @@
-// STATIC WIRING GUARDS ONLY.\n// Behavioral semantics are covered in focused tests such as extension-policy,\n// delegation-retry, pi-usage, training-recorder/exporter and the real-Pi gate.\n// These assertions only catch accidental loss/miswiring of extension declarations.\n\nimport test from "node:test";
+// STATIC WIRING GUARDS ONLY.
+// Behavioral semantics are covered in focused tests such as extension-policy,
+// delegation-retry, pi-usage, training-recorder/exporter and the real-Pi gate.
+// These assertions only catch accidental loss/miswiring of extension declarations.
+
+import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 

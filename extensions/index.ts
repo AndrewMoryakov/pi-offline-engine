@@ -753,7 +753,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("offline-context", {
-    description: "Use /offline-context on|off|refresh|status for deterministic repository context",
+    description: "Add git repo snapshot to prompts",
+    getArgumentCompletions: argumentChoices([
+      ["status", "Show whether the repository snapshot is added to prompts"],
+      ["on", "Add branch, HEAD, changed files and .sln/.csproj list whenever they change"],
+      ["off", "Stop adding the repository snapshot"],
+      ["refresh", "Turn the snapshot on and resend it with the next prompt"]
+    ]),
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
       if (mode === "on") repoCapsuleEnabled = true;
@@ -770,7 +776,12 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("offline-compact", {
-    description: "Use /offline-compact on|off|status for deterministic dotnet output compaction",
+    description: "Shorten dotnet build/test output",
+    getArgumentCompletions: argumentChoices([
+      ["status", "Show whether dotnet build/test output is shortened"],
+      ["on", "Large output: send errors/failed tests only, full log to .pi/offline-engine/tool-results"],
+      ["off", "Send dotnet build/test output to the model in full"]
+    ]),
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
       if (mode === "on") compactToolResults = true;
@@ -797,14 +808,19 @@ export default function offlineEngine(pi: ExtensionAPI) {
   }
 
   pi.registerCommand("offline-doctor", {
-    description: "Check local offline readiness",
+    description: "Check TinyCoder, dotnet, LSP, search",
     handler: async (_args, ctx) => {
       await notifyDoctorReport(ctx);
     }
   });
 
   pi.registerCommand("offline-setup", {
-    description: "Configure the TinyCoder endpoint: /offline-setup [reset | <endpoint-url> [model]]",
+    description: "Find/save TinyCoder server, or reset",
+    // Nothing on an empty prefix: Enter would otherwise insert "reset".
+    getArgumentCompletions: (prefix) =>
+      prefix.trim()
+        ? argumentChoices([["reset", "Forget the saved TinyCoder endpoint and model"]])(prefix)
+        : null,
     handler: async (args, ctx) => {
       const request = parseSetupArgs(args);
 
@@ -864,7 +880,12 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("offline-tools", {
-    description: "Use /offline-tools minimal|restore|status to control the local-model tool surface",
+    description: "Trim tools for slow models / restore",
+    getArgumentCompletions: argumentChoices([
+      ["status", "List the tools the model can call right now"],
+      ["minimal", "Keep only read/edit/write, shell, code, search, LSP and TinyCoder tools"],
+      ["restore", "Bring back the tool set that was active before 'minimal'"]
+    ]),
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
       if (mode === "minimal") {
@@ -889,7 +910,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("offline-training", {
-    description: "Use /offline-training on|off|status|export for opt-in local training trace capture",
+    description: "Save TinyCoder runs as training data",
+    getArgumentCompletions: argumentChoices([
+      ["status", "Show whether capture is on and where the raw trace is written"],
+      ["on", "Start saving specs, context and TinyCoder results locally (includes source code)"],
+      ["off", "Stop saving training data"],
+      ["export", "Build SFT, preference and eval datasets from the captured runs"]
+    ]),
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
       if (mode === "on") {
@@ -938,7 +965,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("offline-stats", {
-    description: "Show local TinyCoder and context-saving statistics",
+    description: "TinyCoder calls and context savings",
     handler: async (_args, ctx) => {
       const { events } = await readOfflineEvents(ctx.cwd);
       ctx.ui.notify(formatOfflineStats(summarizeOfflineEvents(events)), "info");
@@ -946,7 +973,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("offline-status", {
-    description: "Show pi-offline-engine configuration",
+    description: "Show engine settings and sources",
     handler: async (_args, ctx) => {
       ctx.ui.notify(
         [
@@ -967,6 +994,16 @@ export default function offlineEngine(pi: ExtensionAPI) {
       );
     }
   });
+}
+
+function argumentChoices(choices: Array<[value: string, description: string]>) {
+  return (prefix: string) => {
+    const typed = prefix.trimStart().toLowerCase();
+    const items = choices
+      .filter(([value]) => value.startsWith(typed))
+      .map(([value, description]) => ({ value, label: value, description }));
+    return items.length > 0 ? items : null;
+  };
 }
 
 // Precedence for all four: environment > engine config file > built-in default

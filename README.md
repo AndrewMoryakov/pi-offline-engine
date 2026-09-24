@@ -68,9 +68,11 @@ The task statement, with where each rule came from, is [docs/HYBRID_EDIT_V0.md](
 
 `scriptEditPolicy` (config) or `PI_OFFLINE_SCRIPT_EDIT_POLICY` (env) decides when the other `edit` is offered next to `line_edit`:
 
-- `cloud-only` (default): hidden while the session model's `baseUrl` is local (loopback, RFC1918, `.local`, a bare hostname), offered for a remote one. Re-evaluated at session start and on every model switch. A small local model does better with range edits than with writing edit scripts.
-- `always`: always offered. Use this when a strong model is reached through a local address, e.g. a tunnel or relay on `127.0.0.1`: judged by `baseUrl` it counts as local.
+- `always` (default): always offered. The model picks between the two tools from their descriptions.
+- `cloud-only`: hidden while the session model's `baseUrl` is local (loopback, RFC1918, `.local`, a bare hostname), offered for a remote one. Re-evaluated at session start and on every model switch. A strong model reached through a local address, e.g. a tunnel on `127.0.0.1`, counts as local here.
 - `never`: registered but never offered.
+
+Hiding `edit` does not steer a model to `line_edit`. In a live run with the script edit hidden, a 27B model did an 11-file rename with `sed -i` through `bash`, which has neither `line_edit`'s stale-text check nor the script edit's diff and rollback. That is why the default is `always`; see `HE-10` in the task statement.
 
 The policy only removes and restores `edit` itself; it never re-enables an `edit` you turned off, and `/offline-tools minimal` keeps it hidden. Tools that call Pi's built-ins directly, such as `pi-code-tool`'s bridge, are not governed by it (see [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md)).
 

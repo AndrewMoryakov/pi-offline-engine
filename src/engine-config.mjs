@@ -24,13 +24,14 @@ const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "configuredB
 export const EDIT_PROVIDERS = Object.freeze(["lean", "none", "hybrid"]);
 export const DEFAULT_EDIT_PROVIDER = "lean";
 
-// Hybrid only: when the other `edit` is offered to the model. "cloud-only"
-// hides it while the session model's baseUrl is local (small local models do
-// better with range edits than with writing scripts); "always" never hides
-// it; "never" keeps it registered but always hidden.
-// Spec: docs/HYBRID_EDIT_V0.md HE-5, HE-6.
+// Hybrid only: when the other `edit` is offered to the model. "always" (the
+// default) never hides it; "cloud-only" hides it while the session model's
+// baseUrl is local; "never" keeps it registered but always hidden. The default
+// was "cloud-only" until a live run showed that a model without the script
+// edit rewrites files with `sed -i` through bash rather than with line_edit.
+// Spec: docs/HYBRID_EDIT_V0.md HE-5, HE-6, HE-10.
 export const SCRIPT_EDIT_POLICIES = Object.freeze(["cloud-only", "always", "never"]);
-export const DEFAULT_SCRIPT_EDIT_POLICY = "cloud-only";
+export const DEFAULT_SCRIPT_EDIT_POLICY = "always";
 
 export function engineConfigPath(agentDir) {
   return path.join(agentDir, "pi-offline-engine", "config.json");

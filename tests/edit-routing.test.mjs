@@ -101,9 +101,10 @@ test("without both tools registered the policy does nothing", () => {
   assert.equal(onlyEdit.changed, false);
 });
 
-// HE-6
+// HE-6, HE-10
 test("scriptEditPolicy resolves env over config over default and skips unknown values", () => {
-  assert.deepEqual(resolveScriptEditPolicy({}), { value: "cloud-only", source: "default" });
+  // HE-10: the default offers the script edit to every model.
+  assert.deepEqual(resolveScriptEditPolicy({}), { value: "always", source: "default" });
   assert.deepEqual(resolveScriptEditPolicy({ config: { scriptEditPolicy: "Always" } }), { value: "always", source: "config" });
   assert.deepEqual(
     resolveScriptEditPolicy({ env: { PI_OFFLINE_SCRIPT_EDIT_POLICY: "never" }, config: { scriptEditPolicy: "always" } }),

@@ -301,3 +301,27 @@ test("survives HTML error pages instead of JSON and never echoes the key", async
   assert.equal(serialized.includes(key), false, "api key leaked into the doctor report");
   assert.equal(serialized.includes("doctorcanary"), false);
 });
+
+test("doctor names the edit provider and why pi-lean-edit is off", async () => {
+  const fetchFn = async () => ({ ok: true, async json() { return { data: [{ id: "tiny" }] }; } });
+  const exec = async () => ({ code: 0, killed: false, stdout: "ok", stderr: "" });
+  const run = (tools, editProvider) => runOfflineDoctor({
+    cwd: "/tmp", endpoint: "http://127.0.0.1:8081", model: "tiny", tools, exec, fetchFn, editProvider
+  });
+  const lineOf = (report) => formatDoctorReport(report).split("\n").find((x) => x.includes("edit_provider"));
+
+  const lean = await run([{ name: "edit", sourceInfo: { path: "/pkg/extensions/pi-lean-edit.ts" } }]);
+  assert.equal(lineOf(lean), "✓ edit_provider: edit tool source: /pkg/extensions/pi-lean-edit.ts");
+
+  const other = await run(
+    [{ name: "edit", sourceInfo: { path: "/pi-utils/extensions/edit.ts" } }],
+    { value: "none", source: "config" }
+  );
+  assert.equal(
+    lineOf(other),
+    "✓ edit_provider: edit tool source: /pi-utils/extensions/edit.ts (bundled pi-lean-edit disabled: editProvider=none from config)"
+  );
+
+  const absent = await run([], { value: "none", source: "env" });
+  assert.match(lineOf(absent), /^! edit_provider: edit tool not active \(bundled pi-lean-edit disabled: editProvider=none from env\)$/);
+});

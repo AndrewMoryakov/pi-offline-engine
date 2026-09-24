@@ -10,6 +10,7 @@ export async function runOfflineDoctor({
   model,
   tools,
   exec,
+  editProvider = { value: "lean", source: "default" },
   apiKey = null,
   fetchFn = fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS
@@ -56,14 +57,18 @@ export async function runOfflineDoctor({
   checks.push(checkAnyTool(tools, ["list_symbols", "code_overview", "lsp_symbols"], false, "structural code navigation"));
 
   const editTool = tools.find((tool) => tool.name === "edit");
+  // Without the reason, "none" reads like a broken install months later.
+  const leanOff = editProvider.value === "none"
+    ? ` (bundled pi-lean-edit disabled: editProvider=none from ${editProvider.source})`
+    : "";
   checks.push({
     id: "edit_provider",
     required: false,
     ok: Boolean(editTool),
     status: editTool ? "ok" : "warn",
     message: editTool
-      ? `edit tool source: ${formatSource(editTool.sourceInfo)}`
-      : "edit tool not active"
+      ? `edit tool source: ${formatSource(editTool.sourceInfo)}${leanOff}`
+      : `edit tool not active${leanOff}`
   });
 
   const requiredFailures = checks.filter((x) => x.required && !x.ok);

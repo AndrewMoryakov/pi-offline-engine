@@ -31,12 +31,29 @@ test("bundled packages ship inside the tarball and are loaded by the manifest", 
   // them outside this package's root and nothing loads them.
   assert.deepEqual([...manifest.bundledDependencies].sort(), Object.keys(manifest.dependencies).sort());
   for (const name of Object.keys(manifest.dependencies)) {
+    if (name in WRAPPED_BY) continue;
     assert.ok(
       manifest.pi.extensions.some((entry) => entry.startsWith(`node_modules/${name}/`)),
       `${name} is installed but no manifest entry loads it`
     );
   }
   assert.equal(manifest.pi.extensions[0], "./extensions/index.ts");
+});
+
+// A bundled package loaded through an engine-owned wrapper instead of its own
+// entry point: the wrapper must be in the manifest and must import the package.
+const WRAPPED_BY = { "pi-lean-edit": "./extensions/pi-lean-edit.ts" };
+
+test("wrapped bundled packages are loaded only through their wrapper", () => {
+  for (const [name, wrapper] of Object.entries(WRAPPED_BY)) {
+    assert.ok(manifest.pi.extensions.includes(wrapper), `${wrapper} missing from the manifest`);
+    assert.ok(
+      !manifest.pi.extensions.some((entry) => entry.startsWith(`node_modules/${name}/`)),
+      `${name} is loaded directly as well, so the wrapper's switch would not stop it`
+    );
+    const source = fs.readFileSync(new URL(wrapper, new URL("../", import.meta.url)), "utf8");
+    assert.match(source, new RegExp(`from "${name}"`), `${wrapper} does not import ${name}`);
+  }
 });
 
 test("optional and deferred packages stay out of the automatic install", () => {

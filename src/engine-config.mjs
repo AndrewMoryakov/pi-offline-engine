@@ -13,7 +13,14 @@ const MAX_ATTEMPTS = 3;
 
 // Keys this engine is willing to persist. Credentials are deliberately absent:
 // an API key stays in the environment and is never written to disk by us.
-const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "configuredBy", "configuredAt", "backend"]);
+const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "configuredBy", "configuredAt", "backend", "editProvider"]);
+
+// Who supplies Pi's read/edit/write tools. "lean" loads the bundled
+// pi-lean-edit; "none" leaves them to another package (pi-utils overrides
+// `edit` too, and Pi aborts startup when two extensions register one tool
+// name) or to Pi's built-ins.
+export const EDIT_PROVIDERS = Object.freeze(["lean", "none"]);
+export const DEFAULT_EDIT_PROVIDER = "lean";
 
 export function engineConfigPath(agentDir) {
   return path.join(agentDir, "pi-offline-engine", "config.json");
@@ -84,6 +91,23 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
       apiKey: apiKeyValue ? "env" : "none"
     }
   };
+}
+
+// Same precedence as the settings above. An unrecognised value is skipped
+// rather than guessed at, so the next layer decides.
+export function resolveEditProvider({ env = {}, config = {} } = {}) {
+  const fromEnv = parseEditProvider(env.PI_OFFLINE_EDIT_PROVIDER);
+  if (fromEnv !== null) return { value: fromEnv, source: "env" };
+  const fromConfig = parseEditProvider(config.editProvider);
+  if (fromConfig !== null) return { value: fromConfig, source: "config" };
+  return { value: DEFAULT_EDIT_PROVIDER, source: "default" };
+}
+
+function parseEditProvider(value) {
+  const cleaned = blankToNull(value);
+  if (cleaned === null) return null;
+  const lowered = cleaned.toLowerCase();
+  return EDIT_PROVIDERS.includes(lowered) ? lowered : null;
 }
 
 function pick(envValue, configValue, fallback) {

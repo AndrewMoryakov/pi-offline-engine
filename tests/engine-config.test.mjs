@@ -7,6 +7,7 @@ import {
   DEFAULT_SETTINGS,
   engineConfigPath,
   readEngineConfig,
+  resolveEditProvider,
   resolveEngineSettings,
   writeEngineConfig
 } from "../src/engine-config.mjs";
@@ -139,4 +140,30 @@ test("writing null removes a key so the next layer shows through", () => {
   writeEngineConfig(file, { endpoint: "http://127.0.0.1:8080", model: "a" });
   writeEngineConfig(file, { endpoint: null, model: null });
   assert.deepEqual(readEngineConfig(file).config, {});
+});
+
+test("edit provider defaults to lean and follows env > config", () => {
+  assert.deepEqual(resolveEditProvider({ env: {}, config: {} }), { value: "lean", source: "default" });
+  assert.deepEqual(resolveEditProvider({ env: {}, config: { editProvider: "none" } }), { value: "none", source: "config" });
+  assert.deepEqual(
+    resolveEditProvider({ env: { PI_OFFLINE_EDIT_PROVIDER: "lean" }, config: { editProvider: "none" } }),
+    { value: "lean", source: "env" }
+  );
+  assert.deepEqual(resolveEditProvider({ env: { PI_OFFLINE_EDIT_PROVIDER: " NONE " } }), { value: "none", source: "env" });
+});
+
+test("an unrecognised edit provider falls through to the next layer", () => {
+  assert.deepEqual(
+    resolveEditProvider({ env: { PI_OFFLINE_EDIT_PROVIDER: "off" }, config: { editProvider: "none" } }),
+    { value: "none", source: "config" }
+  );
+  assert.deepEqual(resolveEditProvider({ env: {}, config: { editProvider: false } }), { value: "lean", source: "default" });
+});
+
+test("a hand-set editProvider survives a later /offline-setup write", () => {
+  const file = engineConfigPath(scratchDir());
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ editProvider: "none" }));
+  writeEngineConfig(file, { endpoint: "http://127.0.0.1:1234" });
+  assert.equal(readEngineConfig(file).config.editProvider, "none");
 });

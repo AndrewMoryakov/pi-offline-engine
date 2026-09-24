@@ -5,7 +5,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 // probe command reports the registered and active tool names as JSON.
 // Spec: docs/HYBRID_EDIT_V0.md HE-9.
 export default function otherEdit(pi: ExtensionAPI) {
-  pi.registerTool({
+  // GATE_FIXTURE_NO_EDIT=1 loads only the probe, for the lean-mode schema check.
+  if (process.env.GATE_FIXTURE_NO_EDIT !== "1") pi.registerTool({
     name: "edit",
     label: "edit",
     description: "Fixture edit tool (gate:edit).",
@@ -17,7 +18,11 @@ export default function otherEdit(pi: ExtensionAPI) {
   pi.registerCommand("probe-edit-tools", {
     description: "gate:edit probe",
     handler: async (_args, ctx) => {
-      const all = pi.getAllTools().map((tool) => ({ name: tool.name, source: tool.sourceInfo?.path ?? "" }));
+      const all = pi.getAllTools().map((tool) => ({
+        name: tool.name,
+        source: tool.sourceInfo?.path ?? "",
+        topLevelUnion: Array.isArray((tool.parameters as any)?.anyOf) && (tool.parameters as any)?.properties === undefined
+      }));
       ctx.ui.notify(`PROBE ${JSON.stringify({ all, active: pi.getActiveTools() })}`, "info");
     }
   });

@@ -13,14 +13,22 @@ const MAX_ATTEMPTS = 3;
 
 // Keys this engine is willing to persist. Credentials are deliberately absent:
 // an API key stays in the environment and is never written to disk by us.
-const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "configuredBy", "configuredAt", "backend", "editProvider"]);
+const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "configuredBy", "configuredAt", "backend", "editProvider", "scriptEditPolicy"]);
 
 // Who supplies Pi's read/edit/write tools. "lean" loads the bundled
 // pi-lean-edit; "none" leaves them to another package (pi-utils overrides
 // `edit` too, and Pi aborts startup when two extensions register one tool
-// name) or to Pi's built-ins.
-export const EDIT_PROVIDERS = Object.freeze(["lean", "none"]);
+// name) or to Pi's built-ins. "hybrid" loads pi-lean-edit with its edit
+// renamed to `line_edit`, so the other `edit` can stay registered beside it.
+export const EDIT_PROVIDERS = Object.freeze(["lean", "none", "hybrid"]);
 export const DEFAULT_EDIT_PROVIDER = "lean";
+
+// Hybrid only: when the other `edit` is offered to the model. "cloud-only"
+// hides it while the session model's baseUrl is local (small local models do
+// better with range edits than with writing scripts); "always" never hides
+// it; "never" keeps it registered but always hidden.
+export const SCRIPT_EDIT_POLICIES = Object.freeze(["cloud-only", "always", "never"]);
+export const DEFAULT_SCRIPT_EDIT_POLICY = "cloud-only";
 
 export function engineConfigPath(agentDir) {
   return path.join(agentDir, "pi-offline-engine", "config.json");
@@ -96,18 +104,26 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
 // Same precedence as the settings above. An unrecognised value is skipped
 // rather than guessed at, so the next layer decides.
 export function resolveEditProvider({ env = {}, config = {} } = {}) {
-  const fromEnv = parseEditProvider(env.PI_OFFLINE_EDIT_PROVIDER);
-  if (fromEnv !== null) return { value: fromEnv, source: "env" };
-  const fromConfig = parseEditProvider(config.editProvider);
-  if (fromConfig !== null) return { value: fromConfig, source: "config" };
-  return { value: DEFAULT_EDIT_PROVIDER, source: "default" };
+  return pickChoice(env.PI_OFFLINE_EDIT_PROVIDER, config.editProvider, EDIT_PROVIDERS, DEFAULT_EDIT_PROVIDER);
 }
 
-function parseEditProvider(value) {
+export function resolveScriptEditPolicy({ env = {}, config = {} } = {}) {
+  return pickChoice(env.PI_OFFLINE_SCRIPT_EDIT_POLICY, config.scriptEditPolicy, SCRIPT_EDIT_POLICIES, DEFAULT_SCRIPT_EDIT_POLICY);
+}
+
+function pickChoice(envValue, configValue, allowed, fallback) {
+  const fromEnv = parseChoice(envValue, allowed);
+  if (fromEnv !== null) return { value: fromEnv, source: "env" };
+  const fromConfig = parseChoice(configValue, allowed);
+  if (fromConfig !== null) return { value: fromConfig, source: "config" };
+  return { value: fallback, source: "default" };
+}
+
+function parseChoice(value, allowed) {
   const cleaned = blankToNull(value);
   if (cleaned === null) return null;
   const lowered = cleaned.toLowerCase();
-  return EDIT_PROVIDERS.includes(lowered) ? lowered : null;
+  return allowed.includes(lowered) ? lowered : null;
 }
 
 function pick(envValue, configValue, fallback) {

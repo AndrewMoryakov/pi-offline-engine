@@ -32,7 +32,14 @@ import {
 } from "../src/training-recorder.mjs";
 import { exportTrainingData } from "../src/training-exporter.mjs";
 import { applyCodeToolPolicy, selectActiveToolObjects } from "../src/extension-policy.mjs";
-import { engineConfigPath, readEngineConfig, resolveEditProvider, resolveEngineSettings, writeEngineConfig } from "../src/engine-config.mjs";
+import {
+  engineConfigPath,
+  readEngineConfig,
+  resolveEditProvider,
+  resolveEngineSettings,
+  resolveScriptEditPolicy,
+  writeEngineConfig
+} from "../src/engine-config.mjs";
 import { discoverEndpoints, probeEndpoint } from "../src/endpoint-discovery.mjs";
 import {
   autoConfigureIfNeeded,
@@ -49,6 +56,7 @@ let engineConfigState = readEngineConfig(engineConfigFile);
 // extensions/pi-lean-edit.ts decides once, at load; the doctor must report that
 // decision, not a config edited since (it takes effect on the next start).
 const editProviderAtLoad = resolveEditProvider({ env: process.env, config: engineConfigState.config });
+const scriptEditPolicyAtLoad = resolveScriptEditPolicy({ env: process.env, config: engineConfigState.config });
 
 function reloadEngineConfig() {
   engineConfigState = readEngineConfig(engineConfigFile);
@@ -798,7 +806,8 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   async function notifyDoctorReport(ctx: any) {
-    const activeTools = selectActiveToolObjects(pi.getAllTools(), pi.getActiveTools());
+    const allTools = pi.getAllTools();
+    const activeTools = selectActiveToolObjects(allTools, pi.getActiveTools());
     const report = await runOfflineDoctor({
       cwd: ctx.cwd,
       endpoint: tinyEndpoint(),
@@ -806,6 +815,9 @@ export default function offlineEngine(pi: ExtensionAPI) {
       apiKey: tinyApiKey(),
       tools: activeTools,
       editProvider: editProviderAtLoad,
+      scriptEditPolicy: scriptEditPolicyAtLoad,
+      allTools,
+      sessionModel: ctx.model,
       exec: (command, args, options) => pi.exec(command, args, options)
     });
     ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");
@@ -887,14 +899,14 @@ export default function offlineEngine(pi: ExtensionAPI) {
     description: "Trim tools for slow models / restore",
     getArgumentCompletions: argumentChoices([
       ["status", "List the tools the model can call right now"],
-      ["minimal", "Keep only read/edit/write, shell, code, search, LSP and TinyCoder tools"],
+      ["minimal", "Keep only read/edit/line_edit/write, shell, code, search, LSP and TinyCoder tools"],
       ["restore", "Bring back the tool set that was active before 'minimal'"]
     ]),
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
       if (mode === "minimal") {
         if (!savedActiveTools) savedActiveTools = pi.getActiveTools();
-        const minimal = buildMinimalToolSet(pi.getAllTools());
+        const minimal = buildMinimalToolSet(pi.getAllTools(), process.platform, pi.getActiveTools());
         pi.setActiveTools(minimal);
         ctx.ui.notify(`Offline minimal tools enabled (${minimal.length}): ${minimal.join(", ")}`, "info");
         return;

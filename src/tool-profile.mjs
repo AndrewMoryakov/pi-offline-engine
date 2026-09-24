@@ -1,5 +1,7 @@
-export function buildMinimalToolSet(allTools, platform = process.platform) {
+export function buildMinimalToolSet(allTools, platform = process.platform, activeToolNames = null) {
   const names = new Set(allTools.map((tool) => tool.name));
+  // Hybrid edit: `edit` hidden by scriptEditPolicy stays hidden in minimal.
+  if (names.has("line_edit") && activeToolNames && !activeToolNames.includes("edit")) names.delete("edit");
   const selected = [];
 
   const add = (name) => {
@@ -8,6 +10,7 @@ export function buildMinimalToolSet(allTools, platform = process.platform) {
 
   add("read");
   add("edit");
+  add("line_edit");
   add("write");
 
   if (platform === "win32" && names.has("powershell")) add("powershell");

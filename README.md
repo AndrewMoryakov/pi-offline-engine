@@ -53,12 +53,26 @@ pi clones the repository and runs `npm install`, which brings in the four bundle
 
 ### Another package that overrides `edit`
 
-pi-lean-edit registers `read`, `edit` and `write`. Pi refuses to start when two extensions register the same tool name, so a package with its own `edit` — for example `git:github.com/sting8k/pi-utils` — stops pi with `Tool "edit" conflicts with ...`. Pi gives extensions no view of other packages' tools while they load, so the engine cannot resolve this on its own; pick one provider:
+pi-lean-edit registers `read`, `edit` and `write`. Pi refuses to start when two extensions register the same tool name, so a package with its own `edit` — for example `git:github.com/sting8k/pi-utils` — stops pi with `Tool "edit" conflicts with ...`. Pi gives extensions no view of other packages' tools while they load, so the engine cannot resolve this on its own; pick one provider, or run both side by side:
 
 - keep pi-lean-edit and turn the other off — for pi-utils, add `"edit"` to `disabledTools` in `~/.pi/agent/pi-utils.json`;
 - or keep the other one and set `"editProvider": "none"` in the engine config below (or `PI_OFFLINE_EDIT_PROVIDER=none`). pi-lean-edit's `read` and `write` go with it, since its `edit` only accepts ranges its own `read` has shown.
 
-`/offline-doctor` shows which extension supplies `edit` and, when it is not pi-lean-edit, that `editProvider=none` is the reason.
+- or keep both: set `"editProvider": "hybrid"` (or `PI_OFFLINE_EDIT_PROVIDER=hybrid`) and leave the other `edit` on. pi-lean-edit's range edit is then registered as `line_edit`, and the other package keeps `edit`.
+
+`/offline-doctor` shows which extension supplies `edit` and, when it is not pi-lean-edit, that `editProvider=none` is the reason. In hybrid mode it names the source of both tools and whether `edit` is currently offered.
+
+#### Hybrid: which edit the model sees
+
+`scriptEditPolicy` (config) or `PI_OFFLINE_SCRIPT_EDIT_POLICY` (env) decides when the other `edit` is offered next to `line_edit`:
+
+- `cloud-only` (default): hidden while the session model's `baseUrl` is local (loopback, RFC1918, `.local`, a bare hostname), offered for a remote one. Re-evaluated at session start and on every model switch. A small local model does better with range edits than with writing edit scripts.
+- `always`: always offered. Use this when a strong model is reached through a local address, e.g. a tunnel or relay on `127.0.0.1`: judged by `baseUrl` it counts as local.
+- `never`: registered but never offered.
+
+The policy only removes and restores `edit` itself; it never re-enables an `edit` you turned off, and `/offline-tools minimal` keeps it hidden. Tools that call Pi's built-ins directly, such as `pi-code-tool`'s bridge, are not governed by it (see [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md)).
+
+`npm run gate:edit` loads pi-lean-edit next to a fixture `edit` through the installed pi in each mode and checks the outcome, including that `lean` still refuses the pair.
 
 Then start the TinyCoder server and open pi:
 
@@ -330,6 +344,14 @@ npm run gate:pi
 ```
 
 to load the extension through the actually installed Pi runtime without making an LLM request. It drives `pi --mode rpc` and requires the engine's commands to be registered, so an extension that throws while loading fails the gate. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).
+
+`gate:pi` loads the engine alone, so it cannot see a clash with another package. For that, run:
+
+```bash
+npm run gate:edit
+```
+
+It loads `extensions/pi-lean-edit.ts` next to a fixture that registers its own `edit` in each `editProvider` mode, and fails if `lean` stops refusing the pair or if `none`/`hybrid` do not load as described above.
 
 To check the whole turnkey path — the same `npm install --omit=dev` pi runs for a git package, then `pi install` into a throwaway agent dir, then `/offline-doctor` over RPC asserting the bundled companion tools are active — run (needs network for the npm step; your own `~/.pi` is not touched):
 

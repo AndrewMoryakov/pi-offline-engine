@@ -325,3 +325,27 @@ test("doctor names the edit provider and why pi-lean-edit is off", async () => {
   const absent = await run([], { value: "none", source: "env" });
   assert.match(lineOf(absent), /^! edit_provider: edit tool not active \(bundled pi-lean-edit disabled: editProvider=none from env\)$/);
 });
+
+test("doctor explains a hybrid edit setup, including a hidden script edit", async () => {
+  const fetchFn = async () => ({ ok: true, async json() { return { data: [{ id: "tiny" }] }; } });
+  const exec = async () => ({ code: 0, killed: false, stdout: "ok", stderr: "" });
+  const lineEdit = { name: "line_edit", sourceInfo: { path: "/pkg/extensions/pi-lean-edit.ts" } };
+  const scriptEdit = { name: "edit", sourceInfo: { path: "/pi-utils/extensions/edit.ts" } };
+  const run = (tools, sessionModel) => runOfflineDoctor({
+    cwd: "/tmp", endpoint: "http://127.0.0.1:8081", model: "tiny", exec, fetchFn,
+    tools, allTools: [lineEdit, scriptEdit], sessionModel,
+    editProvider: { value: "hybrid", source: "config" },
+    scriptEditPolicy: { value: "cloud-only", source: "default" }
+  });
+  const lineOf = (report) => formatDoctorReport(report).split("\n").find((x) => x.includes("edit_provider"));
+
+  const hidden = await run([lineEdit], { baseUrl: "http://127.0.0.1:8080/v1" });
+  assert.equal(
+    lineOf(hidden),
+    "✓ edit_provider: hybrid (editProvider from config); line_edit source: /pkg/extensions/pi-lean-edit.ts; " +
+      "edit source: /pi-utils/extensions/edit.ts, hidden (local model, scriptEditPolicy=cloud-only from default)"
+  );
+
+  const offered = await run([lineEdit, scriptEdit], { baseUrl: "https://chatgpt.com/backend-api" });
+  assert.match(lineOf(offered), /edit source: \/pi-utils\/extensions\/edit\.ts, offered \(remote model,/);
+});

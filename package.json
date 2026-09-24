@@ -18,7 +18,8 @@
     "gate:pi": "node ./scripts/pi-load-gate.mjs",
     "gate:install": "node ./scripts/install-gate.mjs",
     "training:export": "node ./scripts/export-training-data.mjs",
-    "acceptance:prepare": "node ./scripts/prepare-acceptance-v0.mjs"
+    "acceptance:prepare": "node ./scripts/prepare-acceptance-v0.mjs",
+    "gate:edit": "node ./scripts/edit-conflict-gate.mjs"
   },
   "dependencies": {
     "pi-code-tool": "0.6.1",

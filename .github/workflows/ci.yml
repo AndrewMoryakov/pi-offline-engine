@@ -25,5 +25,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Load through the pinned Pi runtime
         run: npm run gate:pi
+      - name: Edit-tool conflict with another package, per editProvider
+        run: npm run gate:edit
       - name: Verify isolated Pi package installation and companion extensions
         run: npm run gate:install -- --package-dir .

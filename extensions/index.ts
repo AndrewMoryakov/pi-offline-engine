@@ -32,7 +32,7 @@ import {
 } from "../src/training-recorder.mjs";
 import { exportTrainingData } from "../src/training-exporter.mjs";
 import { applyCodeToolPolicy, selectActiveToolObjects } from "../src/extension-policy.mjs";
-import { engineConfigPath, readEngineConfig, resolveEngineSettings, writeEngineConfig } from "../src/engine-config.mjs";
+import { engineConfigPath, readEngineConfig, resolveEditProvider, resolveEngineSettings, writeEngineConfig } from "../src/engine-config.mjs";
 import { discoverEndpoints, probeEndpoint } from "../src/endpoint-discovery.mjs";
 import {
   autoConfigureIfNeeded,
@@ -46,6 +46,9 @@ import {
 // first-run discovery). Environment variables still override it.
 const engineConfigFile = engineConfigPath(getAgentDir());
 let engineConfigState = readEngineConfig(engineConfigFile);
+// extensions/pi-lean-edit.ts decides once, at load; the doctor must report that
+// decision, not a config edited since (it takes effect on the next start).
+const editProviderAtLoad = resolveEditProvider({ env: process.env, config: engineConfigState.config });
 
 function reloadEngineConfig() {
   engineConfigState = readEngineConfig(engineConfigFile);
@@ -802,6 +805,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
       model: tinyModel(),
       apiKey: tinyApiKey(),
       tools: activeTools,
+      editProvider: editProviderAtLoad,
       exec: (command, args, options) => pi.exec(command, args, options)
     });
     ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");

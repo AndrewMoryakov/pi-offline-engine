@@ -51,6 +51,15 @@ integration tests.
 
 pi clones the repository and runs `npm install`, which brings in the four bundled companion extensions — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool`, `pi-lean-edit` — at exact pinned versions, all loaded through this package's manifest. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for what each one does and which optional packages stay opt-in. Do not `pi install` the bundled four separately; that would register duplicate tools.
 
+### Another package that overrides `edit`
+
+pi-lean-edit registers `read`, `edit` and `write`. Pi refuses to start when two extensions register the same tool name, so a package with its own `edit` — for example `git:github.com/sting8k/pi-utils` — stops pi with `Tool "edit" conflicts with ...`. Pi gives extensions no view of other packages' tools while they load, so the engine cannot resolve this on its own; pick one provider:
+
+- keep pi-lean-edit and turn the other off — for pi-utils, add `"edit"` to `disabledTools` in `~/.pi/agent/pi-utils.json`;
+- or keep the other one and set `"editProvider": "none"` in the engine config below (or `PI_OFFLINE_EDIT_PROVIDER=none`). pi-lean-edit's `read` and `write` go with it, since its `edit` only accepts ranges its own `read` has shown.
+
+`/offline-doctor` shows which extension supplies `edit` and, when it is not pi-lean-edit, that `editProvider=none` is the reason.
+
 Then start the TinyCoder server and open pi:
 
 ```bash

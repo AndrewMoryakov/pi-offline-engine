@@ -49,7 +49,7 @@
       "node_modules/pi-knowledge/extension.js",
       "node_modules/pi-lsp-extension/src/index.ts",
       "node_modules/pi-code-tool/extensions/index.js",
-      "node_modules/pi-lean-edit/index.ts"
+      "./extensions/pi-lean-edit.ts"
     ]
   }
 }

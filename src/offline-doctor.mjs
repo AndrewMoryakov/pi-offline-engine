@@ -1,3 +1,5 @@
+import { endpointHost, isLocalHost } from "./endpoint-locality.mjs";
+import { LINE_EDIT_TOOL, SCRIPT_EDIT_TOOL, isLocalModel } from "./edit-routing.mjs";
 import { resolveEndpointUrl } from "./endpoint-url.mjs";
 import { buildAuthHeaders } from "./tiny-client.mjs";
 
@@ -11,6 +13,9 @@ export async function runOfflineDoctor({
   tools,
   exec,
   editProvider = { value: "lean", source: "default" },
+  scriptEditPolicy = { value: "cloud-only", source: "default" },
+  allTools = tools,
+  sessionModel = undefined,
   apiKey = null,
   fetchFn = fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS
@@ -56,20 +61,11 @@ export async function runOfflineDoctor({
   checks.push(checkAnyTool(tools, ["code"], false, "code-mode mechanical pipelines"));
   checks.push(checkAnyTool(tools, ["list_symbols", "code_overview", "lsp_symbols"], false, "structural code navigation"));
 
-  const editTool = tools.find((tool) => tool.name === "edit");
-  // Without the reason, "none" reads like a broken install months later.
-  const leanOff = editProvider.value === "none"
-    ? ` (bundled pi-lean-edit disabled: editProvider=none from ${editProvider.source})`
-    : "";
-  checks.push({
-    id: "edit_provider",
-    required: false,
-    ok: Boolean(editTool),
-    status: editTool ? "ok" : "warn",
-    message: editTool
-      ? `edit tool source: ${formatSource(editTool.sourceInfo)}${leanOff}`
-      : `edit tool not active${leanOff}`
-  });
+  if (editProvider.value === "hybrid") {
+    checks.push(checkHybridEdit({ tools, allTools, editProvider, scriptEditPolicy, sessionModel }));
+  } else {
+    checks.push(checkEditProvider(tools, editProvider));
+  }
 
   const requiredFailures = checks.filter((x) => x.required && !x.ok);
   const warnings = checks.filter((x) => !x.required && !x.ok);
@@ -100,15 +96,56 @@ function summarizeCatalog(models, model) {
   return `${shown.join(", ")}${suffix}`;
 }
 
+function checkEditProvider(tools, editProvider) {
+  const editTool = tools.find((tool) => tool.name === "edit");
+  // Without the reason, "none" reads like a broken install months later.
+  const leanOff = editProvider.value === "none"
+    ? ` (bundled pi-lean-edit disabled: editProvider=none from ${editProvider.source})`
+    : "";
+  return {
+    id: "edit_provider",
+    required: false,
+    ok: Boolean(editTool),
+    status: editTool ? "ok" : "warn",
+    message: editTool
+      ? `edit tool source: ${formatSource(editTool.sourceInfo)}${leanOff}`
+      : `edit tool not active${leanOff}`
+  };
+}
+
+// Hybrid: pi-lean-edit's edit is line_edit, and the other package's `edit`
+// is shown or hidden per scriptEditPolicy. Says which, and why, because a
+// hidden `edit` otherwise looks like a missing one.
+// Spec: docs/HYBRID_EDIT_V0.md HE-8.
+function checkHybridEdit({ tools, allTools, editProvider, scriptEditPolicy, sessionModel }) {
+  const lineTool = tools.find((tool) => tool.name === LINE_EDIT_TOOL);
+  const scriptRegistered = allTools.find((tool) => tool.name === SCRIPT_EDIT_TOOL);
+  const scriptActive = tools.some((tool) => tool.name === SCRIPT_EDIT_TOOL);
+  const local = isLocalModel(sessionModel);
+  const locality = local === null ? "model locality unknown" : local ? "local model" : "remote model";
+  const parts = [
+    `hybrid (editProvider from ${editProvider.source})`,
+    lineTool ? `${LINE_EDIT_TOOL} source: ${formatSource(lineTool.sourceInfo)}` : `${LINE_EDIT_TOOL} not active`,
+    scriptRegistered
+      ? `${SCRIPT_EDIT_TOOL} source: ${formatSource(scriptRegistered.sourceInfo)}, ${scriptActive ? "offered" : "hidden"} (${locality}, scriptEditPolicy=${scriptEditPolicy.value} from ${scriptEditPolicy.source})`
+      : `${SCRIPT_EDIT_TOOL} not registered`
+  ];
+  return {
+    id: "edit_provider",
+    required: false,
+    ok: Boolean(lineTool),
+    status: lineTool ? "ok" : "warn",
+    message: parts.join("; ")
+  };
+}
+
 // The project's premise is that source stays on this machine. Pointing the
 // implementer at a hosted router is a legitimate, deliberate choice, so this
 // is a warning rather than a readiness failure -- but it must be stated, or
 // "OFFLINE READY: yes" would be a false claim.
 export function checkEndpointLocality(endpoint) {
-  let host = "";
-  try {
-    host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(endpoint) ? endpoint : `http://${endpoint}`).hostname;
-  } catch {
+  const host = endpointHost(endpoint);
+  if (host === null) {
     return {
       id: "endpoint_locality",
       required: false,
@@ -130,19 +167,6 @@ export function checkEndpointLocality(endpoint) {
       ? `implementer endpoint is local (${host}); source stays on your network`
       : `implementer endpoint is remote (${host}); prompts and source excerpts leave your network`
   };
-}
-
-function isLocalHost(hostname) {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
-  if (host === "::1" || host === "0.0.0.0" || host === "::") return true;
-  if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host)) return true;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
-  if (/^169\.254\./.test(host)) return true;
-  if (/^f[cd][0-9a-f]{2}:/.test(host) || /^fe80:/.test(host)) return true;
-  // A bare intranet name with no dot is not a public destination.
-  if (!host.includes(".")) return true;
-  return false;
 }
 
 async function checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs, apiKey) {

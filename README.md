@@ -76,6 +76,8 @@ Hiding `edit` does not steer a model to `line_edit`. In a live run with the scri
 
 The policy only removes and restores `edit` itself; it never re-enables an `edit` you turned off, and `/offline-tools minimal` keeps it hidden. Tools that call Pi's built-ins directly, such as `pi-code-tool`'s bridge, are not governed by it (see [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md)).
 
+pi-lean-edit's edit schema is a union with no top-level `properties`, and ik_llama.cpp's tool-call parser returns such a tool's arguments empty. The engine therefore gives the model a flattened schema in both `lean` and `hybrid` modes; pi-lean-edit still rejects invalid combinations itself. See `HE-11`.
+
 `npm run gate:edit` loads pi-lean-edit next to a fixture `edit` through the installed pi in each mode and checks the outcome, including that `lean` still refuses the pair.
 
 Then start the TinyCoder server and open pi:

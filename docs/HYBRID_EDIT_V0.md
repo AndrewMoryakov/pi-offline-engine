@@ -92,6 +92,31 @@ became `always`. `cloud-only` stays for users who want it. One run per case
 is an observation, not a rate; qwen was reached through OpenRouter, not run
 locally.
 
+**HE-11 (evidence, then decision, 2026-09-24).** pi-lean-edit's edit schema
+is `{ "type": "object", "anyOf": [...] }` with no top-level `properties`.
+Behind ik_llama.cpp's `llama-server --jinja` (the fork build at
+`ik_llama_my-fork/build-ui`, Qwen3.6-35B-A3B Q8_0), a model calling that tool
+gets `arguments: {}`, 2 of 2 requests, while the same request with the
+fields as plain `properties` returns them. The model is not at fault: its raw
+output, fetched through `/completion` from the rendered template, carries
+every parameter (`<parameter=path>`, `<parameter=startLine>`,
+`<parameter=newText>`). The server's tool-call parser drops them. In a pi
+session the local model called `line_edit` six times with `{}`, then fell
+back to the script edit and finally to `write`.
+
+Decision: the wrapper hands the model a flattened schema in both `lean` and
+`hybrid` modes (`src/tool-schema.mjs`): every property of every variant, and
+as required only what all variants require (`path`; `startLine` and
+`newText` inside `edits[]`). The flat schema admits combinations the union
+did not. pi-lean-edit rejects them at run time (`normalizeEdits`: required
+fields, no top-level range with `edits[]`, integers, no overlaps), so no
+check is lost, only moved. Cloud providers accept the flat schema as well.
+
+The same parser also drops one leading space from a parameter value
+(`'    timeout = 60'` raw, `'   timeout = 60'` parsed, one deterministic
+comparison). That corrupts indentation in edits and is not fixable here; it
+belongs in the ik_llama fork.
+
 ## Out of scope
 
 - `pi-code-tool`'s bridge calls Pi's built-ins directly and bypasses both

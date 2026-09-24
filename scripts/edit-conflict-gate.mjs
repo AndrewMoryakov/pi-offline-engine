@@ -15,7 +15,8 @@
 // Runs against a throwaway agent dir, so neither the user's settings nor
 // their engine config can change the outcome.
 //
-// Spec: docs/HYBRID_EDIT_V0.md HE-9; the lean case reproduces HE-1.
+// Spec: docs/HYBRID_EDIT_V0.md HE-9; the lean case reproduces HE-1; the
+// schema checks cover HE-11.
 import fs from "node:fs";
 import os from "node:os";
 import process from "node:process";
@@ -76,6 +77,14 @@ expect("hybrid: loads without errors", hybrid.errors.length === 0 && hybrid.prob
 expect("hybrid: line_edit from pi-lean-edit.ts", owner(hybrid.probe, "line_edit").endsWith("pi-lean-edit.ts"), owner(hybrid.probe, "line_edit"));
 expect("hybrid: edit from the fixture", owner(hybrid.probe, "edit").endsWith("other-edit.ts"), owner(hybrid.probe, "edit"));
 expect("hybrid: both active", ["line_edit", "edit"].every((n) => hybrid.probe?.active.includes(n)), JSON.stringify(hybrid.probe?.active));
+
+// HE-11: whatever name pi-lean-edit's edit ends up under, the model must get
+// a schema with top-level properties, or ik_llama.cpp drops its arguments.
+const flatIn = (probe, name) => Boolean(probe?.all.find((tool) => tool.name === name && tool.source.endsWith("pi-lean-edit.ts") && !tool.topLevelUnion));
+expect("hybrid: line_edit schema is flat", flatIn(hybrid.probe, "line_edit"), JSON.stringify(hybrid.probe?.all.find((t) => t.name === "line_edit")));
+const leanAlone = await load({ PI_OFFLINE_EDIT_PROVIDER: "lean", GATE_FIXTURE_NO_EDIT: "1" });
+expect("lean alone: loads without errors", leanAlone.errors.length === 0 && leanAlone.probe !== null, JSON.stringify(leanAlone.errors));
+expect("lean alone: edit is pi-lean-edit's, with a flat schema", flatIn(leanAlone.probe, "edit"), JSON.stringify(leanAlone.probe?.all.find((t) => t.name === "edit")));
 
 const never = await load({ PI_OFFLINE_EDIT_PROVIDER: "hybrid", PI_OFFLINE_SCRIPT_EDIT_POLICY: "never" });
 expect("hybrid+never: loads without errors", never.errors.length === 0 && never.probe !== null, JSON.stringify(never.errors));

@@ -1,6 +1,7 @@
 // Loopback, RFC1918, link-local and bare intranet names count as local: data
 // sent there may cross to another box, but it stays inside the operator's
 // network. Shared by the doctor's endpoint check and the hybrid edit routing.
+// Spec: docs/HYBRID_EDIT_V0.md HE-5 (one locality rule for both).
 export function isLocalHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;

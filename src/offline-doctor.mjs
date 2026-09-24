@@ -116,6 +116,7 @@ function checkEditProvider(tools, editProvider) {
 // Hybrid: pi-lean-edit's edit is line_edit, and the other package's `edit`
 // is shown or hidden per scriptEditPolicy. Says which, and why, because a
 // hidden `edit` otherwise looks like a missing one.
+// Spec: docs/HYBRID_EDIT_V0.md HE-8.
 function checkHybridEdit({ tools, allTools, editProvider, scriptEditPolicy, sessionModel }) {
   const lineTool = tools.find((tool) => tool.name === LINE_EDIT_TOOL);
   const scriptRegistered = allTools.find((tool) => tool.name === SCRIPT_EDIT_TOOL);

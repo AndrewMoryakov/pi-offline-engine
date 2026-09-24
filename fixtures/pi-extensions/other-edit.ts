@@ -3,6 +3,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 // Stands in for another package that overrides `edit` (pi-utils' script
 // edit), so gate:edit can reproduce the startup conflict without it. The
 // probe command reports the registered and active tool names as JSON.
+// Spec: docs/HYBRID_EDIT_V0.md HE-9.
 export default function otherEdit(pi: ExtensionAPI) {
   pi.registerTool({
     name: "edit",

@@ -326,6 +326,7 @@ test("doctor names the edit provider and why pi-lean-edit is off", async () => {
   assert.match(lineOf(absent), /^! edit_provider: edit tool not active \(bundled pi-lean-edit disabled: editProvider=none from env\)$/);
 });
 
+// Spec: docs/HYBRID_EDIT_V0.md HE-8.
 test("doctor explains a hybrid edit setup, including a hidden script edit", async () => {
   const fetchFn = async () => ({ ok: true, async json() { return { data: [{ id: "tiny" }] }; } });
   const exec = async () => ({ code: 0, killed: false, stdout: "ok", stderr: "" });

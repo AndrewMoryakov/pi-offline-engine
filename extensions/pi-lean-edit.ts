@@ -13,6 +13,7 @@ import { planScriptEditActivation, renameLeanEditTool } from "../src/edit-routin
 //
 // "hybrid" registers pi-lean-edit's edit as `line_edit` instead, so the other
 // `edit` loads too, and offers that `edit` to the model per scriptEditPolicy.
+// Spec: docs/HYBRID_EDIT_V0.md HE-1 (why a rename), HE-3, HE-4.
 export default function leanEditProvider(pi: ExtensionAPI) {
   const { config } = readEngineConfig(engineConfigPath(getAgentDir()));
   const provider = resolveEditProvider({ env: process.env, config }).value;
@@ -33,6 +34,7 @@ export default function leanEditProvider(pi: ExtensionAPI) {
   });
   leanEdit(renaming);
 
+  // Spec: docs/HYBRID_EDIT_V0.md HE-5: re-judged at session start and on every model switch.
   const policy = resolveScriptEditPolicy({ env: process.env, config }).value;
   let hiddenByPolicy = false;
   const apply = (model: ExtensionContext["model"]) => {

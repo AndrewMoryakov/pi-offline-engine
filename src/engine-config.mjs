@@ -20,6 +20,7 @@ const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "configuredB
 // `edit` too, and Pi aborts startup when two extensions register one tool
 // name) or to Pi's built-ins. "hybrid" loads pi-lean-edit with its edit
 // renamed to `line_edit`, so the other `edit` can stay registered beside it.
+// Spec: docs/HYBRID_EDIT_V0.md HE-3 (opt-in, default stays lean), HE-4 (rename).
 export const EDIT_PROVIDERS = Object.freeze(["lean", "none", "hybrid"]);
 export const DEFAULT_EDIT_PROVIDER = "lean";
 
@@ -27,6 +28,7 @@ export const DEFAULT_EDIT_PROVIDER = "lean";
 // hides it while the session model's baseUrl is local (small local models do
 // better with range edits than with writing scripts); "always" never hides
 // it; "never" keeps it registered but always hidden.
+// Spec: docs/HYBRID_EDIT_V0.md HE-5, HE-6.
 export const SCRIPT_EDIT_POLICIES = Object.freeze(["cloud-only", "always", "never"]);
 export const DEFAULT_SCRIPT_EDIT_POLICY = "cloud-only";
 

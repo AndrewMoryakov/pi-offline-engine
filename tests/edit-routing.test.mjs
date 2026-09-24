@@ -4,6 +4,8 @@ import { isLocalModel, planScriptEditActivation, renameLeanEditTool } from "../s
 import { resolveScriptEditPolicy } from "../src/engine-config.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 
+// Spec: docs/HYBRID_EDIT_V0.md. Each test names the item it checks.
+
 const LOCAL = { baseUrl: "http://127.0.0.1:8080/v1" };
 const REMOTE = { baseUrl: "https://chatgpt.com/backend-api" };
 const BOTH = ["read", "line_edit", "edit", "write", "bash"];
@@ -19,6 +21,7 @@ function plan(overrides) {
   });
 }
 
+// HE-4
 test("renaming pi-lean-edit's edit rewrites the guidelines that name it", () => {
   const renamed = renameLeanEditTool({
     name: "edit",
@@ -40,11 +43,13 @@ test("renaming pi-lean-edit's edit rewrites the guidelines that name it", () => 
   assert.match(renamed.promptGuidelines.at(-1), /tool named edit is also available/);
 });
 
+// HE-4
 test("renaming leaves pi-lean-edit's read and write alone", () => {
   const read = { name: "read", label: "read" };
   assert.equal(renameLeanEditTool(read), read);
 });
 
+// HE-5
 test("model locality comes from baseUrl, and is unknown without one", () => {
   assert.equal(isLocalModel(LOCAL), true);
   assert.equal(isLocalModel({ baseUrl: "http://192.168.1.20:1234" }), true);
@@ -53,6 +58,7 @@ test("model locality comes from baseUrl, and is unknown without one", () => {
   assert.equal(isLocalModel({ baseUrl: "" }), null);
 });
 
+// HE-5, HE-6
 test("cloud-only hides the script edit for a local model and brings it back for a remote one", () => {
   const hidden = plan({ model: LOCAL });
   assert.equal(hidden.changed, true);
@@ -65,12 +71,14 @@ test("cloud-only hides the script edit for a local model and brings it back for 
   assert.equal(back.hiddenByPolicy, false);
 });
 
+// HE-7
 test("an edit the user turned off is not turned back on", () => {
   const result = plan({ model: REMOTE, activeToolNames: ["read", "line_edit", "write"], hiddenByPolicy: false });
   assert.equal(result.changed, false);
   assert.deepEqual(result.activeToolNames, ["read", "line_edit", "write"]);
 });
 
+// HE-6
 test("always and never ignore the model", () => {
   assert.equal(plan({ model: LOCAL, policy: "always" }).changed, false);
   const never = plan({ model: REMOTE, policy: "never" });
@@ -78,12 +86,14 @@ test("always and never ignore the model", () => {
   assert.equal(never.activeToolNames.includes("edit"), false);
 });
 
+// HE-5
 test("unknown locality under cloud-only changes nothing", () => {
   const result = plan({ model: undefined, activeToolNames: ["read", "line_edit"], hiddenByPolicy: true });
   assert.equal(result.changed, false);
   assert.equal(result.hiddenByPolicy, true);
 });
 
+// HE-2
 test("without both tools registered the policy does nothing", () => {
   const onlyLean = plan({ allToolNames: ["read", "line_edit"], activeToolNames: ["read", "line_edit"], model: LOCAL });
   assert.equal(onlyLean.changed, false);
@@ -91,6 +101,7 @@ test("without both tools registered the policy does nothing", () => {
   assert.equal(onlyEdit.changed, false);
 });
 
+// HE-6
 test("scriptEditPolicy resolves env over config over default and skips unknown values", () => {
   assert.deepEqual(resolveScriptEditPolicy({}), { value: "cloud-only", source: "default" });
   assert.deepEqual(resolveScriptEditPolicy({ config: { scriptEditPolicy: "Always" } }), { value: "always", source: "config" });
@@ -104,6 +115,7 @@ test("scriptEditPolicy resolves env over config over default and skips unknown v
   );
 });
 
+// HE-7
 test("minimal tool set keeps line_edit and does not revive a hidden script edit", () => {
   const all = BOTH.map((name) => ({ name }));
   assert.deepEqual(buildMinimalToolSet(all, "linux", BOTH).slice(0, 4), ["read", "edit", "line_edit", "write"]);

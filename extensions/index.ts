@@ -56,6 +56,7 @@ let engineConfigState = readEngineConfig(engineConfigFile);
 // extensions/pi-lean-edit.ts decides once, at load; the doctor must report that
 // decision, not a config edited since (it takes effect on the next start).
 const editProviderAtLoad = resolveEditProvider({ env: process.env, config: engineConfigState.config });
+// Spec: docs/HYBRID_EDIT_V0.md HE-8: the doctor reports the policy read at load.
 const scriptEditPolicyAtLoad = resolveScriptEditPolicy({ env: process.env, config: engineConfigState.config });
 
 function reloadEngineConfig() {

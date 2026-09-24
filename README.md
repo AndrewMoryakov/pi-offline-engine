@@ -64,6 +64,8 @@ pi-lean-edit registers `read`, `edit` and `write`. Pi refuses to start when two 
 
 #### Hybrid: which edit the model sees
 
+The task statement, with where each rule came from, is [docs/HYBRID_EDIT_V0.md](docs/HYBRID_EDIT_V0.md).
+
 `scriptEditPolicy` (config) or `PI_OFFLINE_SCRIPT_EDIT_POLICY` (env) decides when the other `edit` is offered next to `line_edit`:
 
 - `cloud-only` (default): hidden while the session model's `baseUrl` is local (loopback, RFC1918, `.local`, a bare hostname), offered for a remote one. Re-evaluated at session start and on every model switch. A small local model does better with range edits than with writing edit scripts.

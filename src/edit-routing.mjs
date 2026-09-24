@@ -3,6 +3,7 @@ import { endpointHost, isLocalHost } from "./endpoint-locality.mjs";
 // Hybrid edit provider: pi-lean-edit's range edit is registered under this
 // name, and the tool registered as `edit` by another package (pi-utils' script
 // edit) or by Pi itself stays beside it.
+// Spec: docs/HYBRID_EDIT_V0.md HE-2, HE-4.
 export const LINE_EDIT_TOOL = "line_edit";
 export const SCRIPT_EDIT_TOOL = "edit";
 
@@ -10,6 +11,7 @@ export const SCRIPT_EDIT_TOOL = "edit";
 // the tool by that name ("edit: use after read ..."). Renaming only the
 // registration would leave the model told to call a tool it cannot see, so
 // the guidelines are rewritten with it, and one line says when to use which.
+// Spec: docs/HYBRID_EDIT_V0.md HE-4.
 export function renameLeanEditTool(tool) {
   if (!tool || tool.name !== "edit") return tool;
   const guidelines = (tool.promptGuidelines ?? []).map((line) =>
@@ -28,6 +30,7 @@ export function renameLeanEditTool(tool) {
 
 // true / false when the model's baseUrl can be judged, null when it cannot
 // (no model yet, or a provider without a baseUrl).
+// Spec: docs/HYBRID_EDIT_V0.md HE-5.
 export function isLocalModel(model) {
   const host = endpointHost(model?.baseUrl);
   return host === null ? null : isLocalHost(host);
@@ -37,6 +40,7 @@ export function isLocalModel(model) {
 // returns the new active tool list. Only SCRIPT_EDIT_TOOL is ever added or
 // removed, and it is added back only if this policy removed it: /offline-tools
 // minimal and the user's own tool choices stay untouched.
+// Spec: docs/HYBRID_EDIT_V0.md HE-5, HE-6 (policy values), HE-7 (touch only `edit`).
 export function planScriptEditActivation({ allToolNames, activeToolNames, model, policy, hiddenByPolicy }) {
   const unchanged = (reason) => ({ activeToolNames, hiddenByPolicy, changed: false, reason });
   const all = new Set(allToolNames);

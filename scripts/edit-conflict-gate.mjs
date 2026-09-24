@@ -14,6 +14,8 @@
 //
 // Runs against a throwaway agent dir, so neither the user's settings nor
 // their engine config can change the outcome.
+//
+// Spec: docs/HYBRID_EDIT_V0.md HE-9; the lean case reproduces HE-1.
 import fs from "node:fs";
 import os from "node:os";
 import process from "node:process";

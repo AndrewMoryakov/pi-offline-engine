@@ -336,7 +336,7 @@ test("doctor explains a hybrid edit setup, including a hidden script edit", asyn
     cwd: "/tmp", endpoint: "http://127.0.0.1:8081", model: "tiny", exec, fetchFn,
     tools, allTools: [lineEdit, scriptEdit], sessionModel,
     editProvider: { value: "hybrid", source: "config" },
-    scriptEditPolicy: { value: "cloud-only", source: "default" }
+    scriptEditPolicy: { value: "cloud-only", source: "config" }
   });
   const lineOf = (report) => formatDoctorReport(report).split("\n").find((x) => x.includes("edit_provider"));
 
@@ -344,7 +344,7 @@ test("doctor explains a hybrid edit setup, including a hidden script edit", asyn
   assert.equal(
     lineOf(hidden),
     "✓ edit_provider: hybrid (editProvider from config); line_edit source: /pkg/extensions/pi-lean-edit.ts; " +
-      "edit source: /pi-utils/extensions/edit.ts, hidden (local model, scriptEditPolicy=cloud-only from default)"
+      "edit source: /pi-utils/extensions/edit.ts, hidden (local model, scriptEditPolicy=cloud-only from config)"
   );
 
   const offered = await run([lineEdit, scriptEdit], { baseUrl: "https://chatgpt.com/backend-api" });

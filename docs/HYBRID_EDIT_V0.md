@@ -45,17 +45,18 @@ pi-lean-edit's own source is not patched. Its prompt guidelines address the
 tool as `edit:` and are rewritten with the name, plus one line on when to
 use which tool.
 
-**HE-5 (decision).** Which tools the model sees is decided in code, without a
-cloud classifier (Jev-based routers were considered): the engine's premise is
+**HE-5 (decision; the default until HE-10).** Which tools the model sees
+is decided in code, without a cloud classifier (Jev-based routers were considered): the engine's premise is
 that source stays on the operator's network (`/offline-doctor`'s
 `endpoint_locality`). The signal is the session model's `baseUrl`, judged by
 the same `isLocalHost` the doctor uses, on `session_start` and `model_select`.
 A local model gets `line_edit` only; a remote one gets both.
 
-**HE-6 (decision).** `scriptEditPolicy` / `PI_OFFLINE_SCRIPT_EDIT_POLICY`:
-`cloud-only` (default, HE-5), `always`, `never`. `always` exists because a
-strong model reached through a local address (a tunnel or relay on
-`127.0.0.1`) counts as local by `baseUrl`.
+**HE-6 (decision, default revised by HE-10).** `scriptEditPolicy` /
+`PI_OFFLINE_SCRIPT_EDIT_POLICY`: `always` (default), `cloud-only` (HE-5),
+`never`. The default was `cloud-only` in the first version. A strong model
+reached through a local address (a tunnel or relay on `127.0.0.1`) counts
+as local by `baseUrl`, which `cloud-only` gets wrong.
 
 **HE-7 (decision).** The policy never rebuilds the tool set. It removes and
 restores only `edit`, and restores it only if it removed it, so
@@ -72,11 +73,30 @@ with another package. `gate:edit` (also in CI) loads
 throwaway agent dir, for each mode. `lean` must still be refused, which shows
 the gate can fail.
 
+**HE-10 (evidence, 2026-09-24).** Live runs on TashkentServ, one each, in a
+throwaway repo: change one line in `app/config.py`; rename `foo` to
+`double_value` across 11 files.
+
+```text
+gpt-6-sol       one line: read, line_edit      rename: edit (one script over 11 files)
+qwen3.8-27b     one line: read, line_edit      rename: edit (one script over 11 files)
+qwen3.8-27b     rename with edit hidden (never): sed -i through bash, no line_edit
+```
+
+With both tools offered, both models chose as HE-2 intends, from the tool
+descriptions alone. With the script edit hidden, the smaller model did not
+fall back to range edits: it used `sed -i`, which has neither `line_edit`'s
+stale-text check nor the script edit's diff and rollback. Hiding `edit`
+removes the safer bulk tool without steering to `line_edit`, so the default
+became `always`. `cloud-only` stays for users who want it. One run per case
+is an observation, not a rate; qwen was reached through OpenRouter, not run
+locally.
+
 ## Out of scope
 
 - `pi-code-tool`'s bridge calls Pi's built-ins directly and bypasses both
   tools (see `OFFLINE_PROFILE.md`).
 - pi-lean-edit's metrics key on the tool name `edit` (`src/metrics.ts:82` in
   pi-lean-edit 0.3.6); not checked for the renamed tool.
-- A model editing through `line_edit` in a live session has not been
-  observed.
+- A real local model (llama-server) has not been run; HE-10 used qwen
+  through OpenRouter.

@@ -13,7 +13,7 @@ export async function runOfflineDoctor({
   tools,
   exec,
   editProvider = { value: "lean", source: "default" },
-  scriptEditPolicy = { value: "cloud-only", source: "default" },
+  scriptEditPolicy = { value: "always", source: "default" },
   allTools = tools,
   sessionModel = undefined,
   apiKey = null,

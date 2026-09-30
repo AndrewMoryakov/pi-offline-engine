@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { getAgentDir, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
-import { Type } from "typebox";
+import { DelegationParametersSchema } from "./delegation-schema.ts";
 import { validateImplementationSpec, validateCandidate } from "../src/implementation-spec.mjs";
 import { callTinyImplementer, TinyModelOutputError } from "../src/tiny-client.mjs";
 import { appendEvent } from "../src/event-log.mjs";
@@ -71,45 +71,6 @@ function saveEngineConfig(patch: Record<string, unknown>) {
   writeEngineConfig(engineConfigFile, patch);
   reloadEngineConfig();
 }
-
-const NonEmptyString = Type.String({ minLength: 1 });
-
-const VerificationSchema = Type.Object({
-  build: Type.Optional(Type.Object({
-    project: NonEmptyString
-  }, { additionalProperties: false })),
-  tests: Type.Optional(Type.Object({
-    project: NonEmptyString,
-    names: Type.Optional(Type.Array(NonEmptyString))
-  }, { additionalProperties: false }))
-}, { additionalProperties: false });
-
-const ImplementationSpecSchema = Type.Object({
-  version: Type.Literal(1),
-  spec_id: NonEmptyString,
-  operation: Type.Literal("modify_symbol"),
-  goal: Type.Object({
-    summary: NonEmptyString
-  }, { additionalProperties: false }),
-  target: Type.Object({
-    file: NonEmptyString,
-    symbol: NonEmptyString
-  }, { additionalProperties: false }),
-  requirements: Type.Array(NonEmptyString, { minItems: 1 }),
-  preserve: Type.Optional(Type.Array(NonEmptyString)),
-  scope: Type.Object({
-    allowed_files: Type.Array(NonEmptyString, { minItems: 1, maxItems: 2 }),
-    allow_new_files: Type.Boolean(),
-    allow_dependencies: Type.Boolean(),
-    allow_public_api_change: Type.Boolean()
-  }, { additionalProperties: false }),
-  verification: VerificationSchema
-}, { additionalProperties: false });
-
-const DelegationParametersSchema = Type.Object({
-  spec: ImplementationSpecSchema,
-  context: Type.Optional(Type.Object({}, { additionalProperties: true }))
-}, { additionalProperties: false });
 
 export default function offlineEngine(pi: ExtensionAPI) {
   let savedActiveTools: string[] | null = null;

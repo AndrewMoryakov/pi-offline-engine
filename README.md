@@ -1,8 +1,78 @@
-# pi-offline-engine
+<p align="center">
+  <img src="docs/assets/pi-offline-engine-hero.png" alt="pi-offline-engine: a big local model writes a spec, you approve it once, a tiny coder patches inside a bounded loop of build and tests, a red result goes back for repair, and still-red work returns to the big model" width="100%">
+</p>
+
+<h1 align="center">pi-offline-engine</h1>
+
+<p align="center"><b>A big local model plans, a tiny local model codes, real .NET build and tests decide — all on your own machine. An offline-first extension for the Pi coding agent.</b></p>
+
+<p align="center">
+  <a href="https://nodejs.org/"><img alt="Node.js 22.19+" src="https://img.shields.io/badge/Node.js-22.19%2B-339933.svg?logo=nodedotjs&logoColor=white"></a>
+  <a href="#install"><img alt="Pi 0.86.1 verified" src="https://img.shields.io/badge/Pi-0.86.1%20verified-6E56CF.svg"></a>
+  <a href="#current-vertical-slice"><img alt="Verification: dotnet build and test" src="https://img.shields.io/badge/verification-dotnet%20build%20%2B%20test-512BD4.svg?logo=dotnet&logoColor=white"></a>
+  <a href="package.json"><img alt="Version 0.0.16" src="https://img.shields.io/badge/version-0.0.16-blue.svg"></a>
+</p>
+
+<p align="center"><b>English</b> | <a href="README.ru.md">Русский</a></p>
+
+```bash
+pi install git:github.com/AndrewMoryakov/pi-offline-engine
+llama-server -m qwen2.5-coder-3b-instruct-q4_k_m.gguf   # the tiny implementer, listens on :8080
+pi                                                      # then run /offline-doctor
+```
 
 Offline-first extension experiments for the Pi coding agent.
 
 The project explores a compound local coding system where a large local model is reserved for reasoning and architecture, while deterministic tools and a much smaller local coding model perform bounded implementation work.
+
+## Why pi-offline-engine?
+
+- **If** your main local model is big and slow, **then** you do not want to spend its turns on routine edits and build-fix cycles: it writes a strict spec, a tiny local coder does the bounded implementation, and the big model stays out of the cheap repair loop.
+- **If** you work offline or are about to disconnect, **then** everything runs on your machine: the engine discovers a local OpenAI-compatible server on loopback, and `/offline-doctor` tells you whether you are ready before you lose the network.
+- **If** you do not trust a small model with your repository, **then** the blast radius is narrow: you approve the declared file scope once, writes are exact and scope-checked, a stale file is rejected, and real `dotnet build` / `dotnet test` results decide — not the model's opinion.
+- **If** you want a working local setup without assembling it, **then** one `pi install` brings the engine and four pinned companion extensions (retrieval, LSP, code tool, lean edit).
+
+It is **not** a general-purpose coder for any stack: verification today is .NET-only (`dotnet build` / `dotnet test`), and the repository documents no other toolchain. It is not a substitute for review — a `verification_passed` result means only that the declared compiler and test checks passed, not that the task is semantically complete, so the main agent must inspect the diff. It is a Git-distributed Pi package (`private: true`), not on npm, and still experimental. Pointing the tiny implementer at a hosted router is possible but [is not an offline configuration](#hosted-openai-compatible-routers-openrouter).
+
+## Features
+
+- **Two Pi tools** — `delegate_implementation` (candidate only, no writes) and `execute_delegated_implementation` (bounded loop with guarded writes and deterministic verification).
+- **Strict `ImplementationSpec` v1** — operation, target, requirements, allowed-file scope and verification declared up front; delegation is limited to at most two files.
+- **One approval, exact writes** — the user approves the declared file scope once; a candidate is applied only as an exact `replace_text` or an explicitly allowed `create_file`, after SHA-256 preimage and stale checks.
+- **Deterministic .NET verification** — `dotnet build` / tests with `--no-restore`; VSTest uses targeted TRX runs and .NET 10 Microsoft.Testing.Platform uses `--report-trx`.
+- **Cheap repair loop** — on failure a compact `RepairPacket` goes back to the TinyCoder (up to two repairs); if it is still red the work is escalated to the main model.
+- **Turnkey companion stack** — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool` and `pi-lean-edit` come pinned and are loaded through this package's manifest.
+- **Offline operations** — `/offline-doctor`, `/offline-setup`, `/offline-tools minimal`, compaction of large `dotnet` output, and a deterministic repository context capsule.
+- **Nothing leaves quietly** — an API key is never saved to the config file, `events.jsonl`, candidate records or training data, and training-data capture is off unless you turn it on.
+
+## How it works
+
+<p align="center">
+  <img src="docs/assets/pi-offline-engine-how-it-works.png" alt="pi-offline-engine: a planner owl with a blueprint hands one step to a tiny coder, who lays bricks that only the tests check; a failed test means redo; the cloud is locked out and everything runs on the laptop" width="100%">
+</p>
+
+1. **The big model plans.** It writes a strict `ImplementationSpec` — scope, requirements and the build/test to run — and you approve the declared files once.
+2. **The tiny coder proposes a patch.** The engine snapshots a SHA-256 of every allowed file, then asks the local TinyCoder for a candidate; if it lacks information it should return `insufficient_spec` rather than guess.
+3. **The engine applies and verifies.** The candidate is validated, checked for staleness and applied exactly, then `dotnet build` and tests run with `--no-restore`.
+4. **Red means repair, not a round trip to the big model.** A compact `RepairPacket` goes to the TinyCoder, up to two repairs; green yields `verification_passed` evidence, and a still-red result escalates to the main model.
+
+## Quick start
+
+Needs Pi 0.86.1 (the verified host baseline), Node.js 22.19.0 or newer, and a local OpenAI-compatible server for the tiny coder. Details, version pinning and the `edit` conflict cases are in [Install](#install).
+
+```bash
+pi install git:github.com/AndrewMoryakov/pi-offline-engine
+llama-server -m qwen2.5-coder-3b-instruct-q4_k_m.gguf   # llama.cpp / ik_llama.cpp, listens on :8080
+pi
+```
+
+On the first session start the engine finds the local server and saves it. Then confirm readiness inside Pi:
+
+```text
+/offline-doctor
+```
+
+From a clone, for development: `pi -e ./extensions/index.ts`. To try the pipeline on a disposable .NET fixture rather than your own repository, see [First real acceptance run](#first-real-acceptance-run).
 
 ## Current vertical slice
 
@@ -224,6 +294,10 @@ npm run check
 ```
 
 See [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md) for the runtime contract.
+
+## Status
+
+Experimental. `pi-offline-engine` is at version 0.0.16 and is a Git-distributed Pi package (`private: true`, not published to npm). The bounded-delegation contract is still to be measured on real tasks before the layers listed under [Next layers](#next-layers) are built. GitHub Actions runs the release gates (`gate:local`, a production dependency audit, `gate:pi`, `gate:edit`, `gate:install`) on pushes and pull requests; see [Canonical local gate](#canonical-local-gate).
 
 ## Next layers
 

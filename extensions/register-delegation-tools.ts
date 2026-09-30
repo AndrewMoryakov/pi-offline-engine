@@ -29,7 +29,7 @@ import {
   safeAppendTrainingRecord
 } from "../src/training-recorder.mjs";
 import { runCandidateDelegation } from "../src/delegation-candidate-workflow.mjs";
-import { formatCandidateResult } from "../src/delegation-results.mjs";
+import { formatCancelledResult, formatCandidateResult, formatExecutionResult } from "../src/delegation-results.mjs";
 
 export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRuntime) {
   pi.registerTool({
@@ -107,7 +107,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
           ].join("\n")
         );
         if (!approved) {
-          return { content: [{ type: "text", text: "Delegated implementation cancelled by user." }], details: { cancelled: true } };
+          return formatCancelledResult();
         }
       }
 
@@ -152,18 +152,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
             error: message
           }));
         }
-        return {
-          content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
-          details: {
-            success: false,
-            escalated: true,
-            reason: outcome.reason,
-            stage: outcome.stage,
-            workspaceModified: false,
-            error: outcome.error,
-            attempts
-          }
-        };
+        return formatExecutionResult({ kind: "preflight_failure", outcome, attempts });
       }
       let nestedUsage: any = undefined;
 
@@ -261,19 +250,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
             specId: params.spec.spec_id,
             ...outcome
           });
-          return {
-            content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
-            details: {
-              success: false,
-              escalated: true,
-              reason: outcome.reason,
-              stage: outcome.stage,
-              workspaceModified: outcome.workspace_modified,
-              changedFiles: outcome.changed_files,
-              attempts
-            },
-            usage: nestedUsage
-          };
+          return formatExecutionResult({ kind: "model_output_escalation", outcome, attempts, nestedUsage });
         }
 
         if (result.candidate.status !== "candidate") {
@@ -308,19 +285,15 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
             ...outcome
           });
 
-          return {
-            content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
-            details: {
-              success: false,
-              escalated: workspaceModified,
-              terminalStatus: result.candidate.status,
-              attempt,
-              usage: result.usage,
-              workspaceModified: outcome.workspace_modified,
-              changedFiles: outcome.changed_files
-            },
-            usage: nestedUsage
-          };
+          return formatExecutionResult({
+            kind: "terminal_model_status",
+            outcome,
+            terminalStatus: result.candidate.status,
+            attempt,
+            attemptUsage: result.usage,
+            workspaceModified,
+            nestedUsage
+          });
         }
 
         stage = "candidate_record";
@@ -386,25 +359,14 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
 
         if (verification.passed) {
           await appendEvent(ctx.cwd, { type: "delegated_verification_passed", specId: params.spec.spec_id, attempt });
-          return {
-            content: [{ type: "text", text: JSON.stringify({
-              status: "verification_passed",
-              task_complete: false,
-              note: "Compiler/test verification passed; the main reasoner still owns semantic completion.",
-              attempt,
-              changedFiles: [...cumulativeChangedFiles].sort(),
-              verification
-            }, null, 2) }],
-            details: {
-              success: true,
-              taskComplete: false,
-              attempt,
-              attempts,
-              changedFiles: [...cumulativeChangedFiles].sort(),
-              verification
-            },
-            usage: nestedUsage
-          };
+          return formatExecutionResult({
+            kind: "verification_passed",
+            attempt,
+            attempts,
+            changedFiles: [...cumulativeChangedFiles].sort(),
+            verification,
+            nestedUsage
+          });
         }
 
         repairPacket = buildRepairPacket({ spec: params.spec, attempt, candidate: result.candidate, verification });
@@ -448,19 +410,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
               specId: params.spec.spec_id,
               ...outcome
             });
-            return {
-              content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
-              details: {
-                success: false,
-                escalated: true,
-                reason: outcome.reason,
-                stage: outcome.stage,
-                workspaceModified: outcome.workspace_modified,
-                changedFiles: outcome.changed_files,
-                attempts
-              },
-              usage: nestedUsage
-            };
+            return formatExecutionResult({ kind: "model_output_escalation", outcome, attempts, nestedUsage });
           }
 
           const outcome = buildRuntimeFailureOutcome({
@@ -488,47 +438,20 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
             }));
           }
 
-          return {
-            content: [{ type: "text", text: JSON.stringify(outcome, null, 2) }],
-            details: {
-              success: false,
-              escalated: true,
-              reason: outcome.reason,
-              stage: outcome.stage,
-              workspaceModified: outcome.workspace_modified,
-              workspaceStateUncertain: outcome.workspace_state_uncertain,
-              changedFiles: outcome.changed_files,
-              error: outcome.error,
-              attempts
-            },
-            usage: nestedUsage
-          };
+          return formatExecutionResult({ kind: "runtime_failure", outcome, attempts, nestedUsage });
         }
       }
 
       await appendEvent(ctx.cwd, { type: "delegated_implementation_escalated", specId: params.spec.spec_id, attempts: maxAttempts });
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            status: "needs_main_model",
-            reason: "tiny_implementation_attempts_exhausted",
-            workspace_modified: workspaceModified,
-            changed_files: [...cumulativeChangedFiles].sort(),
-            attempts: maxAttempts,
-            verification: lastVerification
-          }, null, 2)
-        }],
-        details: {
-          success: false,
-          escalated: true,
-          workspaceModified,
-          changedFiles: [...cumulativeChangedFiles].sort(),
-          attempts,
-          verification: lastVerification
-        },
-        usage: nestedUsage
-      };
+      return formatExecutionResult({
+        kind: "attempts_exhausted",
+        maxAttempts,
+        workspaceModified,
+        changedFiles: [...cumulativeChangedFiles].sort(),
+        attempts,
+        verification: lastVerification,
+        nestedUsage
+      });
     }
   });
 }

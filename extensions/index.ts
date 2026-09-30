@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { getAgentDir, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { DelegationParametersSchema } from "./delegation-schema.ts";
 import { validateImplementationSpec, validateCandidate } from "../src/implementation-spec.mjs";
 import { callTinyImplementer, TinyModelOutputError } from "../src/tiny-client.mjs";
@@ -32,14 +32,8 @@ import {
 } from "../src/training-recorder.mjs";
 import { exportTrainingData } from "../src/training-exporter.mjs";
 import { applyCodeToolPolicy, selectActiveToolObjects } from "../src/extension-policy.mjs";
-import {
-  engineConfigPath,
-  readEngineConfig,
-  resolveEditProvider,
-  resolveEngineSettings,
-  resolveScriptEditPolicy,
-  writeEngineConfig
-} from "../src/engine-config.mjs";
+import { engineConfigPath } from "../src/engine-config.mjs";
+import { applyCompanionEnvDefaults, createExtensionRuntime, readInitialEngineConfig } from "./extension-runtime.ts";
 import { discoverEndpoints, probeEndpoint } from "../src/endpoint-discovery.mjs";
 import {
   autoConfigureIfNeeded,
@@ -49,49 +43,18 @@ import {
   parseSetupArgs
 } from "../src/engine-setup.mjs";
 
-// User-level engine config (endpoint/model chosen by /offline-setup or by the
-// first-run discovery). Environment variables still override it.
-const engineConfigFile = engineConfigPath(getAgentDir());
-let engineConfigState = readEngineConfig(engineConfigFile);
-// extensions/pi-lean-edit.ts decides once, at load; the doctor must report that
-// decision, not a config edited since (it takes effect on the next start).
-const editProviderAtLoad = resolveEditProvider({ env: process.env, config: engineConfigState.config });
-// Spec: docs/HYBRID_EDIT_V0.md HE-8: the doctor reports the policy read at load.
-const scriptEditPolicyAtLoad = resolveScriptEditPolicy({ env: process.env, config: engineConfigState.config });
-
-function reloadEngineConfig() {
-  engineConfigState = readEngineConfig(engineConfigFile);
-}
-
-function engineSettings() {
-  return resolveEngineSettings({ env: process.env, config: engineConfigState.config });
-}
-
-function saveEngineConfig(patch: Record<string, unknown>) {
-  writeEngineConfig(engineConfigFile, patch);
-  reloadEngineConfig();
-}
+// Captured while this module is evaluated; each factory invocation builds its
+// own runtime (and mutable config facade) from this snapshot.
+const initialConfig = readInitialEngineConfig(engineConfigPath(getAgentDir()), process.env);
 
 export default function offlineEngine(pi: ExtensionAPI) {
-  let savedActiveTools: string[] | null = null;
-  let compactToolResults = process.env.PI_OFFLINE_COMPACT_TOOL_RESULTS !== "0";
-  let repoCapsuleEnabled = process.env.PI_OFFLINE_REPO_CAPSULE !== "0";
-  let lastRepoCapsuleFingerprint: string | null = null;
-  let trainingCaptureEnabled = process.env.PI_OFFLINE_TRAINING_CAPTURE === "1";
-  let autoSetupAttempted = false;
-
-  // The bundled pi-knowledge reads its settings lazily from the environment.
-  // Apply the profile's slow-local-model search default unless the user chose
-  // one. PI_KNOWLEDGE_OFFLINE is deliberately not forced: it would block the
-  // first download of the local embedding model. /offline-status reports this,
-  // so the write into another package's environment is never silent.
-  const knowledgeProfileSource = process.env.PI_KNOWLEDGE_SEARCH_PROFILE === undefined ? "default" : "env";
-  process.env.PI_KNOWLEDGE_SEARCH_PROFILE ??= "low_token";
-  const companionEnv = [{
-    name: "PI_KNOWLEDGE_SEARCH_PROFILE",
-    value: process.env.PI_KNOWLEDGE_SEARCH_PROFILE,
-    source: knowledgeProfileSource
-  }];
+  const runtime = createExtensionRuntime({
+    pi,
+    env: process.env,
+    initialConfig,
+    companionEnv: applyCompanionEnvDefaults(process.env)
+  });
+  const state = runtime.state;
   pi.registerTool({
     name: "delegate_implementation",
     label: "Delegate implementation",
@@ -109,13 +72,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: `ImplementationSpec rejected: ${checked.errors.join("; ")}` }], details: { accepted: false, errors: checked.errors } };
       }
 
-      const endpoint = tinyEndpoint();
-      const model = tinyModel();
+      const endpoint = runtime.config.settings().endpoint;
+      const model = runtime.config.settings().model;
       const snapshot = await snapshotAllowedFiles(ctx.cwd, params.spec);
       await appendEvent(ctx.cwd, { type: "tiny_started", specId: params.spec.spec_id, model, endpoint, mode: "candidate_only" });
 
       try {
-        const result = await callTinyImplementer({ endpoint, model, spec: params.spec, context: params.context ?? {}, apiKey: tinyApiKey(), signal });
+        const result = await callTinyImplementer({ endpoint, model, spec: params.spec, context: params.context ?? {}, apiKey: runtime.config.settings().apiKey, signal });
         const candidateCheck = validateCandidate(result.candidate, params.spec);
         await appendEvent(ctx.cwd, {
           type: "tiny_finished",
@@ -171,15 +134,15 @@ export default function offlineEngine(pi: ExtensionAPI) {
       const checked = validateImplementationSpec(params.spec);
       if (!checked.ok) throw new Error(`ImplementationSpec rejected: ${checked.errors.join("; ")}`);
 
-      const endpoint = tinyEndpoint();
-      const model = tinyModel();
-      const maxAttempts = tinyMaxAttempts();
+      const endpoint = runtime.config.settings().endpoint;
+      const model = runtime.config.settings().model;
+      const maxAttempts = runtime.config.settings().maxAttempts;
       const trainingSensitive = hasSensitiveTrainingPath(params.spec);
-      const trainingRunId = trainingCaptureEnabled && !trainingSensitive
+      const trainingRunId = state.trainingCaptureEnabled && !trainingSensitive
         ? createTrainingRunId(params.spec.spec_id)
         : null;
 
-      if (trainingCaptureEnabled && trainingSensitive) {
+      if (state.trainingCaptureEnabled && trainingSensitive) {
         await appendEvent(ctx.cwd, {
           type: "training_capture_skipped_sensitive_path",
           specId: params.spec.spec_id
@@ -219,7 +182,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         verificationPreflight = await preflightVerificationInfrastructure({
           cwd: ctx.cwd,
           spec: params.spec,
-          exec: (command, args, options) => pi.exec(command, args, options),
+          exec: runtime.exec,
           signal
         });
       } catch (error) {
@@ -280,7 +243,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           spec: params.spec,
           context: params.context ?? {},
           repairPacket,
-          apiKey: tinyApiKey(),
+          apiKey: runtime.config.settings().apiKey,
           signal
         });
 
@@ -424,7 +387,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         const targetPaths = uniqueAbsolutePaths(ctx.cwd, result.candidate);
 
         stage = "apply";
-        const applied = await withMutationQueues(targetPaths, () => applyCandidate(ctx.cwd, record));
+        const applied = await runtime.withMutationQueues(targetPaths, () => applyCandidate(ctx.cwd, record));
         workspaceModified = true;
         for (const file of applied.changedFiles) cumulativeChangedFiles.add(file);
         await appendEvent(ctx.cwd, {
@@ -440,7 +403,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         const verification = await runVerification({
           cwd: ctx.cwd,
           spec: params.spec,
-          exec: (command, args, options) => pi.exec(command, args, options),
+          exec: runtime.exec,
           signal,
           attempt,
           preflight: verificationPreflight
@@ -628,7 +591,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async () => {
-    lastRepoCapsuleFingerprint = null;
+    state.lastRepoCapsuleFingerprint = null;
   });
 
   // First-run setup: while no endpoint is configured (neither env nor config
@@ -636,12 +599,12 @@ export default function offlineEngine(pi: ExtensionAPI) {
   // awaited, so a filtered port can never delay pi's startup; runs once per
   // process because session switches re-emit session_start.
   pi.on("session_start", async (_event, ctx) => {
-    if (autoSetupAttempted) return;
-    autoSetupAttempted = true;
+    if (state.autoSetupAttempted) return;
+    state.autoSetupAttempted = true;
     void autoConfigureIfNeeded({
-      settings: engineSettings(),
+      settings: runtime.config.settings(),
       discover: () => discoverEndpoints(),
-      save: saveEngineConfig
+      save: runtime.config.save
     }).then((result) => {
       if (result.action === "skipped" || !result.message || !ctx.hasUI) return;
       ctx.ui.notify(result.message, result.action === "configured" ? "info" : "warning");
@@ -654,12 +617,12 @@ export default function offlineEngine(pi: ExtensionAPI) {
   pi.on("session_compact", async () => {
     // Compaction can remove the prior hidden capsule from replay context.
     // Force a fresh deterministic capsule on the next user prompt.
-    lastRepoCapsuleFingerprint = null;
+    state.lastRepoCapsuleFingerprint = null;
   });
 
   pi.on("session_tree", async () => {
     // Tree navigation can move to a branch without the last injected capsule.
-    lastRepoCapsuleFingerprint = null;
+    state.lastRepoCapsuleFingerprint = null;
   });
 
   pi.on("before_agent_start", async (event) => {
@@ -667,14 +630,14 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.on("before_agent_start", async (_event, ctx) => {
-    if (!repoCapsuleEnabled) return;
+    if (!state.repoCapsuleEnabled) return;
     const capsule = await buildRepoCapsule({
       cwd: ctx.cwd,
-      exec: (command, args, options) => pi.exec(command, args, options)
+      exec: runtime.exec
     });
-    if (!capsule.available || !capsule.text || capsule.fingerprint === lastRepoCapsuleFingerprint) return;
+    if (!capsule.available || !capsule.text || capsule.fingerprint === state.lastRepoCapsuleFingerprint) return;
 
-    lastRepoCapsuleFingerprint = capsule.fingerprint;
+    state.lastRepoCapsuleFingerprint = capsule.fingerprint;
     await appendEvent(ctx.cwd, {
       type: "repo_capsule_injected",
       fingerprint: capsule.fingerprint,
@@ -705,7 +668,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
   });
 
   pi.on("tool_result", async (event, ctx) => {
-    if (!compactToolResults) return;
+    if (!state.compactToolResults) return;
     const compacted = await compactToolResult({
       cwd: ctx.cwd,
       toolName: event.toolName,
@@ -737,16 +700,16 @@ export default function offlineEngine(pi: ExtensionAPI) {
     ]),
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
-      if (mode === "on") repoCapsuleEnabled = true;
-      else if (mode === "off") repoCapsuleEnabled = false;
+      if (mode === "on") state.repoCapsuleEnabled = true;
+      else if (mode === "off") state.repoCapsuleEnabled = false;
       else if (mode === "refresh") {
-        repoCapsuleEnabled = true;
-        lastRepoCapsuleFingerprint = null;
+        state.repoCapsuleEnabled = true;
+        state.lastRepoCapsuleFingerprint = null;
       } else if (mode !== "status") {
         ctx.ui.notify("Usage: /offline-context on|off|refresh|status", "warning");
         return;
       }
-      ctx.ui.notify(`Repository context capsule: ${repoCapsuleEnabled ? "on" : "off"}${mode === "refresh" ? " (will refresh on next prompt)" : ""}`, "info");
+      ctx.ui.notify(`Repository context capsule: ${state.repoCapsuleEnabled ? "on" : "off"}${mode === "refresh" ? " (will refresh on next prompt)" : ""}`, "info");
     }
   });
 
@@ -759,13 +722,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
     ]),
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
-      if (mode === "on") compactToolResults = true;
-      else if (mode === "off") compactToolResults = false;
+      if (mode === "on") state.compactToolResults = true;
+      else if (mode === "off") state.compactToolResults = false;
       else if (mode !== "status") {
         ctx.ui.notify("Usage: /offline-compact on|off|status", "warning");
         return;
       }
-      ctx.ui.notify(`Dotnet tool-result compaction: ${compactToolResults ? "on" : "off"}`, "info");
+      ctx.ui.notify(`Dotnet tool-result compaction: ${state.compactToolResults ? "on" : "off"}`, "info");
     }
   });
 
@@ -774,15 +737,15 @@ export default function offlineEngine(pi: ExtensionAPI) {
     const activeTools = selectActiveToolObjects(allTools, pi.getActiveTools());
     const report = await runOfflineDoctor({
       cwd: ctx.cwd,
-      endpoint: tinyEndpoint(),
-      model: tinyModel(),
-      apiKey: tinyApiKey(),
+      endpoint: runtime.config.settings().endpoint,
+      model: runtime.config.settings().model,
+      apiKey: runtime.config.settings().apiKey,
       tools: activeTools,
-      editProvider: editProviderAtLoad,
-      scriptEditPolicy: scriptEditPolicyAtLoad,
+      editProvider: runtime.editProviderAtLoad,
+      scriptEditPolicy: runtime.scriptEditPolicyAtLoad,
       allTools,
       sessionModel: ctx.model,
-      exec: (command, args, options) => pi.exec(command, args, options)
+      exec: runtime.exec
     });
     ctx.ui.notify(formatDoctorReport(report), report.ready ? "info" : "warning");
   }
@@ -810,13 +773,13 @@ export default function offlineEngine(pi: ExtensionAPI) {
       }
 
       if (request.mode === "reset") {
-        saveEngineConfig({ endpoint: null, model: null, backend: null, configuredBy: null, configuredAt: null });
-        ctx.ui.notify(`Engine config cleared: ${engineConfigFile}`, "info");
+        runtime.config.save({ endpoint: null, model: null, backend: null, configuredBy: null, configuredAt: null });
+        ctx.ui.notify(`Engine config cleared: ${runtime.config.file}`, "info");
         return;
       }
 
       if (request.mode === "manual") {
-        const result = await configureFromSetupArgs({ request, probe: probeEndpoint, save: saveEngineConfig });
+        const result = await configureFromSetupArgs({ request, probe: probeEndpoint, save: runtime.config.save });
         ctx.ui.notify(result.message, result.ok ? "info" : "warning");
         if (!result.ok) return;
       } else {
@@ -838,7 +801,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
           chosen = discovery.usable[index];
         }
 
-        saveEngineConfig({
+        runtime.config.save({
           endpoint: chosen.endpoint,
           model: chosen.model,
           backend: chosen.label,
@@ -848,7 +811,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         ctx.ui.notify(`Saved TinyCoder ${chosen.model} @ ${chosen.endpoint} (${chosen.label}).`, "info");
       }
 
-      const sources = engineSettings().sources;
+      const sources = runtime.config.settings().sources;
       if (sources.endpoint === "env" || sources.model === "env") {
         ctx.ui.notify(
           "Note: PI_OFFLINE_TINY_ENDPOINT / PI_OFFLINE_TINY_MODEL are set in the environment and still override the saved config.",
@@ -869,20 +832,20 @@ export default function offlineEngine(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
       if (mode === "minimal") {
-        if (!savedActiveTools) savedActiveTools = pi.getActiveTools();
+        if (!state.savedActiveTools) state.savedActiveTools = pi.getActiveTools();
         const minimal = buildMinimalToolSet(pi.getAllTools(), process.platform, pi.getActiveTools());
         pi.setActiveTools(minimal);
         ctx.ui.notify(`Offline minimal tools enabled (${minimal.length}): ${minimal.join(", ")}`, "info");
         return;
       }
       if (mode === "restore") {
-        if (!savedActiveTools) {
+        if (!state.savedActiveTools) {
           ctx.ui.notify("No saved tool set to restore.", "warning");
           return;
         }
-        pi.setActiveTools(savedActiveTools);
-        ctx.ui.notify(`Restored ${savedActiveTools.length} tools.`, "info");
-        savedActiveTools = null;
+        pi.setActiveTools(state.savedActiveTools);
+        ctx.ui.notify(`Restored ${state.savedActiveTools.length} tools.`, "info");
+        state.savedActiveTools = null;
         return;
       }
       ctx.ui.notify(`Active tools (${pi.getActiveTools().length}): ${pi.getActiveTools().join(", ")}`, "info");
@@ -900,7 +863,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const mode = String(args ?? "").trim().toLowerCase() || "status";
       if (mode === "on") {
-        trainingCaptureEnabled = true;
+        state.trainingCaptureEnabled = true;
         ctx.ui.notify(
           "Training capture enabled. Exact bounded specs, context, TinyCoder candidates and verification labels will be stored locally under .pi/offline-engine/training/raw.jsonl. Sensitive-path captures are blocked automatically.",
           "warning"
@@ -908,7 +871,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         return;
       }
       if (mode === "off") {
-        trainingCaptureEnabled = false;
+        state.trainingCaptureEnabled = false;
         ctx.ui.notify("Training capture disabled.", "info");
         return;
       }
@@ -932,7 +895,7 @@ export default function offlineEngine(pi: ExtensionAPI) {
         ctx.ui.notify("Usage: /offline-training on|off|status|export", "warning");
         return;
       }
-      const status = trainingCaptureStatus({ enabled: trainingCaptureEnabled });
+      const status = trainingCaptureStatus({ enabled: state.trainingCaptureEnabled });
       ctx.ui.notify(
         [
           `Training capture: ${status.enabled ? "on" : "off"}`,
@@ -958,14 +921,14 @@ export default function offlineEngine(pi: ExtensionAPI) {
       ctx.ui.notify(
         [
           formatEngineStatus({
-            settings: engineSettings(),
-            configFile: engineConfigFile,
-            configError: engineConfigState.error,
-            companionEnv
+            settings: runtime.config.settings(),
+            configFile: runtime.config.file,
+            configError: runtime.config.error(),
+            companionEnv: runtime.companionEnv
           }),
-          `Endpoint locality: ${checkEndpointLocality(tinyEndpoint()).message}`,
-          `Implementer auth: ${tinyApiKey() ? "bearer key configured" : "none (local endpoint)"}`,
-          `Bounded execute attempts: ${tinyMaxAttempts()}`,
+          `Endpoint locality: ${checkEndpointLocality(runtime.config.settings().endpoint).message}`,
+          `Implementer auth: ${runtime.config.settings().apiKey ? "bearer key configured" : "none (local endpoint)"}`,
+          `Bounded execute attempts: ${runtime.config.settings().maxAttempts}`,
           "Candidate apply: exact replace_text/create_file with stale preimage protection",
           "Verification: declared dotnet build/tests, --no-restore",
           "Telemetry: .pi/offline-engine/events.jsonl"
@@ -986,40 +949,11 @@ function argumentChoices(choices: Array<[value: string, description: string]>) {
   };
 }
 
-// Precedence for all four: environment > engine config file > built-in default
-// (see src/engine-config.mjs).
-function tinyEndpoint() {
-  return engineSettings().endpoint;
-}
-
-function tinyModel() {
-  return engineSettings().model;
-}
-
-// Empty when the implementer is a local llama.cpp. OPENROUTER_API_KEY is
-// honoured so an already-exported key needs no duplication. Keys are read from
-// the environment only; the config file never stores them.
-function tinyApiKey() {
-  return engineSettings().apiKey;
-}
-
-function tinyMaxAttempts() {
-  return engineSettings().maxAttempts;
-}
-
 function uniqueAbsolutePaths(cwd: string, candidate: any) {
   const root = path.resolve(cwd);
   return [...new Set(candidate.changes.map((change: any) => resolveInside(root, change.path)))].sort();
 }
 
-async function withMutationQueues<T>(paths: string[], fn: () => Promise<T>): Promise<T> {
-  let wrapped = fn;
-  for (const target of [...paths].reverse()) {
-    const next = wrapped;
-    wrapped = () => withFileMutationQueue(target, next);
-  }
-  return wrapped();
-}
 
 
 async function captureTrainingRecord(cwd: string, record: any) {

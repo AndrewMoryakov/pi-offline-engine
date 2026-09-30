@@ -1,0 +1,148 @@
+{
+  "type": "object",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "path",
+        "startLine",
+        "newText"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to edit, relative to cwd unless absolute"
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "First line to replace (1-based, inclusive)"
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Last line to replace (1-based, inclusive). Defaults to startLine."
+        },
+        "newText": {
+          "type": "string",
+          "description": "Replacement text. Empty string deletes range."
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "path",
+        "startLine",
+        "startColumn",
+        "endColumn",
+        "newText"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to edit, relative to cwd unless absolute"
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Source line containing the columns to replace (1-based)"
+        },
+        "startColumn": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "First column to replace (1-based, inclusive)"
+        },
+        "endColumn": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Last column to replace (1-based, inclusive)"
+        },
+        "newText": {
+          "type": "string",
+          "description": "Replacement text, which may contain newlines. Empty string deletes range."
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "path",
+        "edits"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to edit, relative to cwd unless absolute"
+        },
+        "edits": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "startLine",
+                  "newText"
+                ],
+                "properties": {
+                  "startLine": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "First line to replace (1-based, inclusive)"
+                  },
+                  "endLine": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Last line to replace (1-based, inclusive). Defaults to startLine."
+                  },
+                  "newText": {
+                    "type": "string",
+                    "description": "Replacement text. Empty string deletes range."
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "required": [
+                  "startLine",
+                  "startColumn",
+                  "endColumn",
+                  "newText"
+                ],
+                "properties": {
+                  "startLine": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Source line containing the columns to replace (1-based)"
+                  },
+                  "startColumn": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "First column to replace (1-based, inclusive)"
+                  },
+                  "endColumn": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Last column to replace (1-based, inclusive)"
+                  },
+                  "newText": {
+                    "type": "string",
+                    "description": "Replacement text, which may contain newlines. Empty string deletes range."
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "minItems": 1,
+          "description": "One or more non-overlapping line or single-line column edits for this file."
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "result": null,
+  "error": "Tiny implementer failed: tiny model did not return a JSON object",
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "tiny_started",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "endpoint": "<TINY>",
+      "mode": "candidate_only"
+    },
+    {
+      "ts": "<TS>",
+      "type": "tiny_failed",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "error": "tiny model did not return a JSON object",
+      "mode": "candidate_only"
+    }
+  ],
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [
+    {
+      "model": "fake-tiny",
+      "temperature": 0,
+      "responseFormat": "json_schema",
+      "user": {
+        "implementation_spec": {
+          "version": 1,
+          "spec_id": "characterize-build",
+          "operation": "modify_symbol",
+          "goal": {
+            "summary": "Return two instead of one."
+          },
+          "target": {
+            "file": "src/A.cs",
+            "symbol": "A.Value"
+          },
+          "requirements": [
+            "Value returns 2."
+          ],
+          "scope": {
+            "allowed_files": [
+              "src/A.cs"
+            ],
+            "allow_new_files": false,
+            "allow_dependencies": false,
+            "allow_public_api_change": false
+          },
+          "verification": {
+            "build": {
+              "project": "src/A.csproj"
+            }
+          }
+        },
+        "context": {
+          "snippet": "class A { int Value() => 1; }"
+        },
+        "repair_packet": null
+      }
+    }
+  ],
+  "exec": [],
+  "ui": [],
+  "updates": [],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

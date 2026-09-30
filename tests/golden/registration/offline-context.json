@@ -1,0 +1,37 @@
+[
+  {
+    "kind": "notify",
+    "message": "Repository context capsule: off",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Repository context capsule: off",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Repository context capsule: off",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Repository context capsule: on",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Repository context capsule: off",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Repository context capsule: on (will refresh on next prompt)",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Usage: /offline-context on|off|refresh|status",
+    "level": "warning"
+  }
+]

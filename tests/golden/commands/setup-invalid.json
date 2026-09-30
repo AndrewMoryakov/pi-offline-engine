@@ -1,0 +1,7 @@
+[
+  {
+    "kind": "notify",
+    "message": "Usage: /offline-setup [reset | <endpoint-url> [model]]",
+    "level": "warning"
+  }
+]

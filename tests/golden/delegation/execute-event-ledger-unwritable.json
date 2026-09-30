@@ -1,0 +1,33 @@
+{
+  "result": null,
+  "error": "EISDIR: illegal operation on a directory, write",
+  "events": null,
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [],
+  "ui": [
+    {
+      "kind": "confirm",
+      "title": "Bounded local implementation",
+      "body": "Spec: characterize-build\nTiny model: fake-tiny\nFiles: src/A.cs\nAttempts: up to 3\nPi will write only inside this declared scope and run the declared dotnet checks."
+    }
+  ],
+  "updates": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Tiny implementation attempt 1/3..."
+        }
+      ],
+      "details": {
+        "attempt": 1,
+        "maxAttempts": 3
+      }
+    }
+  ],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

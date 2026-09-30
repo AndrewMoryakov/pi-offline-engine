@@ -1,0 +1,14 @@
+{
+  "result": null,
+  "error": "allowed path is not a regular file: src/A.cs",
+  "events": null,
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [],
+  "ui": [],
+  "updates": [],
+  "workspace": {
+    "src/A.cs": "EISDIR"
+  }
+}

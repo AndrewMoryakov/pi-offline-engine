@@ -1,0 +1,14 @@
+{
+  "result": null,
+  "error": "ImplementationSpec rejected: operation must be modify_symbol in v1",
+  "events": null,
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [],
+  "ui": [],
+  "updates": [],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

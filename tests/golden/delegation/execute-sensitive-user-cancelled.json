@@ -1,0 +1,36 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Delegated implementation cancelled by user."
+      }
+    ],
+    "details": {
+      "cancelled": true
+    }
+  },
+  "error": null,
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "training_capture_skipped_sensitive_path",
+      "specId": "characterize-sensitive"
+    }
+  ],
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [],
+  "ui": [
+    {
+      "kind": "confirm",
+      "title": "Bounded local implementation",
+      "body": "Spec: characterize-sensitive\nTiny model: fake-tiny\nFiles: src/secrets.cs\nAttempts: up to 3\nPi will write only inside this declared scope and run the declared dotnet checks."
+    }
+  ],
+  "updates": [],
+  "workspace": {
+    "src/secrets.cs": "ENOENT"
+  }
+}

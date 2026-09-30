@@ -1,0 +1,87 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": {
+          "status": "needs_main_model",
+          "reason": "verification_infrastructure_failure",
+          "stage": "verification_preflight",
+          "workspace_modified": false,
+          "workspace_state_uncertain": false,
+          "changed_files": [],
+          "error": "unable to detect dotnet test runner (exit 1)",
+          "attempts": []
+        }
+      }
+    ],
+    "details": {
+      "success": false,
+      "escalated": true,
+      "reason": "verification_infrastructure_failure",
+      "stage": "verification_preflight",
+      "workspaceModified": false,
+      "error": "unable to detect dotnet test runner (exit 1)",
+      "attempts": []
+    }
+  },
+  "error": null,
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "delegated_implementation_runtime_failure",
+      "specId": "characterize-tests",
+      "attempt": 0,
+      "status": "needs_main_model",
+      "reason": "verification_infrastructure_failure",
+      "stage": "verification_preflight",
+      "workspace_modified": false,
+      "workspace_state_uncertain": false,
+      "changed_files": [],
+      "error": "unable to detect dotnet test runner (exit 1)",
+      "attempts": []
+    }
+  ],
+  "training": [
+    {
+      "schema_version": 1,
+      "captured_at": "<TS>",
+      "kind": "infrastructure_failure",
+      "run_id": "characterize-tests-<RUN>",
+      "spec_id": "characterize-tests",
+      "attempt": 0,
+      "stage": "verification_preflight",
+      "reason": "verification_infrastructure_failure",
+      "error": "unable to detect dotnet test runner (exit 1)"
+    }
+  ],
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [
+    {
+      "command": "dotnet",
+      "args": [
+        "test",
+        "--help",
+        "--project",
+        "<WS>/tests/ATests.csproj"
+      ],
+      "options": {
+        "cwd": "<WS>",
+        "signal": "__undefined__",
+        "timeout": 120000
+      }
+    }
+  ],
+  "ui": [
+    {
+      "kind": "confirm",
+      "title": "Bounded local implementation",
+      "body": "Spec: characterize-tests\nTiny model: fake-tiny\nFiles: src/A.cs\nAttempts: up to 3\nPi will write only inside this declared scope and run the declared dotnet checks."
+    }
+  ],
+  "updates": [],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

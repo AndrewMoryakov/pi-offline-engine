@@ -1,0 +1,17 @@
+[
+  {
+    "kind": "notify",
+    "message": "Saved TinyCoder chosen-model @ <MODELS>.",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Note: PI_OFFLINE_TINY_ENDPOINT / PI_OFFLINE_TINY_MODEL are set in the environment and still override the saved config.",
+    "level": "warning"
+  },
+  {
+    "kind": "notify",
+    "message": "OFFLINE READY: no\n\n✗ tiny_endpoint: reachable, but configured model env-model not listed among 1 available: fake-coder-1.5b\n✓ endpoint_locality: implementer endpoint is local (127.0.0.1); source stays on your network\n✓ dotnet: available\n✓ dotnet_test_runner: VSTest mode detected\n✓ runtime_state_ignore: .pi/offline-engine is ignored by Git\n✓ csharp-ls: available\n✓ tool:execute_delegated_implementation: bounded TinyCoder execution; source unknown\n! tool:knowledge_search: missing: local semantic retrieval\n! tool:lsp_diagnostics: missing: live compiler/LSP diagnostics\n! tool:code: missing: code-mode mechanical pipelines\n! tool:list_symbols: missing: structural code navigation\n✓ edit_provider: edit tool source: unknown",
+    "level": "warning"
+  }
+]

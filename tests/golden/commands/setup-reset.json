@@ -1,0 +1,7 @@
+[
+  {
+    "kind": "notify",
+    "message": "Engine config cleared: <AGENT>/pi-offline-engine/config.json",
+    "level": "info"
+  }
+]

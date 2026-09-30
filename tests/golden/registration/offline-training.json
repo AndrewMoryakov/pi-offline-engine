@@ -1,0 +1,37 @@
+[
+  {
+    "kind": "notify",
+    "message": "Training capture: off\nRaw trace: .pi/offline-engine/training/raw.jsonl\nCapture is opt-in and stores exact bounded context; obvious secret-bearing paths are blocked.",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Training capture enabled. Exact bounded specs, context, TinyCoder candidates and verification labels will be stored locally under .pi/offline-engine/training/raw.jsonl. Sensitive-path captures are blocked automatically.",
+    "level": "warning"
+  },
+  {
+    "kind": "notify",
+    "message": "Training capture: on\nRaw trace: .pi/offline-engine/training/raw.jsonl\nCapture is opt-in and stores exact bounded context; obvious secret-bearing paths are blocked.",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Training capture disabled.",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Training capture: off\nRaw trace: .pi/offline-engine/training/raw.jsonl\nCapture is opt-in and stores exact bounded context; obvious secret-bearing paths are blocked.",
+    "level": "info"
+  },
+  {
+    "kind": "notify",
+    "message": "Usage: /offline-training on|off|status|export",
+    "level": "warning"
+  },
+  {
+    "kind": "notify",
+    "message": "Training export complete.\nSFT: 0\nUnpaired preference: 0\nPaired preference: 0\nEval: 0\nDropped sensitive/duplicate/incomplete: 0/0/0\nManifest: .pi/offline-engine/training/export/manifest.json",
+    "level": "info"
+  }
+]

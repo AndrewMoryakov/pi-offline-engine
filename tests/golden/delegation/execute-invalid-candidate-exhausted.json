@@ -1,0 +1,349 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": {
+          "status": "needs_main_model",
+          "reason": "tiny_invalid_candidate",
+          "stage": "candidate_validation",
+          "attempt": 2,
+          "workspace_modified": false,
+          "changed_files": [],
+          "error": "path outside allowed scope: src/B.cs",
+          "attempts": [
+            {
+              "attempt": 1,
+              "usage": {
+                "inputTokens": 101,
+                "outputTokens": 11,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0,
+                "totalTokens": 112
+              },
+              "latencyMs": "<MS>",
+              "candidateValid": false,
+              "verificationPassed": false
+            },
+            {
+              "attempt": 2,
+              "usage": {
+                "inputTokens": 102,
+                "outputTokens": 12,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0,
+                "totalTokens": 114
+              },
+              "latencyMs": "<MS>",
+              "candidateValid": false,
+              "verificationPassed": false
+            }
+          ]
+        }
+      }
+    ],
+    "details": {
+      "success": false,
+      "escalated": true,
+      "reason": "tiny_invalid_candidate",
+      "stage": "candidate_validation",
+      "workspaceModified": false,
+      "changedFiles": [],
+      "attempts": [
+        {
+          "attempt": 1,
+          "usage": {
+            "inputTokens": 101,
+            "outputTokens": 11,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0,
+            "totalTokens": 112
+          },
+          "latencyMs": "<MS>",
+          "candidateValid": false,
+          "verificationPassed": false
+        },
+        {
+          "attempt": 2,
+          "usage": {
+            "inputTokens": 102,
+            "outputTokens": 12,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0,
+            "totalTokens": 114
+          },
+          "latencyMs": "<MS>",
+          "candidateValid": false,
+          "verificationPassed": false
+        }
+      ]
+    },
+    "usage": {
+      "input": 203,
+      "output": 23,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 226,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0
+      }
+    }
+  },
+  "error": null,
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "tiny_started",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "endpoint": "<TINY>",
+      "attempt": 1,
+      "mode": "execute"
+    },
+    {
+      "ts": "<TS>",
+      "type": "tiny_finished",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "attempt": 1,
+      "latencyMs": "<MS>",
+      "usage": {
+        "inputTokens": 101,
+        "outputTokens": 11,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "totalTokens": 112
+      },
+      "candidateStatus": "candidate",
+      "candidateValid": false,
+      "validationErrors": [
+        "path outside allowed scope: src/B.cs"
+      ],
+      "mode": "execute"
+    },
+    {
+      "ts": "<TS>",
+      "type": "tiny_model_retry_scheduled",
+      "specId": "characterize-build",
+      "attempt": 1,
+      "reason": "invalid_candidate",
+      "validationErrors": [
+        "path outside allowed scope: src/B.cs"
+      ]
+    },
+    {
+      "ts": "<TS>",
+      "type": "tiny_started",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "endpoint": "<TINY>",
+      "attempt": 2,
+      "mode": "execute"
+    },
+    {
+      "ts": "<TS>",
+      "type": "tiny_finished",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "attempt": 2,
+      "latencyMs": "<MS>",
+      "usage": {
+        "inputTokens": 102,
+        "outputTokens": 12,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "totalTokens": 114
+      },
+      "candidateStatus": "candidate",
+      "candidateValid": false,
+      "validationErrors": [
+        "path outside allowed scope: src/B.cs"
+      ],
+      "mode": "execute"
+    },
+    {
+      "ts": "<TS>",
+      "type": "delegated_implementation_escalated",
+      "specId": "characterize-build",
+      "status": "needs_main_model",
+      "reason": "tiny_invalid_candidate",
+      "stage": "candidate_validation",
+      "attempt": 2,
+      "workspace_modified": false,
+      "changed_files": [],
+      "error": "path outside allowed scope: src/B.cs",
+      "attempts": [
+        {
+          "attempt": 1,
+          "usage": {
+            "inputTokens": 101,
+            "outputTokens": 11,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0,
+            "totalTokens": 112
+          },
+          "latencyMs": "<MS>",
+          "candidateValid": false,
+          "verificationPassed": false
+        },
+        {
+          "attempt": 2,
+          "usage": {
+            "inputTokens": 102,
+            "outputTokens": 12,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0,
+            "totalTokens": 114
+          },
+          "latencyMs": "<MS>",
+          "candidateValid": false,
+          "verificationPassed": false
+        }
+      ]
+    }
+  ],
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [
+    {
+      "model": "fake-tiny",
+      "temperature": 0,
+      "responseFormat": "json_schema",
+      "user": {
+        "implementation_spec": {
+          "version": 1,
+          "spec_id": "characterize-build",
+          "operation": "modify_symbol",
+          "goal": {
+            "summary": "Return two instead of one."
+          },
+          "target": {
+            "file": "src/A.cs",
+            "symbol": "A.Value"
+          },
+          "requirements": [
+            "Value returns 2."
+          ],
+          "scope": {
+            "allowed_files": [
+              "src/A.cs"
+            ],
+            "allow_new_files": false,
+            "allow_dependencies": false,
+            "allow_public_api_change": false
+          },
+          "verification": {
+            "build": {
+              "project": "src/A.csproj"
+            }
+          }
+        },
+        "context": {
+          "snippet": "class A { int Value() => 1; }"
+        },
+        "repair_packet": null
+      }
+    },
+    {
+      "model": "fake-tiny",
+      "temperature": 0,
+      "responseFormat": "json_schema",
+      "user": {
+        "implementation_spec": {
+          "version": 1,
+          "spec_id": "characterize-build",
+          "operation": "modify_symbol",
+          "goal": {
+            "summary": "Return two instead of one."
+          },
+          "target": {
+            "file": "src/A.cs",
+            "symbol": "A.Value"
+          },
+          "requirements": [
+            "Value returns 2."
+          ],
+          "scope": {
+            "allowed_files": [
+              "src/A.cs"
+            ],
+            "allow_new_files": false,
+            "allow_dependencies": false,
+            "allow_public_api_change": false
+          },
+          "verification": {
+            "build": {
+              "project": "src/A.csproj"
+            }
+          }
+        },
+        "context": {
+          "snippet": "class A { int Value() => 1; }"
+        },
+        "repair_packet": {
+          "version": 1,
+          "kind": "model_output_failure",
+          "repair_attempt": 1,
+          "previous_candidate": {
+            "status": "candidate",
+            "changes": [
+              {
+                "path": "src/B.cs",
+                "operation": "replace_text",
+                "expected": "=> 1;",
+                "content": "=> 2;"
+              }
+            ]
+          },
+          "validation_errors": [
+            "path outside allowed scope: src/B.cs"
+          ],
+          "error": null,
+          "prior_repair_packet": null,
+          "instruction": "Return a corrected bounded implementation response. Do not expand scope or redesign the task. Return JSON matching the required candidate schema exactly."
+        }
+      }
+    }
+  ],
+  "exec": [],
+  "ui": [
+    {
+      "kind": "confirm",
+      "title": "Bounded local implementation",
+      "body": "Spec: characterize-build\nTiny model: fake-tiny\nFiles: src/A.cs\nAttempts: up to 2\nPi will write only inside this declared scope and run the declared dotnet checks."
+    }
+  ],
+  "updates": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Tiny implementation attempt 1/2..."
+        }
+      ],
+      "details": {
+        "attempt": 1,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Tiny implementation attempt 2/2..."
+        }
+      ],
+      "details": {
+        "attempt": 2,
+        "maxAttempts": 2
+      }
+    }
+  ],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

@@ -1,0 +1,358 @@
+[
+  {
+    "name": "delegate_implementation",
+    "label": "Delegate implementation",
+    "description": "Ask the small local coding model for a bounded candidate without modifying files.",
+    "promptSnippet": "Delegate a precise bounded code change to the local tiny implementer without applying it",
+    "promptGuidelines": [
+      "Use delegate_implementation only after you understand the problem and can provide an explicit bounded ImplementationSpec.",
+      "When using delegate_implementation, include exact source snippets in its context when the tiny model needs to produce replace_text edits.",
+      "Do not use delegate_implementation for architecture decisions, ambiguous work, or broad repository exploration."
+    ],
+    "parameters": {
+      "type": "object",
+      "required": [
+        "spec"
+      ],
+      "properties": {
+        "spec": {
+          "type": "object",
+          "required": [
+            "version",
+            "spec_id",
+            "operation",
+            "goal",
+            "target",
+            "requirements",
+            "scope",
+            "verification"
+          ],
+          "properties": {
+            "version": {
+              "type": "number",
+              "const": 1
+            },
+            "spec_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "operation": {
+              "type": "string",
+              "const": "modify_symbol"
+            },
+            "goal": {
+              "type": "object",
+              "required": [
+                "summary"
+              ],
+              "properties": {
+                "summary": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            "target": {
+              "type": "object",
+              "required": [
+                "file",
+                "symbol"
+              ],
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            "requirements": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "preserve": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "scope": {
+              "type": "object",
+              "required": [
+                "allowed_files",
+                "allow_new_files",
+                "allow_dependencies",
+                "allow_public_api_change"
+              ],
+              "properties": {
+                "allowed_files": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 2
+                },
+                "allow_new_files": {
+                  "type": "boolean"
+                },
+                "allow_dependencies": {
+                  "type": "boolean"
+                },
+                "allow_public_api_change": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "verification": {
+              "type": "object",
+              "properties": {
+                "build": {
+                  "type": "object",
+                  "required": [
+                    "project"
+                  ],
+                  "properties": {
+                    "project": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "tests": {
+                  "type": "object",
+                  "required": [
+                    "project"
+                  ],
+                  "properties": {
+                    "project": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "names": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "context": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "otherKeys": [
+      "description",
+      "execute",
+      "label",
+      "name",
+      "parameters",
+      "promptGuidelines",
+      "promptSnippet"
+    ]
+  },
+  {
+    "name": "execute_delegated_implementation",
+    "label": "Execute delegated implementation",
+    "description": "Run a bounded local TinyCoder implementation loop: candidate, guarded apply, dotnet verification, and up to two cheap repair attempts before returning control.",
+    "promptSnippet": "Execute a strict ImplementationSpec through the local tiny coding model and deterministic verification",
+    "promptGuidelines": [
+      "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
+      "Treat execute_delegated_implementation status verification_passed as compiler/test evidence only; inspect the current diff/changed files before deciding the user task is semantically complete.",
+      "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
+      "When using execute_delegated_implementation, provide exact relevant source snippets in context; the tiny model is not a repository explorer.",
+      "Call execute_delegated_implementation as the only mutating tool in its assistant turn; do not issue sibling edit, write, or mutating shell calls in parallel."
+    ],
+    "parameters": {
+      "type": "object",
+      "required": [
+        "spec"
+      ],
+      "properties": {
+        "spec": {
+          "type": "object",
+          "required": [
+            "version",
+            "spec_id",
+            "operation",
+            "goal",
+            "target",
+            "requirements",
+            "scope",
+            "verification"
+          ],
+          "properties": {
+            "version": {
+              "type": "number",
+              "const": 1
+            },
+            "spec_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "operation": {
+              "type": "string",
+              "const": "modify_symbol"
+            },
+            "goal": {
+              "type": "object",
+              "required": [
+                "summary"
+              ],
+              "properties": {
+                "summary": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            "target": {
+              "type": "object",
+              "required": [
+                "file",
+                "symbol"
+              ],
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            "requirements": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "preserve": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "scope": {
+              "type": "object",
+              "required": [
+                "allowed_files",
+                "allow_new_files",
+                "allow_dependencies",
+                "allow_public_api_change"
+              ],
+              "properties": {
+                "allowed_files": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1,
+                  "maxItems": 2
+                },
+                "allow_new_files": {
+                  "type": "boolean"
+                },
+                "allow_dependencies": {
+                  "type": "boolean"
+                },
+                "allow_public_api_change": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "verification": {
+              "type": "object",
+              "properties": {
+                "build": {
+                  "type": "object",
+                  "required": [
+                    "project"
+                  ],
+                  "properties": {
+                    "project": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "tests": {
+                  "type": "object",
+                  "required": [
+                    "project"
+                  ],
+                  "properties": {
+                    "project": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "names": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "context": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "otherKeys": [
+      "description",
+      "execute",
+      "label",
+      "name",
+      "parameters",
+      "promptGuidelines",
+      "promptSnippet"
+    ]
+  }
+]

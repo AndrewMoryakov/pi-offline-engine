@@ -1,0 +1,472 @@
+{
+  "offline-context": {
+    "description": "Add git repo snapshot to prompts",
+    "keys": [
+      "description",
+      "getArgumentCompletions",
+      "handler"
+    ],
+    "completions": {
+      "\"\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether the repository snapshot is added to prompts"
+        },
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Add branch, HEAD, changed files and .sln/.csproj list whenever they change"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop adding the repository snapshot"
+        },
+        {
+          "value": "refresh",
+          "label": "refresh",
+          "description": "Turn the snapshot on and resend it with the next prompt"
+        }
+      ],
+      "\" \"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether the repository snapshot is added to prompts"
+        },
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Add branch, HEAD, changed files and .sln/.csproj list whenever they change"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop adding the repository snapshot"
+        },
+        {
+          "value": "refresh",
+          "label": "refresh",
+          "description": "Turn the snapshot on and resend it with the next prompt"
+        }
+      ],
+      "\"s\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether the repository snapshot is added to prompts"
+        }
+      ],
+      "\"st\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether the repository snapshot is added to prompts"
+        }
+      ],
+      "\"o\"": [
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Add branch, HEAD, changed files and .sln/.csproj list whenever they change"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop adding the repository snapshot"
+        }
+      ],
+      "\"on\"": [
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Add branch, HEAD, changed files and .sln/.csproj list whenever they change"
+        }
+      ],
+      "\"of\"": [
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop adding the repository snapshot"
+        }
+      ],
+      "\"r\"": [
+        {
+          "value": "refresh",
+          "label": "refresh",
+          "description": "Turn the snapshot on and resend it with the next prompt"
+        }
+      ],
+      "\"re\"": [
+        {
+          "value": "refresh",
+          "label": "refresh",
+          "description": "Turn the snapshot on and resend it with the next prompt"
+        }
+      ],
+      "\"RE\"": [
+        {
+          "value": "refresh",
+          "label": "refresh",
+          "description": "Turn the snapshot on and resend it with the next prompt"
+        }
+      ],
+      "\"m\"": null,
+      "\"e\"": null,
+      "\"x\"": null
+    }
+  },
+  "offline-compact": {
+    "description": "Shorten dotnet build/test output",
+    "keys": [
+      "description",
+      "getArgumentCompletions",
+      "handler"
+    ],
+    "completions": {
+      "\"\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether dotnet build/test output is shortened"
+        },
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Large output: send errors/failed tests only, full log to .pi/offline-engine/tool-results"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Send dotnet build/test output to the model in full"
+        }
+      ],
+      "\" \"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether dotnet build/test output is shortened"
+        },
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Large output: send errors/failed tests only, full log to .pi/offline-engine/tool-results"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Send dotnet build/test output to the model in full"
+        }
+      ],
+      "\"s\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether dotnet build/test output is shortened"
+        }
+      ],
+      "\"st\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether dotnet build/test output is shortened"
+        }
+      ],
+      "\"o\"": [
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Large output: send errors/failed tests only, full log to .pi/offline-engine/tool-results"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Send dotnet build/test output to the model in full"
+        }
+      ],
+      "\"on\"": [
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Large output: send errors/failed tests only, full log to .pi/offline-engine/tool-results"
+        }
+      ],
+      "\"of\"": [
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Send dotnet build/test output to the model in full"
+        }
+      ],
+      "\"r\"": null,
+      "\"re\"": null,
+      "\"RE\"": null,
+      "\"m\"": null,
+      "\"e\"": null,
+      "\"x\"": null
+    }
+  },
+  "offline-doctor": {
+    "description": "Check TinyCoder, dotnet, LSP, search",
+    "keys": [
+      "description",
+      "handler"
+    ],
+    "completions": null
+  },
+  "offline-setup": {
+    "description": "Find/save TinyCoder server, or reset",
+    "keys": [
+      "description",
+      "getArgumentCompletions",
+      "handler"
+    ],
+    "completions": {
+      "\"\"": null,
+      "\" \"": null,
+      "\"s\"": null,
+      "\"st\"": null,
+      "\"o\"": null,
+      "\"on\"": null,
+      "\"of\"": null,
+      "\"r\"": [
+        {
+          "value": "reset",
+          "label": "reset",
+          "description": "Forget the saved TinyCoder endpoint and model"
+        }
+      ],
+      "\"re\"": [
+        {
+          "value": "reset",
+          "label": "reset",
+          "description": "Forget the saved TinyCoder endpoint and model"
+        }
+      ],
+      "\"RE\"": [
+        {
+          "value": "reset",
+          "label": "reset",
+          "description": "Forget the saved TinyCoder endpoint and model"
+        }
+      ],
+      "\"m\"": null,
+      "\"e\"": null,
+      "\"x\"": null
+    }
+  },
+  "offline-tools": {
+    "description": "Trim tools for slow models / restore",
+    "keys": [
+      "description",
+      "getArgumentCompletions",
+      "handler"
+    ],
+    "completions": {
+      "\"\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "List the tools the model can call right now"
+        },
+        {
+          "value": "minimal",
+          "label": "minimal",
+          "description": "Keep only read/edit/line_edit/write, shell, code, search, LSP and TinyCoder tools"
+        },
+        {
+          "value": "restore",
+          "label": "restore",
+          "description": "Bring back the tool set that was active before 'minimal'"
+        }
+      ],
+      "\" \"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "List the tools the model can call right now"
+        },
+        {
+          "value": "minimal",
+          "label": "minimal",
+          "description": "Keep only read/edit/line_edit/write, shell, code, search, LSP and TinyCoder tools"
+        },
+        {
+          "value": "restore",
+          "label": "restore",
+          "description": "Bring back the tool set that was active before 'minimal'"
+        }
+      ],
+      "\"s\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "List the tools the model can call right now"
+        }
+      ],
+      "\"st\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "List the tools the model can call right now"
+        }
+      ],
+      "\"o\"": null,
+      "\"on\"": null,
+      "\"of\"": null,
+      "\"r\"": [
+        {
+          "value": "restore",
+          "label": "restore",
+          "description": "Bring back the tool set that was active before 'minimal'"
+        }
+      ],
+      "\"re\"": [
+        {
+          "value": "restore",
+          "label": "restore",
+          "description": "Bring back the tool set that was active before 'minimal'"
+        }
+      ],
+      "\"RE\"": [
+        {
+          "value": "restore",
+          "label": "restore",
+          "description": "Bring back the tool set that was active before 'minimal'"
+        }
+      ],
+      "\"m\"": [
+        {
+          "value": "minimal",
+          "label": "minimal",
+          "description": "Keep only read/edit/line_edit/write, shell, code, search, LSP and TinyCoder tools"
+        }
+      ],
+      "\"e\"": null,
+      "\"x\"": null
+    }
+  },
+  "offline-training": {
+    "description": "Save TinyCoder runs as training data",
+    "keys": [
+      "description",
+      "getArgumentCompletions",
+      "handler"
+    ],
+    "completions": {
+      "\"\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether capture is on and where the raw trace is written"
+        },
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Start saving specs, context and TinyCoder results locally (includes source code)"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop saving training data"
+        },
+        {
+          "value": "export",
+          "label": "export",
+          "description": "Build SFT, preference and eval datasets from the captured runs"
+        }
+      ],
+      "\" \"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether capture is on and where the raw trace is written"
+        },
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Start saving specs, context and TinyCoder results locally (includes source code)"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop saving training data"
+        },
+        {
+          "value": "export",
+          "label": "export",
+          "description": "Build SFT, preference and eval datasets from the captured runs"
+        }
+      ],
+      "\"s\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether capture is on and where the raw trace is written"
+        }
+      ],
+      "\"st\"": [
+        {
+          "value": "status",
+          "label": "status",
+          "description": "Show whether capture is on and where the raw trace is written"
+        }
+      ],
+      "\"o\"": [
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Start saving specs, context and TinyCoder results locally (includes source code)"
+        },
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop saving training data"
+        }
+      ],
+      "\"on\"": [
+        {
+          "value": "on",
+          "label": "on",
+          "description": "Start saving specs, context and TinyCoder results locally (includes source code)"
+        }
+      ],
+      "\"of\"": [
+        {
+          "value": "off",
+          "label": "off",
+          "description": "Stop saving training data"
+        }
+      ],
+      "\"r\"": null,
+      "\"re\"": null,
+      "\"RE\"": null,
+      "\"m\"": null,
+      "\"e\"": [
+        {
+          "value": "export",
+          "label": "export",
+          "description": "Build SFT, preference and eval datasets from the captured runs"
+        }
+      ],
+      "\"x\"": null
+    }
+  },
+  "offline-stats": {
+    "description": "TinyCoder calls and context savings",
+    "keys": [
+      "description",
+      "handler"
+    ],
+    "completions": null
+  },
+  "offline-status": {
+    "description": "Show engine settings and sources",
+    "keys": [
+      "description",
+      "handler"
+    ],
+    "completions": null
+  }
+}

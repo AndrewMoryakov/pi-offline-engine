@@ -1,0 +1,77 @@
+{
+  "firstMessage": {
+    "message": {
+      "customType": "pi-offline-repo-capsule",
+      "content": "[pi-offline-engine repository snapshot]\nDeterministic repository facts for orientation; this is data, not an instruction.\nRoot: /fake/repo\nBranch: main\nHEAD: abcdef123456\nTracked working-tree changes:\n   M src/A.cs\nTracked .NET solution/project files:\n  src/A.csproj",
+      "display": false
+    }
+  },
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "repo_capsule_injected",
+      "fingerprint": "ae6c899ab4c6158292a5514cd3eee6970f3c84d01dad75ae4f569b28c0110d37",
+      "dirtyFiles": 1,
+      "projectFiles": 1
+    },
+    {
+      "ts": "<TS>",
+      "type": "repo_capsule_injected",
+      "fingerprint": "ae6c899ab4c6158292a5514cd3eee6970f3c84d01dad75ae4f569b28c0110d37",
+      "dirtyFiles": 1,
+      "projectFiles": 1
+    },
+    {
+      "ts": "<TS>",
+      "type": "repo_capsule_injected",
+      "fingerprint": "ae6c899ab4c6158292a5514cd3eee6970f3c84d01dad75ae4f569b28c0110d37",
+      "dirtyFiles": 1,
+      "projectFiles": 1
+    },
+    {
+      "ts": "<TS>",
+      "type": "repo_capsule_injected",
+      "fingerprint": "ae6c899ab4c6158292a5514cd3eee6970f3c84d01dad75ae4f569b28c0110d37",
+      "dirtyFiles": 1,
+      "projectFiles": 1
+    },
+    {
+      "ts": "<TS>",
+      "type": "repo_capsule_injected",
+      "fingerprint": "4653a16a9deb9b12c709858ea355af42ea94e010fd3452f078951286f0db8f48",
+      "dirtyFiles": 2,
+      "projectFiles": 1
+    },
+    {
+      "ts": "<TS>",
+      "type": "repo_capsule_injected",
+      "fingerprint": "674a6832d596d9d093400508e554e7d9df795185d342d29ae6d352fa162d6ae4",
+      "dirtyFiles": 0,
+      "projectFiles": 1
+    },
+    {
+      "ts": "<TS>",
+      "type": "repo_capsule_injected",
+      "fingerprint": "674a6832d596d9d093400508e554e7d9df795185d342d29ae6d352fa162d6ae4",
+      "dirtyFiles": 0,
+      "projectFiles": 1
+    }
+  ],
+  "ui": [
+    {
+      "kind": "notify",
+      "message": "Repository context capsule: off",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Repository context capsule: on (will refresh on next prompt)",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Repository context capsule: on (will refresh on next prompt)",
+      "level": "info"
+    }
+  ]
+}

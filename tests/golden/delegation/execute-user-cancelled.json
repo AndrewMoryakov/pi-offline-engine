@@ -1,0 +1,30 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Delegated implementation cancelled by user."
+      }
+    ],
+    "details": {
+      "cancelled": true
+    }
+  },
+  "error": null,
+  "events": null,
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [],
+  "ui": [
+    {
+      "kind": "confirm",
+      "title": "Bounded local implementation",
+      "body": "Spec: characterize-build\nTiny model: fake-tiny\nFiles: src/A.cs\nAttempts: up to 3\nPi will write only inside this declared scope and run the declared dotnet checks."
+    }
+  ],
+  "updates": [],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

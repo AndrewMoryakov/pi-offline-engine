@@ -3,10 +3,79 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { once } from "node:events";
 import {
+  CANDIDATE_JSON_SCHEMA,
   callTinyImplementer,
   looksLikeStructuredOutputUnsupported,
+  normalizeCandidate,
   TinyModelOutputError
 } from "../src/tiny-client.mjs";
+import { validateCandidate } from "../src/implementation-spec.mjs";
+
+// The rules OpenAI Structured Outputs applies to `strict: true` schemas that
+// this schema could break: every object closes additionalProperties and lists
+// every property as required, and no length/count keywords are used.
+function strictSchemaViolations(schema, at = "$") {
+  const violations = [];
+  for (const keyword of ["minLength", "maxLength", "minItems", "maxItems"]) {
+    if (keyword in schema) violations.push(`${at}: unsupported ${keyword}`);
+  }
+  const types = [].concat(schema.type ?? []);
+  if (types.includes("object")) {
+    if (schema.additionalProperties !== false) violations.push(`${at}: additionalProperties must be false`);
+    const keys = Object.keys(schema.properties ?? {}).sort();
+    const required = [...(schema.required ?? [])].sort();
+    if (JSON.stringify(keys) !== JSON.stringify(required)) violations.push(`${at}: required must list ${keys.join(",")}`);
+    for (const [key, child] of Object.entries(schema.properties ?? {})) {
+      violations.push(...strictSchemaViolations(child, `${at}.${key}`));
+    }
+  }
+  if (schema.items) violations.push(...strictSchemaViolations(schema.items, `${at}[]`));
+  return violations;
+}
+
+test("candidate schema satisfies strict structured-output rules", () => {
+  assert.deepEqual(strictSchemaViolations(CANDIDATE_JSON_SCHEMA), []);
+});
+
+test("the strictness check itself rejects the pre-strict schema shape", () => {
+  const loose = {
+    type: "object",
+    additionalProperties: false,
+    required: ["status"],
+    properties: { status: { type: "string" }, reason: { type: "string", minLength: 1 } }
+  };
+  assert.equal(strictSchemaViolations(loose).length, 2);
+});
+
+test("nulls required by the strict schema are dropped before validation", () => {
+  const spec = { scope: { allowed_files: ["src/New.cs"], allow_new_files: true } };
+  const candidate = normalizeCandidate({
+    status: "candidate",
+    reason: null,
+    changes: [{ path: "src/New.cs", operation: "create_file", expected: null, content: "class New {}" }]
+  });
+  assert.deepEqual(candidate, {
+    status: "candidate",
+    changes: [{ path: "src/New.cs", operation: "create_file", content: "class New {}" }]
+  });
+  assert.deepEqual(validateCandidate(candidate, spec), { ok: true, errors: [] });
+
+  assert.deepEqual(
+    normalizeCandidate({ status: "insufficient_spec", reason: "need the class body", changes: null }),
+    { status: "insufficient_spec", reason: "need the class body" }
+  );
+});
+
+test("falls back when an OpenAI-style strict validator rejects the schema", () => {
+  const raw = JSON.stringify({
+    error: {
+      message: "Invalid schema for response_format 'bounded_implementation_candidate': In context=(), 'required' is required to be supplied and to be an array including every key in properties. Missing 'reason'.",
+      type: "invalid_request_error",
+      param: "response_format"
+    }
+  });
+  assert.equal(looksLikeStructuredOutputUnsupported(raw), true);
+});
 
 test("detects structured-output rejection across backend phrasings", () => {
   const rejections = [

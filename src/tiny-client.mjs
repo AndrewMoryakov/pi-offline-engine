@@ -11,27 +11,32 @@ export class TinyModelOutputError extends Error {
   }
 }
 
-const CANDIDATE_JSON_SCHEMA = {
+// Strict structured-output validators (OpenAI, and routers that forward to
+// it) reject a strict schema unless every property is listed in `required`
+// and they support only a subset of keywords. Optional fields are therefore
+// required-but-nullable here, and length/count limits are left to
+// validateCandidate. normalizeCandidate drops the nulls again, so the rest
+// of the engine sees the same shapes as before.
+export const CANDIDATE_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["status"],
+  required: ["status", "reason", "changes"],
   properties: {
     status: {
       type: "string",
       enum: ["candidate", "insufficient_spec", "cannot_safely_implement"]
     },
-    reason: { type: "string" },
+    reason: { type: ["string", "null"] },
     changes: {
-      type: "array",
-      minItems: 1,
+      type: ["array", "null"],
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["path", "operation", "content"],
+        required: ["path", "operation", "expected", "content"],
         properties: {
-          path: { type: "string", minLength: 1 },
+          path: { type: "string" },
           operation: { type: "string", enum: ["replace_text", "create_file"] },
-          expected: { type: "string" },
+          expected: { type: ["string", "null"] },
           content: { type: "string" }
         }
       }
@@ -101,7 +106,7 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
     if (typeof text !== "string") throw new TinyModelOutputError("tiny endpoint returned no assistant content");
 
     return {
-      candidate: parseJsonObject(text),
+      candidate: normalizeCandidate(parseJsonObject(text)),
       usage: normalizeUsage(envelope.usage),
       latencyMs: Date.now() - startedAt,
       structuredOutputMode
@@ -168,9 +173,30 @@ export function looksLikeStructuredOutputUnsupported(raw) {
   // failed:\n...`, HTTP 500); most inner reasons carry no keyword above.
   // "Cannot use both json_schema and grammar" is deliberately absent: a
   // json_object retry keeps the same grammar conflict and cannot succeed.
-  const reason = String.raw`(?:unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type)|must be one of|only supports?|conversion failed)`;
+  // `invalid schema` covers OpenAI-style strict validators (`Invalid schema
+  // for response_format '...': ...`); json_object has no schema to reject.
+  const reason = String.raw`(?:invalid schema|unsupported|not supported|unrecognized|unknown (?:field|parameter)|invalid (?:field|parameter|type)|must be one of|only supports?|conversion failed)`;
   return new RegExp(feature + String.raw`[\s\S]{0,96}` + reason, "i").test(text) ||
     new RegExp(reason + String.raw`[\s\S]{0,96}` + feature, "i").test(text);
+}
+
+// Null stands for "absent" in the strict schema; remove it so validation,
+// candidate records and training data keep their pre-strict shapes.
+export function normalizeCandidate(candidate) {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return candidate;
+  const out = dropNulls(candidate, ["reason", "changes"]);
+  if (Array.isArray(out.changes)) {
+    out.changes = out.changes.map((change) =>
+      change && typeof change === "object" && !Array.isArray(change) ? dropNulls(change, ["expected"]) : change
+    );
+  }
+  return out;
+}
+
+function dropNulls(object, keys) {
+  const out = { ...object };
+  for (const key of keys) if (out[key] === null) delete out[key];
+  return out;
 }
 
 function parseJsonObject(text) {

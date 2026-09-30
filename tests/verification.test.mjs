@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { detectDotnetTestRunner, runVerification } from "../src/verification.mjs";
+import { detectDotnetTestRunner, preflightVerificationInfrastructure, runVerification } from "../src/verification.mjs";
 
 const baseSpec = {
   spec_id: "verify-001",
@@ -325,4 +325,21 @@ test("fails fast when MTP has no TRX report extension", async () => {
     /TRX reporting is unavailable/
   );
   assert.equal(actualTestRuns, 0);
+});
+
+test("project-qualified runner detection gets a build-sized timeout and reports a kill as a timeout", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  const timeouts = [];
+  const slowHelp = async (_command, args, options) => {
+    timeouts.push(options.timeout);
+    return { code: 1, killed: true, stdout: "", stderr: "" };
+  };
+
+  await assert.rejects(
+    () => preflightVerificationInfrastructure({ cwd, spec: baseSpec, exec: slowHelp }),
+    /runner detection timed out after 120 s \(dotnet test --help --project .*App\.Tests\.csproj\)/
+  );
+  // A real MTP project needed 18-23 s here; the limit must cover a build.
+  assert.ok(timeouts[0] >= 60_000, `runner detection timeout ${timeouts[0]} ms`);
 });

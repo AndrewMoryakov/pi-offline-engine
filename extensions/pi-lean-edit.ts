@@ -3,6 +3,7 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import leanEdit from "pi-lean-edit";
 import { engineConfigPath, readEngineConfig, resolveEditProvider, resolveScriptEditPolicy } from "../src/engine-config.mjs";
 import { planScriptEditActivation, renameLeanEditTool } from "../src/edit-routing.mjs";
+import { flattenLeanEditTool } from "../src/tool-schema.mjs";
 
 // Loads the bundled pi-lean-edit (read/edit/write) unless editProvider is
 // "none". Pi rejects a second registration of a tool name and aborts startup,
@@ -17,22 +18,23 @@ import { planScriptEditActivation, renameLeanEditTool } from "../src/edit-routin
 export default function leanEditProvider(pi: ExtensionAPI) {
   const { config } = readEngineConfig(engineConfigPath(getAgentDir()));
   const provider = resolveEditProvider({ env: process.env, config }).value;
-  if (provider === "lean") {
-    leanEdit(pi);
-    return;
-  }
-  if (provider !== "hybrid") return;
+  if (provider !== "lean" && provider !== "hybrid") return;
 
-  // pi's API object may rely on `this`, so every other member is passed
-  // through bound to the original.
-  const renaming = new Proxy(pi, {
+  // Both modes hand the model a flat edit schema (HE-11); hybrid also renames
+  // the tool (HE-4). pi's API object may rely on `this`, so every other member
+  // is passed through bound to the original.
+  const adapt = provider === "hybrid"
+    ? (tool: any) => renameLeanEditTool(flattenLeanEditTool(tool))
+    : (tool: any) => flattenLeanEditTool(tool);
+  const adapting = new Proxy(pi, {
     get(target, key) {
-      if (key === "registerTool") return (tool: any) => target.registerTool(renameLeanEditTool(tool));
+      if (key === "registerTool") return (tool: any) => target.registerTool(adapt(tool));
       const value = Reflect.get(target, key, target);
       return typeof value === "function" ? value.bind(target) : value;
     }
   });
-  leanEdit(renaming);
+  leanEdit(adapting);
+  if (provider !== "hybrid") return;
 
   // Spec: docs/HYBRID_EDIT_V0.md HE-5: re-judged at session start and on every model switch.
   const policy = resolveScriptEditPolicy({ env: process.env, config }).value;

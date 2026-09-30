@@ -302,6 +302,9 @@ export default function offlineEngine(pi: ExtensionAPI) {
       let nestedUsage: any = undefined;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        // Declared outside the try: the catch below chains it into the next
+        // model-output repair packet.
+        const trainingRepairPacket = repairPacket;
         try {
         onUpdate?.({ content: [{ type: "text", text: `Tiny implementation attempt ${attempt}/${maxAttempts}...` }], details: { attempt, maxAttempts } });
 
@@ -309,7 +312,6 @@ export default function offlineEngine(pi: ExtensionAPI) {
         const snapshot = await snapshotAllowedFiles(ctx.cwd, params.spec);
         await appendEvent(ctx.cwd, { type: "tiny_started", specId: params.spec.spec_id, model, endpoint, attempt, mode: "execute" });
 
-        const trainingRepairPacket = repairPacket;
         stage = "tiny_call";
         const result = await callTinyImplementer({
           endpoint,

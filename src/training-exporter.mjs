@@ -102,7 +102,8 @@ export async function exportTrainingData({
     const promptObject = {
       implementation_spec: raw.input.implementation_spec,
       context: raw.input.context ?? {},
-      repair_packet: raw.input.repair_packet ?? null
+      repair_packet: raw.input.repair_packet ?? null,
+      ...(raw.input.current_files ? { current_files: raw.input.current_files } : {})
     };
     const prompt = redactDeep(promptObject);
     const completion = redactDeep(raw.output.candidate);

@@ -16,7 +16,7 @@
 // and rethrown as `Tiny implementer failed: <message>`.
 
 import { validateCandidate, validateImplementationSpec } from "./implementation-spec.mjs";
-import { snapshotAllowedFiles } from "./workspace-snapshot.mjs";
+import { captureAllowedFiles } from "./workspace-snapshot.mjs";
 import { saveCandidateRecord } from "./candidate-store.mjs";
 
 export async function runCandidateDelegation({
@@ -28,16 +28,17 @@ export async function runCandidateDelegation({
   model,
   callTiny,
   appendEvent,
-  saveCandidate = saveCandidateRecord
+  saveCandidate = saveCandidateRecord,
+  attachCurrentFiles = false
 }) {
   const checked = validateImplementationSpec(spec);
   if (!checked.ok) return { kind: "spec_rejected", errors: checked.errors };
 
-  const snapshot = await snapshotAllowedFiles(cwd, spec);
+  const { snapshot, currentFiles } = await captureAllowedFiles(cwd, spec, { withContent: attachCurrentFiles });
   await appendEvent(cwd, { type: "tiny_started", specId: spec.spec_id, model, endpoint, mode: "candidate_only" });
 
   try {
-    const result = await callTiny({ endpoint, model, spec, context: context ?? {}, signal });
+    const result = await callTiny({ endpoint, model, spec, context: context ?? {}, ...(currentFiles ? { currentFiles } : {}), signal });
     const candidateCheck = validateCandidate(result.candidate, spec);
     await appendEvent(cwd, {
       type: "tiny_finished",

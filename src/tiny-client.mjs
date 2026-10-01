@@ -44,7 +44,7 @@ export const CANDIDATE_JSON_SCHEMA = {
   }
 };
 
-export async function callTinyImplementer({ endpoint, model, spec, context = {}, repairPacket = null, apiKey = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+export async function callTinyImplementer({ endpoint, model, spec, context = {}, repairPacket = null, currentFiles = null, apiKey = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   if (!endpoint) throw new Error("tiny endpoint is required");
   if (!model) throw new Error("tiny model is required");
 
@@ -59,7 +59,7 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
     const base = {
       model,
       temperature: 0,
-      messages: buildMessages(spec, context, repairPacket)
+      messages: buildMessages(spec, context, repairPacket, currentFiles)
     };
 
     let response = await postCompletion(endpoint, {
@@ -117,7 +117,7 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
   }
 }
 
-function buildMessages(spec, context, repairPacket) {
+function buildMessages(spec, context, repairPacket, currentFiles = null) {
   return [
     {
       role: "system",
@@ -131,12 +131,20 @@ function buildMessages(spec, context, repairPacket) {
         "- create_file: {path, operation:'create_file', content}; only when the spec explicitly allows new files.",
         "For candidate, return {status:'candidate', changes:[...]}.",
         "If the specification or supplied context is insufficient, return insufficient_spec instead of guessing.",
-        "Never name a path outside scope.allowed_files."
+        "Never name a path outside scope.allowed_files.",
+        ...(currentFiles ? [
+          "current_files holds the exact current text of each allowed file, read just before this request; copy replace_text expected from it rather than from context."
+        ] : [])
       ].join("\n")
     },
     {
       role: "user",
-      content: JSON.stringify({ implementation_spec: spec, context, repair_packet: repairPacket })
+      content: JSON.stringify({
+        implementation_spec: spec,
+        context,
+        repair_packet: repairPacket,
+        ...(currentFiles ? { current_files: currentFiles } : {})
+      })
     }
   ];
 }

@@ -50,15 +50,15 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
   const delegate = {
     name: "delegate_implementation",
     title: "Delegate implementation (candidate only)",
-    description: "Ask the cheap implementer model for a bounded candidate for a fully decided change (1-2 files, ImplementationSpec v1). Writes nothing. Include exact current source excerpts in context.",
+    description: "Ask the cheap implementer model for a bounded candidate for a fully decided change (1-2 files, ImplementationSpec v1). Writes nothing. The current text of the allowed files is attached automatically (up to 16 KB each); put other relevant snippets in context.",
     inputSchema: DELEGATION_PARAMETERS_JSON_SCHEMA,
     annotations: { readOnlyHint: true, openWorldHint: true },
     async call(args, ctx) {
       const cwd = await workspace(ctx);
       await ensureSelfIgnoringStateDir(cwd);
-      const { endpoint, model } = settings();
+      const { endpoint, model, attachCurrentFiles } = settings();
       const outcome = await runCandidateDelegation({
-        spec: args.spec, context: args.context, cwd, signal: ctx.signal, endpoint, model, callTiny, appendEvent
+        spec: args.spec, context: args.context, cwd, signal: ctx.signal, endpoint, model, callTiny, appendEvent, attachCurrentFiles
       });
       return withWorkspace(formatCandidateResult(outcome), cwd);
     }
@@ -76,7 +76,7 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
       const { trainingRunId } = await prepareDelegatedExecution({
         spec: args.spec, cwd, trainingCaptureEnabled: env.PI_OFFLINE_TRAINING_CAPTURE === "1", appendEvent
       });
-      const { endpoint, model, maxAttempts } = settings();
+      const { endpoint, model, maxAttempts, attachCurrentFiles } = settings();
 
       const headless = env.PI_OFFLINE_ALLOW_HEADLESS_APPLY === "1";
       const approval = headless ? true : await ctx.confirm([
@@ -111,6 +111,7 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
         // still refuses a candidate whose files changed meanwhile.
         withMutationQueues: (_paths, fn) => fn(),
         appendEvent,
+        attachCurrentFiles,
         onAttemptStart: ({ attempt, maxAttempts: total }) => ctx.progress(`Implementer attempt ${attempt}/${total}`)
       });
       return withWorkspace(formatExecutionResult(outcome), cwd);

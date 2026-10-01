@@ -440,7 +440,13 @@
         "context": {
           "snippet": "class A { int Value() => 1; }"
         },
-        "repair_packet": null
+        "repair_packet": null,
+        "current_files": {
+          "src/A.cs": {
+            "exists": true,
+            "content": "class A { int Value() => 1; }\n"
+          }
+        }
       }
     },
     {
@@ -512,6 +518,12 @@
             ]
           },
           "instruction": "Repair only the bounded implementation. Do not expand scope. The previous change content is the current failed source state where it was applied. Use the current source state as the new preimage."
+        },
+        "current_files": {
+          "src/A.cs": {
+            "exists": true,
+            "content": "class A { int Value() => 2; }\n"
+          }
         }
       }
     }

@@ -11,6 +11,8 @@
 //   withMutationQueues(paths, fn)    serializes writes to candidate targets
 //   appendEvent(cwd, event)          event-ledger writer
 //   onAttemptStart({attempt, maxAttempts})  optional progress callback
+//   attachCurrentFiles               send the allowed files' current text
+//                                    with every TinyCoder request
 //
 // Returned outcome kinds: preflight_failure, runtime_failure,
 // model_output_escalation, terminal_model_status, verification_passed,

@@ -185,7 +185,13 @@
         "context": {
           "snippet": "class A { int Value() => 1; }"
         },
-        "repair_packet": null
+        "repair_packet": null,
+        "current_files": {
+          "src/A.cs": {
+            "exists": true,
+            "content": "class A { int Value() => 1; }\n"
+          }
+        }
       }
     }
   ],

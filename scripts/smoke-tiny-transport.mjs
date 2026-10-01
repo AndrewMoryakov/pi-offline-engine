@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { callTinyImplementer } from "../src/tiny-client.mjs";
 import { validateCandidate, validateImplementationSpec } from "../src/implementation-spec.mjs";
+import { resolveEngineSettings } from "../src/engine-config.mjs";
 
 const spec = {
   version: 1,
@@ -35,7 +36,7 @@ assert.equal(validateImplementationSpec(spec).ok, true);
 if (process.argv.includes("--live")) {
   const endpoint = process.env.PI_OFFLINE_TINY_ENDPOINT;
   const model = process.env.PI_OFFLINE_TINY_MODEL;
-  const apiKey = process.env.PI_OFFLINE_TINY_API_KEY ?? process.env.OPENROUTER_API_KEY ?? null;
+  const apiKey = resolveEngineSettings({ env: process.env }).apiKey;
   if (!endpoint || !model) {
     console.error("--live requires PI_OFFLINE_TINY_ENDPOINT and PI_OFFLINE_TINY_MODEL");
     process.exit(2);

@@ -1,0 +1,233 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": {
+          "status": "needs_main_model",
+          "reason": "candidate_apply_failure",
+          "stage": "apply",
+          "workspace_modified": true,
+          "workspace_state_uncertain": true,
+          "changed_files": [],
+          "error": "replace_text expected text must occur exactly once in src/A.cs; found 0",
+          "attempts": []
+        }
+      }
+    ],
+    "details": {
+      "success": false,
+      "escalated": true,
+      "reason": "candidate_apply_failure",
+      "stage": "apply",
+      "workspaceModified": true,
+      "workspaceStateUncertain": true,
+      "changedFiles": [],
+      "error": "replace_text expected text must occur exactly once in src/A.cs; found 0",
+      "attempts": []
+    },
+    "usage": {
+      "input": 101,
+      "output": 11,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 112,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0
+      }
+    }
+  },
+  "error": null,
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "tiny_started",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "endpoint": "<TINY>",
+      "attempt": 1,
+      "mode": "execute"
+    },
+    {
+      "ts": "<TS>",
+      "type": "tiny_finished",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "attempt": 1,
+      "latencyMs": "<MS>",
+      "usage": {
+        "inputTokens": 101,
+        "outputTokens": 11,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "totalTokens": 112
+      },
+      "candidateStatus": "candidate",
+      "candidateValid": true,
+      "validationErrors": [],
+      "mode": "execute"
+    },
+    {
+      "ts": "<TS>",
+      "type": "delegated_implementation_runtime_failure",
+      "specId": "characterize-build",
+      "attempt": 1,
+      "status": "needs_main_model",
+      "reason": "candidate_apply_failure",
+      "stage": "apply",
+      "workspace_modified": true,
+      "workspace_state_uncertain": true,
+      "changed_files": [],
+      "error": "replace_text expected text must occur exactly once in src/A.cs; found 0",
+      "attempts": []
+    }
+  ],
+  "training": [
+    {
+      "schema_version": 1,
+      "captured_at": "<TS>",
+      "kind": "infrastructure_failure",
+      "run_id": "characterize-build-<RUN>",
+      "spec_id": "characterize-build",
+      "attempt": 1,
+      "stage": "apply",
+      "reason": "candidate_apply_failure",
+      "error": "replace_text expected text must occur exactly once in src/A.cs; found 0"
+    }
+  ],
+  "candidates": {
+    "caa41844ad678febb0fe9652-attempt-1.json": {
+      "version": 1,
+      "savedAt": "<TS>",
+      "spec": {
+        "version": 1,
+        "spec_id": "characterize-build",
+        "operation": "modify_symbol",
+        "goal": {
+          "summary": "Return two instead of one."
+        },
+        "target": {
+          "file": "src/A.cs",
+          "symbol": "A.Value"
+        },
+        "requirements": [
+          "Value returns 2."
+        ],
+        "scope": {
+          "allowed_files": [
+            "src/A.cs"
+          ],
+          "allow_new_files": false,
+          "allow_dependencies": false,
+          "allow_public_api_change": false
+        },
+        "verification": {
+          "build": {
+            "project": "src/A.csproj"
+          }
+        }
+      },
+      "candidate": {
+        "status": "candidate",
+        "changes": [
+          {
+            "path": "src/A.cs",
+            "operation": "replace_text",
+            "expected": "=> 42;",
+            "content": "=> 43;"
+          }
+        ]
+      },
+      "snapshot": {
+        "version": 1,
+        "root": "<WS>",
+        "files": {
+          "src/A.cs": {
+            "exists": true,
+            "sha256": "c5cb24c903b0bdba749a9844ad3e031a88d24febc535095d228629477dca5e92",
+            "size": 30
+          }
+        }
+      },
+      "attempt": 1,
+      "model": "fake-tiny",
+      "usage": {
+        "inputTokens": 101,
+        "outputTokens": 11,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "totalTokens": 112
+      }
+    }
+  },
+  "tinyRequests": [
+    {
+      "model": "fake-tiny",
+      "temperature": 0,
+      "responseFormat": "json_schema",
+      "user": {
+        "implementation_spec": {
+          "version": 1,
+          "spec_id": "characterize-build",
+          "operation": "modify_symbol",
+          "goal": {
+            "summary": "Return two instead of one."
+          },
+          "target": {
+            "file": "src/A.cs",
+            "symbol": "A.Value"
+          },
+          "requirements": [
+            "Value returns 2."
+          ],
+          "scope": {
+            "allowed_files": [
+              "src/A.cs"
+            ],
+            "allow_new_files": false,
+            "allow_dependencies": false,
+            "allow_public_api_change": false
+          },
+          "verification": {
+            "build": {
+              "project": "src/A.csproj"
+            }
+          }
+        },
+        "context": {
+          "snippet": "class A { int Value() => 1; }"
+        },
+        "repair_packet": null
+      }
+    }
+  ],
+  "exec": [],
+  "ui": [
+    {
+      "kind": "confirm",
+      "title": "Bounded local implementation",
+      "body": "Spec: characterize-build\nTiny model: fake-tiny\nFiles: src/A.cs\nAttempts: up to 3\nPi will write only inside this declared scope and run the declared dotnet checks."
+    }
+  ],
+  "updates": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Tiny implementation attempt 1/3..."
+        }
+      ],
+      "details": {
+        "attempt": 1,
+        "maxAttempts": 3
+      }
+    }
+  ],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

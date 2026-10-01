@@ -1,0 +1,7 @@
+[
+  {
+    "kind": "notify",
+    "message": "pi-offline-engine stats\n\nTinyCoder calls: 1\nTinyCoder reported tokens: in 10, out 5\nTinyCoder calls with incomplete usage: 0\nTinyCoder average latency: 1000 ms\nDelegated verification passes / escalations: 0 / 0\nVerification pass / fail: 0 / 0\nRepair packets: 0\nRepository capsules injected: 0\nCompacted tool results: 1\nTool-result chars avoided in model context: 8100",
+    "level": "info"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "ImplementationSpec rejected: scope.allowed_files must be a non-empty array"
+      }
+    ],
+    "details": {
+      "accepted": false,
+      "errors": [
+        "scope.allowed_files must be a non-empty array"
+      ]
+    }
+  },
+  "error": null,
+  "events": null,
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [],
+  "ui": [],
+  "updates": [],
+  "workspace": {}
+}

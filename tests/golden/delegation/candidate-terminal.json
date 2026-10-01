@@ -1,0 +1,120 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": {
+          "status": "insufficient_spec",
+          "reason": "needs the class body"
+        }
+      }
+    ],
+    "details": {
+      "accepted": true,
+      "candidate": {
+        "status": "insufficient_spec",
+        "reason": "needs the class body"
+      },
+      "usage": {
+        "inputTokens": 101,
+        "outputTokens": 11,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "totalTokens": 112
+      },
+      "latencyMs": "<MS>"
+    },
+    "usage": {
+      "input": 101,
+      "output": 11,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 112,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0
+      }
+    }
+  },
+  "error": null,
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "tiny_started",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "endpoint": "<TINY>",
+      "mode": "candidate_only"
+    },
+    {
+      "ts": "<TS>",
+      "type": "tiny_finished",
+      "specId": "characterize-build",
+      "model": "fake-tiny",
+      "latencyMs": "<MS>",
+      "usage": {
+        "inputTokens": 101,
+        "outputTokens": 11,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "totalTokens": 112
+      },
+      "candidateStatus": "insufficient_spec",
+      "candidateValid": true,
+      "validationErrors": [],
+      "mode": "candidate_only"
+    }
+  ],
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [
+    {
+      "model": "fake-tiny",
+      "temperature": 0,
+      "responseFormat": "json_schema",
+      "user": {
+        "implementation_spec": {
+          "version": 1,
+          "spec_id": "characterize-build",
+          "operation": "modify_symbol",
+          "goal": {
+            "summary": "Return two instead of one."
+          },
+          "target": {
+            "file": "src/A.cs",
+            "symbol": "A.Value"
+          },
+          "requirements": [
+            "Value returns 2."
+          ],
+          "scope": {
+            "allowed_files": [
+              "src/A.cs"
+            ],
+            "allow_new_files": false,
+            "allow_dependencies": false,
+            "allow_public_api_change": false
+          },
+          "verification": {
+            "build": {
+              "project": "src/A.csproj"
+            }
+          }
+        },
+        "context": {
+          "snippet": "class A { int Value() => 1; }"
+        },
+        "repair_packet": null
+      }
+    }
+  ],
+  "exec": [],
+  "ui": [],
+  "updates": [],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

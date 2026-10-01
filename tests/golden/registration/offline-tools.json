@@ -1,0 +1,67 @@
+{
+  "ui": [
+    {
+      "kind": "notify",
+      "message": "No saved tool set to restore.",
+      "level": "warning"
+    },
+    {
+      "kind": "notify",
+      "message": "Active tools (7): read, line_edit, write, bash, custom, execute_delegated_implementation, delegate_implementation",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Offline minimal tools enabled (9): read, line_edit, write, bash, grep, find, ls, execute_delegated_implementation, delegate_implementation",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Offline minimal tools enabled (9): read, line_edit, write, bash, grep, find, ls, execute_delegated_implementation, delegate_implementation",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Restored 7 tools.",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "No saved tool set to restore.",
+      "level": "warning"
+    }
+  ],
+  "activeWrites": [
+    [
+      "read",
+      "line_edit",
+      "write",
+      "bash",
+      "grep",
+      "find",
+      "ls",
+      "execute_delegated_implementation",
+      "delegate_implementation"
+    ],
+    [
+      "read",
+      "line_edit",
+      "write",
+      "bash",
+      "grep",
+      "find",
+      "ls",
+      "execute_delegated_implementation",
+      "delegate_implementation"
+    ],
+    [
+      "read",
+      "line_edit",
+      "write",
+      "bash",
+      "custom",
+      "execute_delegated_implementation",
+      "delegate_implementation"
+    ]
+  ]
+}

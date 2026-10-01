@@ -1,0 +1,7 @@
+[
+  {
+    "kind": "notify",
+    "message": "Tiny implementer: fake-coder-1.5b @ <MODELS>\n  endpoint: config file\n  model: config file\n  attempts: 3 (built-in default)\nConfig file: <AGENT>/pi-offline-engine/config.json\nCompanion setting: PI_KNOWLEDGE_SEARCH_PROFILE=low_token (built-in default)\nEndpoint locality: implementer endpoint is local (127.0.0.1); source stays on your network\nImplementer auth: none (local endpoint)\nBounded execute attempts: 3\nCandidate apply: exact replace_text/create_file with stale preimage protection\nVerification: declared dotnet build/tests, --no-restore\nTelemetry: .pi/offline-engine/events.jsonl",
+    "level": "info"
+  }
+]

@@ -1,0 +1,63 @@
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": {
+          "status": "needs_main_model",
+          "reason": "verification_infrastructure_failure",
+          "stage": "verification_preflight",
+          "workspace_modified": false,
+          "workspace_state_uncertain": false,
+          "changed_files": [],
+          "error": "presentation failed",
+          "attempts": []
+        }
+      }
+    ],
+    "details": {
+      "success": false,
+      "escalated": true,
+      "reason": "verification_infrastructure_failure",
+      "stage": "verification_preflight",
+      "workspaceModified": false,
+      "workspaceStateUncertain": false,
+      "changedFiles": [],
+      "error": "presentation failed",
+      "attempts": []
+    },
+    "usage": "__undefined__"
+  },
+  "error": null,
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "delegated_implementation_runtime_failure",
+      "specId": "characterize-build",
+      "attempt": 1,
+      "status": "needs_main_model",
+      "reason": "verification_infrastructure_failure",
+      "stage": "verification_preflight",
+      "workspace_modified": false,
+      "workspace_state_uncertain": false,
+      "changed_files": [],
+      "error": "presentation failed",
+      "attempts": []
+    }
+  ],
+  "training": null,
+  "candidates": {},
+  "tinyRequests": [],
+  "exec": [],
+  "ui": [
+    {
+      "kind": "confirm",
+      "title": "Bounded local implementation",
+      "body": "Spec: characterize-build\nTiny model: fake-tiny\nFiles: src/A.cs\nAttempts: up to 3\nPi will write only inside this declared scope and run the declared dotnet checks."
+    }
+  ],
+  "updates": [],
+  "workspace": {
+    "src/A.cs": "class A { int Value() => 1; }\n"
+  }
+}

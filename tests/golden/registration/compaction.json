@@ -1,0 +1,44 @@
+{
+  "compacted": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[pi-offline-engine: compacted dotnet tool output]\nCommand: dotnet build src/A.csproj\nOriginal: 402 lines / 20739 chars\nFull artifact: .pi/offline-engine/tool-results/tc-1.log\n\nSelected diagnostics:\nsrc/A.cs(1,1): error CS0001: broken\nBuild FAILED.\n\nFull output was retained locally; use the artifact only if the compact diagnostics are insufficient."
+      }
+    ]
+  },
+  "events": [
+    {
+      "ts": "<TS>",
+      "type": "tool_result_compacted",
+      "toolCallId": "tc-1",
+      "toolName": "bash",
+      "artifact": ".pi/offline-engine/tool-results/tc-1.log",
+      "originalChars": 20739,
+      "originalLines": 402,
+      "compactedChars": 349
+    }
+  ],
+  "ui": [
+    {
+      "kind": "notify",
+      "message": "Dotnet tool-result compaction: off",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Dotnet tool-result compaction: off",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Dotnet tool-result compaction: on",
+      "level": "info"
+    },
+    {
+      "kind": "notify",
+      "message": "Usage: /offline-compact on|off|status",
+      "level": "warning"
+    }
+  ]
+}

@@ -136,7 +136,7 @@ The engine is one Pi extension (`extensions/index.ts`) over a Pi-independent cor
 | `context` | Keeps only the latest capsule in model context | [Repository context capsule](#repository-context-capsule) |
 | `tool_result` | Compacts large direct `dotnet build` / `dotnet test` shell output | [Tool-result compaction](#tool-result-compaction) |
 | `/offline-*` commands | Doctor, setup, status, tools, context, compact, training, stats | [Commands](#commands) |
-| Every step | Appends control metadata to `.pi/offline-engine/events.jsonl` | [Files on disk](#files-on-disk) |
+| Selected engine events | Appends control metadata to `.pi/offline-engine/events.jsonl` at delegation, repository-capsule, tool-result-compaction and training-capture points; routine turns and most tool calls are not recorded | [Files on disk](#files-on-disk) |
 
 ## Quick start
 
@@ -275,7 +275,7 @@ The engine, not the model, builds the commands from `verification.build.project`
 - **VSTest:** each declared test pattern runs on its own through `--filter` and TRX logging.
 - **.NET 10 Microsoft.Testing.Platform (MTP):** the project suite runs once with `--report-trx`, and every declared pattern must appear among the executed TRX test identities. The test project must already provide `Microsoft.Testing.Extensions.TrxReport`, so restore it while you are still online.
 
-A verification preflight runs before the TinyCoder is first called and fails closed if, for example, MTP is active but TRX reporting is unavailable. Full stdout/stderr and results are kept under `.pi/offline-engine/artifacts/`; only compact diagnostics are sent back through model context.
+A verification preflight runs before the TinyCoder is first called and fails closed if, for example, MTP is active but TRX reporting is unavailable. Full stdout/stderr of each check is kept under `.pi/offline-engine/artifacts/` and the fresh TRX result under `.pi/offline-engine/test-results/`; only compact diagnostics are sent back through model context.
 
 ## Tiny implementer
 
@@ -605,9 +605,10 @@ Pi tools: `delegate_implementation`, `execute_delegated_implementation`.
 | Path | Content |
 |---|---|
 | `<pi agent dir>/pi-offline-engine/config.json` | Saved endpoint, model, attempts, edit provider and policy; never an API key |
-| `.pi/offline-engine/events.jsonl` | Control-metadata telemetry read by `/offline-stats` (no full source payloads) |
+| `.pi/offline-engine/events.jsonl` | Selected engine telemetry (control metadata, no full source payloads) read by `/offline-stats`; it is not a complete audit trail of the session, because routine turns and most tool calls write no event |
 | `.pi/offline-engine/candidates/` | Candidate records, including generated patch content |
-| `.pi/offline-engine/artifacts/` | Full build/test stdout, stderr and TRX results |
+| `.pi/offline-engine/artifacts/` | Full stdout and stderr of each build/test command (`<id>.log`) |
+| `.pi/offline-engine/test-results/<id>/results.trx` | The fresh TRX result of each test run, the evidence that tests executed |
 | `.pi/offline-engine/tool-results/` | Full output of compacted `dotnet` commands |
 | `.pi/offline-engine/training/raw.jsonl` | Raw training traces (only when capture is on; may contain source) |
 | `.pi/offline-engine/training/export/` | Exported datasets and manifest |

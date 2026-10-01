@@ -101,6 +101,7 @@ export function formatEngineStatus({ settings, configFile, configError, companio
     `  endpoint: ${SOURCE_LABELS[settings.sources.endpoint]}`,
     `  model: ${SOURCE_LABELS[settings.sources.model]}`,
     `  attempts: ${settings.maxAttempts} (${SOURCE_LABELS[settings.sources.maxAttempts]})`,
+    ...(settings.timeoutMs ? [`  request timeout: ${Math.round(settings.timeoutMs / 1000)} s (${SOURCE_LABELS[settings.sources.timeoutMs]})`] : []),
     `Config file: ${configFile}`
   ];
   if (configError) lines.push(`Config file problem: ${configError}`);

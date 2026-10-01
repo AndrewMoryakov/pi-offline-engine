@@ -21,11 +21,13 @@ test("falls back to built-in defaults when nothing is configured", () => {
   assert.equal(settings.endpoint, DEFAULT_SETTINGS.endpoint);
   assert.equal(settings.model, DEFAULT_SETTINGS.model);
   assert.equal(settings.maxAttempts, 3);
+  assert.equal(settings.timeoutMs, 120_000);
   assert.equal(settings.apiKey, null);
   assert.deepEqual(settings.sources, {
     endpoint: "default",
     model: "default",
     maxAttempts: "default",
+    timeoutMs: "default",
     apiKey: "none"
   });
 });
@@ -187,4 +189,16 @@ test("OPENROUTER_API_KEY is sent only to openrouter.ai", () => {
   const explicit = resolveEngineSettings({ env: { PI_OFFLINE_TINY_API_KEY: "sk-local", OPENROUTER_API_KEY: key, PI_OFFLINE_TINY_ENDPOINT: "http://10.0.0.5:8080" }, config: {} });
   assert.equal(explicit.apiKey, "sk-local");
   assert.equal(explicit.openRouterKeyWithheld, false);
+});
+
+test("the implementer request timeout comes from env, then config, clamped to 5-300 s", () => {
+  assert.deepEqual(
+    [resolveEngineSettings({ env: { PI_OFFLINE_TINY_TIMEOUT_MS: "240000" }, config: { timeoutMs: 60000 } }).timeoutMs,
+      resolveEngineSettings({ env: {}, config: { timeoutMs: 60000 } }).timeoutMs,
+      resolveEngineSettings({ env: { PI_OFFLINE_TINY_TIMEOUT_MS: "900000" } }).timeoutMs,
+      resolveEngineSettings({ env: { PI_OFFLINE_TINY_TIMEOUT_MS: "10" } }).timeoutMs,
+      resolveEngineSettings({ env: { PI_OFFLINE_TINY_TIMEOUT_MS: "soon" } }).timeoutMs],
+    [240000, 60000, 300000, 5000, 120000]
+  );
+  assert.equal(resolveEngineSettings({ env: {}, config: { timeoutMs: 60000 } }).sources.timeoutMs, "config");
 });

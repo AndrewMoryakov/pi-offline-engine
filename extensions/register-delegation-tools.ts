@@ -41,7 +41,8 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
         model: settings.model,
         callTiny,
         appendEvent,
-        attachCurrentFiles: settings.attachCurrentFiles
+        attachCurrentFiles: settings.attachCurrentFiles,
+        tinyTimeoutMs: settings.timeoutMs
       });
       return formatCandidateResult(outcome);
     }
@@ -67,7 +68,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
         trainingCaptureEnabled: runtime.state.trainingCaptureEnabled,
         appendEvent
       });
-      const { endpoint, model, maxAttempts, attachCurrentFiles } = runtime.config.settings();
+      const { endpoint, model, maxAttempts, attachCurrentFiles, timeoutMs } = runtime.config.settings();
 
       if (!ctx.hasUI && runtime.env.PI_OFFLINE_ALLOW_HEADLESS_APPLY !== "1") {
         throw new Error("execute_delegated_implementation requires interactive confirmation; set PI_OFFLINE_ALLOW_HEADLESS_APPLY=1 only in a separately sandboxed workflow");
@@ -101,6 +102,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
         withMutationQueues: runtime.withMutationQueues,
         appendEvent,
         attachCurrentFiles,
+        tinyTimeoutMs: timeoutMs,
         onAttemptStart: ({ attempt, maxAttempts: total }: { attempt: number; maxAttempts: number }) => {
           onUpdate?.({ content: [{ type: "text", text: `Tiny implementation attempt ${attempt}/${total}...` }], details: { attempt, maxAttempts: total } });
         }

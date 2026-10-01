@@ -36,7 +36,9 @@ version).
 
 The implementer endpoint and model resolve exactly as in Pi: environment
 (`PI_OFFLINE_TINY_ENDPOINT`, `PI_OFFLINE_TINY_MODEL`, `PI_OFFLINE_TINY_API_KEY` /
-`OPENROUTER_API_KEY`, `PI_OFFLINE_TINY_MAX_ATTEMPTS`), then the engine config file
+`OPENROUTER_API_KEY` (sent only to openrouter.ai), `PI_OFFLINE_TINY_MAX_ATTEMPTS`,
+`PI_OFFLINE_TINY_TIMEOUT_MS` (per request, 5-300 s, default 120 s),
+`PI_OFFLINE_ATTACH_CURRENT_FILES`), then the engine config file
 written by Pi's `/offline-setup` (`~/.pi/agent/pi-offline-engine/config.json`,
 `PI_CODING_AGENT_DIR` honoured), then the defaults. Without Pi, set the
 environment variables before starting Claude Code. Run `offline_doctor` once.

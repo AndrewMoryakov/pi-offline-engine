@@ -13,6 +13,7 @@
 //   onAttemptStart({attempt, maxAttempts})  optional progress callback
 //   attachCurrentFiles               send the allowed files' current text
 //                                    with every TinyCoder request
+//   tinyTimeoutMs                    per-request TinyCoder timeout
 //
 // Returned outcome kinds: preflight_failure, runtime_failure,
 // model_output_escalation, terminal_model_status, verification_passed,

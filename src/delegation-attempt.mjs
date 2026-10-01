@@ -77,7 +77,8 @@ export async function runDelegationAttempt({
   exec,
   withMutationQueues,
   onAttemptStart,
-  attachCurrentFiles = false
+  attachCurrentFiles = false,
+  tinyTimeoutMs = undefined
 }) {
   let stage = carriedStage;
   let tinyResult = null;
@@ -117,7 +118,7 @@ export async function runDelegationAttempt({
     await appendEvent(cwd, { type: "tiny_started", specId: spec.spec_id, model, endpoint, attempt, mode: "execute" });
 
     stage = "tiny_call";
-    tinyResult = await callTiny({ endpoint, model, spec, context: context ?? {}, repairPacket, ...(currentFiles ? { currentFiles } : {}), signal });
+    tinyResult = await callTiny({ endpoint, model, spec, context: context ?? {}, repairPacket, ...(currentFiles ? { currentFiles } : {}), ...(tinyTimeoutMs ? { timeoutMs: tinyTimeoutMs } : {}), signal });
 
     stage = "candidate_validation";
     const candidateCheck = validateCandidate(tinyResult.candidate, spec);

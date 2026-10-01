@@ -5,15 +5,22 @@ import path from "node:path";
 export const DEFAULT_SETTINGS = Object.freeze({
   endpoint: "http://127.0.0.1:8080",
   model: "qwen2.5-coder-3b-instruct",
-  maxAttempts: 3
+  maxAttempts: 3,
+  timeoutMs: 120_000
 });
 
 const MIN_ATTEMPTS = 1;
 const MAX_ATTEMPTS = 3;
 
+// Per TinyCoder request. Node's fetch stops waiting for response headers
+// after 300 s regardless of this value, and the request is not streamed, so a
+// longer timeout would only look configurable: values are clamped to 5-300 s.
+const MIN_TIMEOUT_MS = 5_000;
+const MAX_TIMEOUT_MS = 300_000;
+
 // Keys this engine is willing to persist. Credentials are deliberately absent:
 // an API key stays in the environment and is never written to disk by us.
-const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "configuredBy", "configuredAt", "backend", "editProvider", "scriptEditPolicy"]);
+const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "timeoutMs", "configuredBy", "configuredAt", "backend", "editProvider", "scriptEditPolicy"]);
 
 // Who supplies Pi's read/edit/write tools. "lean" loads the bundled
 // pi-lean-edit; "none" leaves them to another package (pi-utils overrides
@@ -87,6 +94,7 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
   const endpoint = pick(env.PI_OFFLINE_TINY_ENDPOINT, config.endpoint, DEFAULT_SETTINGS.endpoint);
   const model = pick(env.PI_OFFLINE_TINY_MODEL, config.model, DEFAULT_SETTINGS.model);
   const maxAttempts = pickAttempts(env.PI_OFFLINE_TINY_MAX_ATTEMPTS, config.maxAttempts);
+  const timeoutMs = pickTimeout(env.PI_OFFLINE_TINY_TIMEOUT_MS, config.timeoutMs);
 
   // PI_OFFLINE_TINY_API_KEY is set for the implementer and goes wherever the
   // endpoint points. OPENROUTER_API_KEY is often exported for other tools; it
@@ -100,6 +108,7 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
     endpoint: endpoint.value,
     model: model.value,
     maxAttempts: maxAttempts.value,
+    timeoutMs: timeoutMs.value,
     apiKey: apiKeyValue,
     // The engine attaches the current text of scope.allowed_files to every
     // implementer request unless PI_OFFLINE_ATTACH_CURRENT_FILES=0.
@@ -108,6 +117,7 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
       endpoint: endpoint.source,
       model: model.source,
       maxAttempts: maxAttempts.source,
+      timeoutMs: timeoutMs.source,
       apiKey: apiKeyValue ? "env" : "none"
     },
     openRouterKeyWithheld: !explicitKey && routerKey !== null && !isOpenRouterEndpoint(endpoint.value)
@@ -154,6 +164,21 @@ function pick(envValue, configValue, fallback) {
   const fromConfig = blankToNull(configValue);
   if (fromConfig !== null) return { value: fromConfig, source: "config" };
   return { value: fallback, source: "default" };
+}
+
+function pickTimeout(envValue, configValue) {
+  const fromEnv = parseTimeout(envValue);
+  if (fromEnv !== null) return { value: fromEnv, source: "env" };
+  const fromConfig = parseTimeout(configValue);
+  if (fromConfig !== null) return { value: fromConfig, source: "config" };
+  return { value: DEFAULT_SETTINGS.timeoutMs, source: "default" };
+}
+
+function parseTimeout(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, parsed));
 }
 
 function pickAttempts(envValue, configValue) {

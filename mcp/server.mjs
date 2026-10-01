@@ -56,9 +56,9 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
     async call(args, ctx) {
       const cwd = await workspace(ctx);
       await ensureSelfIgnoringStateDir(cwd);
-      const { endpoint, model, attachCurrentFiles } = settings();
+      const { endpoint, model, attachCurrentFiles, timeoutMs } = settings();
       const outcome = await runCandidateDelegation({
-        spec: args.spec, context: args.context, cwd, signal: ctx.signal, endpoint, model, callTiny, appendEvent, attachCurrentFiles
+        spec: args.spec, context: args.context, cwd, signal: ctx.signal, endpoint, model, callTiny, appendEvent, attachCurrentFiles, tinyTimeoutMs: timeoutMs
       });
       return withWorkspace(formatCandidateResult(outcome), cwd);
     }
@@ -76,7 +76,7 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
       const { trainingRunId } = await prepareDelegatedExecution({
         spec: args.spec, cwd, trainingCaptureEnabled: env.PI_OFFLINE_TRAINING_CAPTURE === "1", appendEvent
       });
-      const { endpoint, model, maxAttempts, attachCurrentFiles } = settings();
+      const { endpoint, model, maxAttempts, attachCurrentFiles, timeoutMs } = settings();
 
       const headless = env.PI_OFFLINE_ALLOW_HEADLESS_APPLY === "1";
       const approval = headless ? true : await ctx.confirm([
@@ -112,6 +112,7 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
         withMutationQueues: (_paths, fn) => fn(),
         appendEvent,
         attachCurrentFiles,
+        tinyTimeoutMs: timeoutMs,
         onAttemptStart: ({ attempt, maxAttempts: total }) => ctx.progress(`Implementer attempt ${attempt}/${total}`)
       });
       return withWorkspace(formatExecutionResult(outcome), cwd);

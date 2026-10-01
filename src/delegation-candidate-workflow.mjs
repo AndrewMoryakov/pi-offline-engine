@@ -29,7 +29,8 @@ export async function runCandidateDelegation({
   callTiny,
   appendEvent,
   saveCandidate = saveCandidateRecord,
-  attachCurrentFiles = false
+  attachCurrentFiles = false,
+  tinyTimeoutMs = undefined
 }) {
   const checked = validateImplementationSpec(spec);
   if (!checked.ok) return { kind: "spec_rejected", errors: checked.errors };
@@ -38,7 +39,7 @@ export async function runCandidateDelegation({
   await appendEvent(cwd, { type: "tiny_started", specId: spec.spec_id, model, endpoint, mode: "candidate_only" });
 
   try {
-    const result = await callTiny({ endpoint, model, spec, context: context ?? {}, ...(currentFiles ? { currentFiles } : {}), signal });
+    const result = await callTiny({ endpoint, model, spec, context: context ?? {}, ...(currentFiles ? { currentFiles } : {}), ...(tinyTimeoutMs ? { timeoutMs: tinyTimeoutMs } : {}), signal });
     const candidateCheck = validateCandidate(result.candidate, spec);
     await appendEvent(cwd, {
       type: "tiny_finished",

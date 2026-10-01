@@ -29,3 +29,8 @@ jobs:
         run: npm run gate:edit
       - name: Verify isolated Pi package installation and companion extensions
         run: npm run gate:install -- --package-dir .
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Delegated execution against a real .NET fixture
+        run: npm run gate:dotnet

@@ -61,6 +61,20 @@ npm run gate:install -- --package-dir .
 This form avoids a second install while retaining the isolated Pi agent-dir
 and RPC checks.
 
+## Real .NET verification gate
+
+```bash
+npm run gate:dotnet
+```
+
+This gate needs a .NET 10 SDK, and the fixture's MSTest.Sdk packages in the NuGet cache (the first run restores them online). It prepares the acceptance fixture in a temporary directory. It then calls `execute_delegated_implementation` from the real extension, with real `dotnet build` / `dotnet test` (TRX) and a scripted implementer that uses all three attempts:
+
+1. malformed output, which takes the model-output retry;
+2. a wrong candidate, which turns the tests red and produces a RepairPacket;
+3. the fix.
+
+It requires `verification_passed` on attempt 3, with only the declared file changed. A run ends with `DOTNET GATE: PASS`, or with `SKIPPED` when no `dotnet` is on PATH. The unit tests fake both `exec` and the Pi host, so this is the only gate that exercises real verification. It found a 10 s runner-detection timeout that failed every preflight on a Windows 11 workstation. Timing problems like that one show up only on machines slow enough to hit them.
+
 ## What this gate establishes
 
 It establishes that the checked-out source is internally consistent at the contract/runtime level:

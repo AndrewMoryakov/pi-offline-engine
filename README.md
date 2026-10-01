@@ -439,6 +439,12 @@ To check the whole turnkey path — the same `npm install --omit=dev` pi runs fo
 npm run gate:install
 ```
 
+To run the delegated execute path against a real .NET fixture — real `dotnet build`/`dotnet test`, a scripted implementer that goes through the malformed-output retry and one red-test repair — run (needs a .NET 10 SDK and, once, network for NuGet; see [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md)):
+
+```bash
+npm run gate:dotnet
+```
+
 
 ## Training-data capture
 

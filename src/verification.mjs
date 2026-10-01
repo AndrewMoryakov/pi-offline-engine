@@ -4,7 +4,11 @@ import { isSafeRelativePath } from "./implementation-spec.mjs";
 import { resolveInside, sha256 } from "./workspace-snapshot.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
-const RUNNER_DETECTION_TIMEOUT_MS = 10_000;
+// `dotnet test --help --project <p>` builds the project under
+// Microsoft.Testing.Platform to list its extension options, so it takes as
+// long as a build: 18-23 s for the acceptance fixture on a Windows 11
+// workstation, where the earlier 10 s limit failed every preflight.
+const RUNNER_DETECTION_TIMEOUT_MS = DEFAULT_TIMEOUT_MS;
 
 export async function runVerification({
   cwd,
@@ -259,7 +263,10 @@ export async function inspectDotnetTestRunner({ cwd, project = null, exec, signa
   // failure. VSTest accepts the project-qualified help shape as well.
   const args = project ? ["test", "--help", "--project", project] : ["test", "--help"];
   const help = await exec("dotnet", args, { cwd, signal, timeout: timeoutMs });
-  if (help.code !== 0 || help.killed === true) {
+  if (help.killed === true) {
+    throw new Error(`dotnet test runner detection timed out after ${Math.round(timeoutMs / 1000)} s (dotnet ${args.join(" ")})`);
+  }
+  if (help.code !== 0) {
     throw new Error(`unable to detect dotnet test runner (exit ${String(help.code)})`);
   }
 

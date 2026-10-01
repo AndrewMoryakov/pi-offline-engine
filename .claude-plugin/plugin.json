@@ -1,0 +1,51 @@
+{
+  "name": "pi-offline-engine",
+  "description": "Bounded delegation of small code changes to a cheap local or hosted implementer model, with guarded writes and deterministic .NET verification; compacts dotnet build/test output and adds a repository snapshot at session start.",
+  "version": "0.0.16",
+  "author": {
+    "name": "Andrew Moryakov"
+  },
+  "homepage": "https://github.com/AndrewMoryakov/pi-offline-engine",
+  "repository": "https://github.com/AndrewMoryakov/pi-offline-engine",
+  "keywords": [
+    "delegation",
+    "local-models",
+    "dotnet",
+    "hooks",
+    "mcp"
+  ],
+  "skills": "./claude-code/skills/",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claude-code/hooks/repo-capsule.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/claude-code/hooks/compact-dotnet-output.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "pi-offline-engine": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs"
+      ]
+    }
+  }
+}

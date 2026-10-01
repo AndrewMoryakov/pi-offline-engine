@@ -350,3 +350,27 @@ test("doctor explains a hybrid edit setup, including a hidden script edit", asyn
   const offered = await run([lineEdit, scriptEdit], { baseUrl: "https://chatgpt.com/backend-api" });
   assert.match(lineOf(offered), /edit source: \/pi-utils\/extensions\/edit\.ts, offered \(remote model,/);
 });
+
+test("a host without Pi's tool registry skips the tool and edit checks", async () => {
+  const fetchFn = async (url) => {
+    const pathname = new URL(url).pathname;
+    if (pathname === "/health") return { ok: true, async json() { return {}; } };
+    if (pathname === "/v1/models") return { ok: true, async json() { return { data: [{ id: "tiny" }] }; } };
+    return { ok: false, async json() { return {}; } };
+  };
+  const exec = async (command) => {
+    if (command === "dotnet") return { code: 0, killed: false, stdout: ".NET SDK 10.0", stderr: "" };
+    throw new Error("missing");
+  };
+  const base = { cwd: "/tmp", endpoint: "http://127.0.0.1:8081", model: "tiny", exec, fetchFn };
+
+  const hostless = await runOfflineDoctor({ ...base, tools: null });
+  assert.equal(hostless.ready, true);
+  assert.deepEqual(hostless.checks.map((x) => x.id), [
+    "tiny_endpoint", "endpoint_locality", "dotnet", "dotnet_test_runner", "runtime_state_ignore", "csharp-ls"
+  ]);
+
+  // The same inputs with an empty Pi tool set still fail on the missing tool.
+  const piWithoutTool = await runOfflineDoctor({ ...base, tools: [] });
+  assert.equal(piWithoutTool.ready, false);
+});

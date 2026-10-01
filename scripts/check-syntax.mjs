@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 
-const roots = ["src", "scripts", "tests", "extensions"];
+const roots = ["src", "scripts", "tests", "extensions", "claude-code", "mcp"];
 const files = [];
 
 for (const root of roots) {

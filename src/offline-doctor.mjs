@@ -55,16 +55,20 @@ export async function runOfflineDoctor({
     timeoutMs
   }));
 
-  checks.push(checkTool(tools, "execute_delegated_implementation", true, "bounded TinyCoder execution"));
-  checks.push(checkAnyTool(tools, ["knowledge_search"], false, "local semantic retrieval"));
-  checks.push(checkAnyTool(tools, ["lsp_diagnostics"], false, "live compiler/LSP diagnostics"));
-  checks.push(checkAnyTool(tools, ["code"], false, "code-mode mechanical pipelines"));
-  checks.push(checkAnyTool(tools, ["list_symbols", "code_overview", "lsp_symbols"], false, "structural code navigation"));
+  // `tools: null` is a host without Pi's tool registry (the MCP server): the
+  // checks below describe Pi's loaded tool set and do not apply there.
+  if (tools) {
+    checks.push(checkTool(tools, "execute_delegated_implementation", true, "bounded TinyCoder execution"));
+    checks.push(checkAnyTool(tools, ["knowledge_search"], false, "local semantic retrieval"));
+    checks.push(checkAnyTool(tools, ["lsp_diagnostics"], false, "live compiler/LSP diagnostics"));
+    checks.push(checkAnyTool(tools, ["code"], false, "code-mode mechanical pipelines"));
+    checks.push(checkAnyTool(tools, ["list_symbols", "code_overview", "lsp_symbols"], false, "structural code navigation"));
 
-  if (editProvider.value === "hybrid") {
-    checks.push(checkHybridEdit({ tools, allTools, editProvider, scriptEditPolicy, sessionModel }));
-  } else {
-    checks.push(checkEditProvider(tools, editProvider));
+    if (editProvider.value === "hybrid") {
+      checks.push(checkHybridEdit({ tools, allTools, editProvider, scriptEditPolicy, sessionModel }));
+    } else {
+      checks.push(checkEditProvider(tools, editProvider));
+    }
   }
 
   const requiredFailures = checks.filter((x) => x.required && !x.ok);

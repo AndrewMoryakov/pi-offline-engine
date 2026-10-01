@@ -1,7 +1,7 @@
 {
   "name": "pi-offline-engine",
   "description": "Bounded delegation of small code changes to a cheap local or hosted implementer model, with guarded writes and deterministic .NET verification; compacts dotnet build/test output and adds a repository snapshot at session start.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Andrew Moryakov"
   },

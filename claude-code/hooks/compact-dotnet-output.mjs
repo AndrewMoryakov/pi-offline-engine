@@ -6,10 +6,14 @@
 //
 // Claude Code applies `updatedToolOutput` for built-in tools only when it has
 // the shape of `tool_response` ({stdout, stderr, ...}); a plain string is
-// ignored (observed with Claude Code 2.1.286). Any failure exits 0 without
-// output, which leaves the original result untouched.
+// ignored. A large result arrives with stdout cut to 30,000 characters and the
+// full text in `persistedOutputPath`; the model is then shown a preview of
+// that file, so the replacement must drop the persisted-output keys, and the
+// compaction reads the full file. (Both observed with Claude Code 2.1.286.)
+// Any failure exits 0 without output, which leaves the original result
+// untouched.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { compactToolResult } from "../../src/tool-result-compactor.mjs";
 import { ensureSelfIgnoringStateDir } from "../../src/state-dir.mjs";
 
@@ -20,7 +24,8 @@ export async function compactHookPayload(payload, { env = process.env } = {}) {
 
   const toolName = String(payload.tool_name ?? "").toLowerCase();
   const cwd = typeof payload.cwd === "string" && payload.cwd ? payload.cwd : process.cwd();
-  const text = [response.stdout, response.stderr].filter((x) => typeof x === "string" && x.length > 0).join("\n");
+  const stdout = readPersistedOutput(response) ?? response.stdout;
+  const text = [stdout, response.stderr].filter((x) => typeof x === "string" && x.length > 0).join("\n");
 
   const compacted = await compactToolResult({
     cwd,
@@ -32,12 +37,26 @@ export async function compactHookPayload(payload, { env = process.env } = {}) {
   if (!compacted) return null;
   await ensureSelfIgnoringStateDir(cwd);
 
+  const { persistedOutputPath: _path, persistedOutputSize: _size, ...rest } = response;
   return {
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
-      updatedToolOutput: { ...response, stdout: compacted.content[0].text, stderr: "" }
+      updatedToolOutput: { ...rest, stdout: compacted.content[0].text, stderr: "" }
     }
   };
+}
+
+const MAX_PERSISTED_BYTES = 32 * 1024 * 1024;
+
+function readPersistedOutput(response) {
+  const file = response.persistedOutputPath;
+  if (typeof file !== "string" || !file) return null;
+  try {
+    if (statSync(file).size > MAX_PERSISTED_BYTES) return null;
+    return readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
 }
 
 if (process.argv[1]?.endsWith("compact-dotnet-output.mjs")) {

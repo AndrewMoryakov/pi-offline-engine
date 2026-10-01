@@ -7,7 +7,7 @@
       "name": "pi-offline-engine",
       "source": "./",
       "description": "Bounded implementer delegation (MCP), dotnet output compaction and a repository snapshot hook.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }

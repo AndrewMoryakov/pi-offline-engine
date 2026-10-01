@@ -1,6 +1,6 @@
 {
   "name": "pi-offline-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Offline-first Pi extension for bounded local coding delegation.",

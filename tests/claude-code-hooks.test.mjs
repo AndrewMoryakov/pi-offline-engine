@@ -127,3 +127,20 @@ test("nodeExec matches the pi.exec result contract", async () => {
   assert.equal(missing.code, 1);
   assert.equal(missing.killed, false);
 });
+
+test("a persisted large result is compacted from the full file and loses its persisted keys", () => {
+  const cwd = tempDir("pi-offline-hook-");
+  const persisted = path.join(cwd, "persisted-output.txt");
+  const fullLog = bigBuildLog + "\nsrc/B.cs(3,1): error CS1513: } expected\n";
+  fs.writeFileSync(persisted, fullLog);
+  // Claude Code cuts stdout and keeps the full text in the persisted file.
+  const payload = bashPayload(cwd, "dotnet build -v d", fullLog.slice(0, 2000));
+  payload.tool_response.persistedOutputPath = persisted;
+  payload.tool_response.persistedOutputSize = fullLog.length;
+
+  const updated = JSON.parse(runHook("compact-dotnet-output.mjs", payload).stdout).hookSpecificOutput.updatedToolOutput;
+  assert.equal("persistedOutputPath" in updated, false);
+  assert.equal("persistedOutputSize" in updated, false);
+  assert.match(updated.stdout, /error CS1513/);
+  assert.equal(updated.interrupted, false);
+});

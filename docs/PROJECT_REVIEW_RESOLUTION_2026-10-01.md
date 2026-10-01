@@ -63,8 +63,16 @@ What was observed in Claude Code 2.1.286, as opposed to read in its docs:
   on attempt 2 (4/4 tests).
 - The server and hooks run from a clean `git archive` with no `node_modules`.
 
-Not observed: the interactive elicitation dialog in the TUI, and MCP clients
-other than Claude Code.
+- Under `--plugin-dir`, the SessionStart hook put the repository snapshot into
+  the model's context: Branch/HEAD quoted correctly.
+- Under `--plugin-dir`, the PostToolUse hook compacted a 298,939-character
+  `dotnet build -v d` result to 879 characters. This only worked after 0.1.1:
+  Claude Code passes large results with `persistedOutputPath`, and 0.1.0 kept
+  that key, so the model still saw the original.
+
+Not observed: the interactive elicitation dialog in the TUI, installation
+through `/plugin marketplace add` (only `--plugin-dir` was used), and MCP
+clients other than Claude Code.
 
 ## Not done, and why
 
@@ -90,5 +98,8 @@ other than Claude Code.
   5. An unwritable ledger rejects with a raw fs error.
   6. `attempts` is a number in content but an array in details on exhaustion.
   7. Preflight-failure results lack a `usage` key.
+- **Pi path in foreign repositories.** The Pi extension still creates an
+  unignored `.pi/` there. Only the MCP server and the Claude Code hooks call
+  `ensureSelfIgnoringStateDir`.
 - **PR #16** (README in layers) belongs to a parallel session and was left
   alone. #18 removed README lines that would otherwise have conflicted with it.

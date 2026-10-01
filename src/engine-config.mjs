@@ -101,6 +101,9 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
     model: model.value,
     maxAttempts: maxAttempts.value,
     apiKey: apiKeyValue,
+    // The engine attaches the current text of scope.allowed_files to every
+    // implementer request unless PI_OFFLINE_ATTACH_CURRENT_FILES=0.
+    attachCurrentFiles: env.PI_OFFLINE_ATTACH_CURRENT_FILES !== "0",
     sources: {
       endpoint: endpoint.source,
       model: model.source,

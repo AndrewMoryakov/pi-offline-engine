@@ -26,7 +26,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
     promptSnippet: "Delegate a precise bounded code change to the local tiny implementer without applying it",
     promptGuidelines: [
       "Use delegate_implementation only after you understand the problem and can provide an explicit bounded ImplementationSpec.",
-      "When using delegate_implementation, include exact source snippets in its context when the tiny model needs to produce replace_text edits.",
+      "delegate_implementation attaches the current text of scope.allowed_files (up to 16 KB each) itself; put other relevant snippets (callees, types) in context.",
       "Do not use delegate_implementation for architecture decisions, ambiguous work, or broad repository exploration."
     ],
     parameters: DelegationParametersSchema,
@@ -40,7 +40,8 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
         endpoint: settings.endpoint,
         model: settings.model,
         callTiny,
-        appendEvent
+        appendEvent,
+        attachCurrentFiles: settings.attachCurrentFiles
       });
       return formatCandidateResult(outcome);
     }
@@ -55,7 +56,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
       "Use execute_delegated_implementation only for bounded implementation after architecture and scope are already decided.",
       "Treat execute_delegated_implementation status verification_passed as compiler/test evidence only; inspect the current diff/changed files before deciding the user task is semantically complete.",
       "Keep execute_delegated_implementation scope.allowed_files at two files or fewer.",
-      "When using execute_delegated_implementation, provide exact relevant source snippets in context; the tiny model is not a repository explorer.",
+      "execute_delegated_implementation attaches the current text of scope.allowed_files (up to 16 KB each) on every attempt; put other relevant snippets (callees, types) in context, since the tiny model is not a repository explorer.",
       "Call execute_delegated_implementation as the only mutating tool in its assistant turn; do not issue sibling edit, write, or mutating shell calls in parallel."
     ],
     parameters: DelegationParametersSchema,
@@ -66,7 +67,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
         trainingCaptureEnabled: runtime.state.trainingCaptureEnabled,
         appendEvent
       });
-      const { endpoint, model, maxAttempts } = runtime.config.settings();
+      const { endpoint, model, maxAttempts, attachCurrentFiles } = runtime.config.settings();
 
       if (!ctx.hasUI && runtime.env.PI_OFFLINE_ALLOW_HEADLESS_APPLY !== "1") {
         throw new Error("execute_delegated_implementation requires interactive confirmation; set PI_OFFLINE_ALLOW_HEADLESS_APPLY=1 only in a separately sandboxed workflow");
@@ -99,6 +100,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
         exec: runtime.exec,
         withMutationQueues: runtime.withMutationQueues,
         appendEvent,
+        attachCurrentFiles,
         onAttemptStart: ({ attempt, maxAttempts: total }: { attempt: number; maxAttempts: number }) => {
           onUpdate?.({ content: [{ type: "text", text: `Tiny implementation attempt ${attempt}/${total}...` }], details: { attempt, maxAttempts: total } });
         }

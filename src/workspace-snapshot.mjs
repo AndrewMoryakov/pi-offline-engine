@@ -2,9 +2,21 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+export const MAX_CURRENT_FILE_BYTES = 16 * 1024;
+
 export async function snapshotAllowedFiles(cwd, spec) {
+  return (await captureAllowedFiles(cwd, spec)).snapshot;
+}
+
+// The preimage snapshot plus, when asked, the current text of each allowed
+// file read from the same bytes that were hashed, so what the implementer is
+// shown is exactly the state the stale-preimage check later compares against.
+// Files over maxBytes are named but not included, to keep small implementer
+// context windows usable.
+export async function captureAllowedFiles(cwd, spec, { withContent = false, maxBytes = MAX_CURRENT_FILE_BYTES } = {}) {
   const root = await fs.realpath(cwd);
   const files = {};
+  const currentFiles = withContent ? {} : null;
   for (const relative of spec.scope.allowed_files) {
     const absolute = resolveInside(root, relative);
     await assertNoSymlinkSegments(root, absolute);
@@ -14,12 +26,19 @@ export async function snapshotAllowedFiles(cwd, spec) {
       if (!stat.isFile()) throw new Error(`allowed path is not a regular file: ${relative}`);
       const content = await fs.readFile(absolute);
       files[relative] = { exists: true, sha256: sha256(content), size: content.length };
+      if (currentFiles) {
+        currentFiles[relative] = content.length <= maxBytes
+          ? { exists: true, content: content.toString("utf8") }
+          : { exists: true, omitted: `${content.length} bytes exceeds the ${maxBytes}-byte limit; use context excerpts` };
+      }
     } catch (error) {
-      if (error?.code === "ENOENT") files[relative] = { exists: false, sha256: null, size: 0 };
-      else throw error;
+      if (error?.code === "ENOENT") {
+        files[relative] = { exists: false, sha256: null, size: 0 };
+        if (currentFiles) currentFiles[relative] = { exists: false };
+      } else throw error;
     }
   }
-  return { version: 1, root, files };
+  return { snapshot: { version: 1, root, files }, currentFiles };
 }
 
 export async function verifySnapshot(cwd, snapshot) {

@@ -26,7 +26,7 @@
 import path from "node:path";
 import { validateCandidate } from "./implementation-spec.mjs";
 import { callTinyImplementer, TinyModelOutputError } from "./tiny-client.mjs";
-import { resolveInside, snapshotAllowedFiles } from "./workspace-snapshot.mjs";
+import { captureAllowedFiles, resolveInside } from "./workspace-snapshot.mjs";
 import { saveCandidateRecord } from "./candidate-store.mjs";
 import { applyCandidate } from "./apply-candidate.mjs";
 import { runVerification } from "./verification.mjs";
@@ -76,11 +76,13 @@ export async function runDelegationAttempt({
   appendEvent,
   exec,
   withMutationQueues,
-  onAttemptStart
+  onAttemptStart,
+  attachCurrentFiles = false
 }) {
   let stage = carriedStage;
   let tinyResult = null;
   let applied = null;
+  let currentFiles = null;
   const reached = () => ({ stage, tinyResult, applied });
 
   const recordAttempt = (outcome, verification) => trainingRunId
@@ -94,6 +96,7 @@ export async function runDelegationAttempt({
         spec,
         context: context ?? {},
         repairPacket,
+        currentFiles,
         candidate: tinyResult.candidate,
         verification,
         outcome,
@@ -108,11 +111,13 @@ export async function runDelegationAttempt({
     onAttemptStart?.({ attempt, maxAttempts });
 
     stage = "snapshot";
-    const snapshot = await snapshotAllowedFiles(cwd, spec);
+    const captured = await captureAllowedFiles(cwd, spec, { withContent: attachCurrentFiles });
+    const snapshot = captured.snapshot;
+    currentFiles = captured.currentFiles;
     await appendEvent(cwd, { type: "tiny_started", specId: spec.spec_id, model, endpoint, attempt, mode: "execute" });
 
     stage = "tiny_call";
-    tinyResult = await callTiny({ endpoint, model, spec, context: context ?? {}, repairPacket, signal });
+    tinyResult = await callTiny({ endpoint, model, spec, context: context ?? {}, repairPacket, ...(currentFiles ? { currentFiles } : {}), signal });
 
     stage = "candidate_validation";
     const candidateCheck = validateCandidate(tinyResult.candidate, spec);

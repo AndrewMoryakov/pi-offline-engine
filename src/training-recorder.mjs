@@ -62,6 +62,7 @@ export function makeImplementationAttemptRecord({
   spec,
   context,
   repairPacket,
+  currentFiles = null,
   candidate,
   verification = null,
   outcome,
@@ -77,7 +78,8 @@ export function makeImplementationAttemptRecord({
     input: {
       implementation_spec: spec,
       context: context ?? {},
-      repair_packet: repairPacket ?? null
+      repair_packet: repairPacket ?? null,
+      ...(currentFiles ? { current_files: currentFiles } : {})
     },
     output: {
       candidate

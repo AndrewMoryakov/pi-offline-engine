@@ -480,3 +480,31 @@ test("never surfaces the api key when a router rejects and echoes the credential
     await once(server, "close");
   }
 });
+
+test("current files reach the model only when the engine attaches them", async () => {
+  const bodies = [];
+  const server = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    bodies.push(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ status: "insufficient_spec", reason: "x" }) } }] }));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    const currentFiles = { "src/A.cs": { exists: true, content: "class A {}\n" } };
+    await callTinyImplementer({ endpoint, model: "tiny", spec, currentFiles, timeoutMs: 5000 });
+    await callTinyImplementer({ endpoint, model: "tiny", spec, timeoutMs: 5000 });
+
+    const [withFiles, without] = bodies;
+    assert.deepEqual(JSON.parse(withFiles.messages[1].content).current_files, currentFiles);
+    assert.match(withFiles.messages[0].content, /current_files holds the exact current text/);
+    assert.equal("current_files" in JSON.parse(without.messages[1].content), false);
+    assert.doesNotMatch(without.messages[0].content, /current_files/);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});

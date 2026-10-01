@@ -245,7 +245,13 @@
         "context": {
           "snippet": "class A { int Value() => 1; }"
         },
-        "repair_packet": null
+        "repair_packet": null,
+        "current_files": {
+          "src/A.cs": {
+            "exists": true,
+            "content": "class A { int Value() => 1; }\n"
+          }
+        }
       }
     },
     {
@@ -305,6 +311,12 @@
           "error": null,
           "prior_repair_packet": null,
           "instruction": "Return a corrected bounded implementation response. Do not expand scope or redesign the task. Return JSON matching the required candidate schema exactly."
+        },
+        "current_files": {
+          "src/A.cs": {
+            "exists": true,
+            "content": "class A { int Value() => 1; }\n"
+          }
         }
       }
     }

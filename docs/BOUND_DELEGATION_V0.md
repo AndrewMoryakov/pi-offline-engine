@@ -78,7 +78,13 @@ A red verification produces a compact `RepairPacket` containing:
 - selected diagnostics;
 - artifact references.
 
-The next TinyCoder call sees the original specification plus the RepairPacket and the caller-supplied bounded context.
+The next TinyCoder call sees the original specification, the RepairPacket, the caller-supplied bounded context and `current_files`.
+
+## Current files
+
+Every TinyCoder request carries `current_files`, the current text of each `scope.allowed_files` entry. Each file is either `{exists, content}`, or `{exists: true, omitted}` when it is over 16 KB, or `{exists: false}`. The text comes from the same bytes the preimage snapshot hashes, so the model is shown exactly the state the stale-preimage check compares against. It is read again before every attempt, so a repair sees the file as the previous attempt left it, not the excerpt the main model passed at the start.
+
+The main model therefore does not echo the target files into `context`; it only adds what the implementer cannot see (callees, types). `PI_OFFLINE_ATTACH_CURRENT_FILES=0` disables attaching. Training records store `current_files` under `input`, so captured prompts match what the model saw.
 
 Default: three total TinyCoder attempts (initial + two repairs). `PI_OFFLINE_TINY_MAX_ATTEMPTS` may lower this but is capped at 3.
 

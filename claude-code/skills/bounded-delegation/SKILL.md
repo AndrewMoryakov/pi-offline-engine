@@ -71,11 +71,16 @@ commands itself; it never runs a command taken from the spec.
 
 ## Context
 
-The implementer answers with exact `replace_text` edits, so its `expected` text
-must match the file byte for byte. Pass the current source of the target symbol
-(and anything it must call) in `context`, copied from what you just read, e.g.
-`{"relevant_source": {"src/Payments/RetryPolicy.cs": "<exact excerpt>"}}`.
-A stale or paraphrased excerpt makes the edit miss, and you pay for a retry.
+The engine attaches the current text of every file in `scope.allowed_files`
+to each implementer request, up to 16 KB per file. It reads the text fresh on
+every attempt, so a repair sees the file as the previous attempt left it.
+Use `context` for what the implementer cannot see: signatures of called
+methods, related types, conventions. For example:
+`{"related_source": {"src/Payments/Backoff.cs": "<exact excerpt>"}}`.
+
+For a file over 16 KB only its name is sent. Then pass the exact excerpt
+around the target symbol in `context`; a paraphrased excerpt makes
+`replace_text` miss, and you pay for a retry.
 
 ## Reading the result
 

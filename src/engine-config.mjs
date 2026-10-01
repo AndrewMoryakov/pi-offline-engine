@@ -88,7 +88,13 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
   const model = pick(env.PI_OFFLINE_TINY_MODEL, config.model, DEFAULT_SETTINGS.model);
   const maxAttempts = pickAttempts(env.PI_OFFLINE_TINY_MAX_ATTEMPTS, config.maxAttempts);
 
-  const apiKeyValue = firstNonBlank(env.PI_OFFLINE_TINY_API_KEY, env.OPENROUTER_API_KEY);
+  // PI_OFFLINE_TINY_API_KEY is set for the implementer and goes wherever the
+  // endpoint points. OPENROUTER_API_KEY is often exported for other tools; it
+  // is sent only to openrouter.ai, never to a discovered local server or any
+  // other host the endpoint names.
+  const explicitKey = firstNonBlank(env.PI_OFFLINE_TINY_API_KEY);
+  const routerKey = firstNonBlank(env.OPENROUTER_API_KEY);
+  const apiKeyValue = explicitKey ?? (isOpenRouterEndpoint(endpoint.value) ? routerKey : null);
 
   return {
     endpoint: endpoint.value,
@@ -100,8 +106,18 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
       model: model.source,
       maxAttempts: maxAttempts.source,
       apiKey: apiKeyValue ? "env" : "none"
-    }
+    },
+    openRouterKeyWithheld: !explicitKey && routerKey !== null && !isOpenRouterEndpoint(endpoint.value)
   };
+}
+
+export function isOpenRouterEndpoint(endpoint) {
+  try {
+    const { protocol, hostname } = new URL(endpoint);
+    return protocol === "https:" && (hostname === "openrouter.ai" || hostname.endsWith(".openrouter.ai"));
+  } catch {
+    return false;
+  }
 }
 
 // Same precedence as the settings above. An unrecognised value is skipped

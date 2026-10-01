@@ -257,7 +257,7 @@ export function registerOfflineCommands(pi: ExtensionAPI, runtime: ExtensionRunt
             companionEnv: runtime.companionEnv
           }),
           `Endpoint locality: ${checkEndpointLocality(runtime.config.settings().endpoint).message}`,
-          `Implementer auth: ${runtime.config.settings().apiKey ? "bearer key configured" : "none (local endpoint)"}`,
+          `Implementer auth: ${implementerAuth(runtime.config.settings())}`,
           `Bounded execute attempts: ${runtime.config.settings().maxAttempts}`,
           "Candidate apply: exact replace_text/create_file with stale preimage protection",
           "Verification: declared dotnet build/tests, --no-restore",
@@ -277,4 +277,11 @@ function argumentChoices(choices: Array<[value: string, description: string]>) {
       .map(([value, description]) => ({ value, label: value, description }));
     return items.length > 0 ? items : null;
   };
+}
+
+function implementerAuth(settings: { apiKey: string | null; openRouterKeyWithheld?: boolean }) {
+  if (settings.apiKey) return "bearer key configured";
+  return settings.openRouterKeyWithheld
+    ? "none (OPENROUTER_API_KEY is set but sent only to openrouter.ai)"
+    : "none (local endpoint)";
 }

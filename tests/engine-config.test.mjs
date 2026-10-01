@@ -82,7 +82,10 @@ test("api keys come only from the environment, never from the config file", () =
   const fromConfig = resolveEngineSettings({ env: {}, config: { apiKey: "sk-or-v1-should-not-load" } });
   assert.equal(fromConfig.apiKey, null);
 
-  const fromEnv = resolveEngineSettings({ env: { OPENROUTER_API_KEY: " sk-or-v1-abc " }, config: {} });
+  const fromEnv = resolveEngineSettings({
+    env: { OPENROUTER_API_KEY: " sk-or-v1-abc ", PI_OFFLINE_TINY_ENDPOINT: "https://openrouter.ai/api/v1" },
+    config: {}
+  });
   assert.equal(fromEnv.apiKey, "sk-or-v1-abc");
   assert.equal(fromEnv.sources.apiKey, "env");
 
@@ -166,4 +169,22 @@ test("a hand-set editProvider survives a later /offline-setup write", () => {
   fs.writeFileSync(file, JSON.stringify({ editProvider: "none" }));
   writeEngineConfig(file, { endpoint: "http://127.0.0.1:1234" });
   assert.equal(readEngineConfig(file).config.editProvider, "none");
+});
+
+test("OPENROUTER_API_KEY is sent only to openrouter.ai", () => {
+  const key = "sk-or-v1-router";
+  for (const endpoint of [undefined, "http://127.0.0.1:1234", "http://192.168.1.20:8080", "https://example.com/v1", "http://openrouter.ai/api/v1", "https://openrouter.ai.evil.example/v1"]) {
+    const env = { OPENROUTER_API_KEY: key, ...(endpoint ? { PI_OFFLINE_TINY_ENDPOINT: endpoint } : {}) };
+    const settings = resolveEngineSettings({ env, config: {} });
+    assert.equal(settings.apiKey, null, String(endpoint));
+    assert.equal(settings.openRouterKeyWithheld, true, String(endpoint));
+  }
+  const fromConfigEndpoint = resolveEngineSettings({ env: { OPENROUTER_API_KEY: key }, config: { endpoint: "https://openrouter.ai/api/v1" } });
+  assert.equal(fromConfigEndpoint.apiKey, key);
+  assert.equal(fromConfigEndpoint.openRouterKeyWithheld, false);
+
+  // An explicit implementer key is the user's choice for whatever endpoint is set.
+  const explicit = resolveEngineSettings({ env: { PI_OFFLINE_TINY_API_KEY: "sk-local", OPENROUTER_API_KEY: key, PI_OFFLINE_TINY_ENDPOINT: "http://10.0.0.5:8080" }, config: {} });
+  assert.equal(explicit.apiKey, "sk-local");
+  assert.equal(explicit.openRouterKeyWithheld, false);
 });

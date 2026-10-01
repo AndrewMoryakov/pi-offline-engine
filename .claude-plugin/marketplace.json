@@ -1,0 +1,13 @@
+{
+  "name": "pi-offline-engine",
+  "owner": { "name": "Andrew Moryakov" },
+  "description": "pi-offline-engine packaged for Claude Code.",
+  "plugins": [
+    {
+      "name": "pi-offline-engine",
+      "source": "./",
+      "description": "Bounded implementer delegation (MCP), dotnet output compaction and a repository snapshot hook.",
+      "version": "0.0.16"
+    }
+  ]
+}

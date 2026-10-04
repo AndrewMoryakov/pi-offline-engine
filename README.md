@@ -322,7 +322,7 @@ Verify a real key end to end without touching a repository:
 node scripts/smoke-tiny-transport.mjs --live
 ```
 
-**This is not an offline configuration.** Prompts, spec text and the source excerpts in `context.relevant_source` are sent to a third party and on to whichever provider serves the model. `/offline-doctor` reports this as an `endpoint_locality` warning naming the receiving host; it is a warning rather than a readiness failure because the configuration is deliberate. Note that the locality check draws the line at your network, not at this machine — loopback, RFC1918 addresses and bare hostnames all count as local, so a LAN server is not flagged.
+**This is not an offline configuration.** Prompts, spec text and the source excerpts in `context.relevant_source` are sent to a third party and on to whichever provider serves the model. `/offline-doctor` reports this as an `endpoint_locality` warning naming the receiving host; it is a warning rather than a readiness failure because the configuration is deliberate. Note that the locality check draws the line at your network, not at this machine — loopback, RFC1918 addresses and bare hostnames all count as local, so a LAN server is not flagged. Ranges are matched against a parsed address, so a public name that merely begins like one (`192.168.example.com`) is reported as remote.
 
 The key is only ever sent as an `Authorization` header. It is not written to `events.jsonl`, candidate records or training data, and a `401` body that quotes the key back is redacted before it is persisted — by value, so a gateway token of any shape is removed, not only keys matching a known vendor pattern. Redaction still applies only to what this engine writes to disk — it says nothing about what the router does with the source you send it.
 
@@ -514,7 +514,7 @@ See [docs/TRAINING_DATA.md](docs/TRAINING_DATA.md) before enabling it: raw trace
 
 ## Canonical local gate
 
-The repository configures GitHub Actions to run the release gates on pushes and pull requests (see [status](#status-and-known-limits) for their current state). Run the same checks locally, starting with:
+The repository configures GitHub Actions to run the release gates on pull requests and on pushes to `main` and `feat/**` (see [status](#status-and-known-limits) for their current state). Run the same checks locally, starting with:
 
 ```bash
 npm ci
@@ -550,6 +550,8 @@ To check the whole turnkey path — the same `npm install --omit=dev` pi runs fo
 ```bash
 npm run gate:install
 ```
+
+CI invokes it as `npm run gate:install -- --package-dir .`, which reuses the already-installed repository tree and therefore **skips** the production install. Only the plain invocation above exercises what pi does for a git package.
 
 ## First real acceptance run
 
@@ -647,7 +649,7 @@ The repository's own `.gitignore` ignores `.pi/`; add `/.pi/offline-engine/` to 
 Experimental. `pi-offline-engine` is at version 0.0.16 and is a Git-distributed Pi package (`private: true`, not published to npm).
 
 - **Measured vs not.** The contract and helpers are covered by unit tests, extension-level tests with a fake Pi and fake TinyCoder, and the gates above. The real-model acceptance run ([docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md)) has no recorded result, and `docs/HYBRID_EDIT_V0.md` states that a real local llama-server has not been run for the hybrid evidence. Success rates of real TinyCoder implementations are therefore unknown.
-- **CI.** The workflow in `.github/workflows/ci.yml` is configured to run `gate:local`, a production dependency audit, `gate:pi`, `gate:edit` and `gate:install` on pushes and pull requests. According to [docs/PROJECT_REVIEW_2026-10-01.md](docs/PROJECT_REVIEW_2026-10-01.md), hosted runs had not started, so the gates had only been run locally. Treat them as locally verified, not as continuously verified by CI.
+- **CI.** The workflow in `.github/workflows/ci.yml` is configured to run `gate:local`, a production dependency audit, `gate:pi`, `gate:edit` and `gate:install` on pull requests and on pushes to `main` and `feat/**`. According to [docs/PROJECT_REVIEW_2026-10-01.md](docs/PROJECT_REVIEW_2026-10-01.md), hosted runs had not started, so the gates had only been run locally. Treat them as locally verified, not as continuously verified by CI.
 - **Verification is .NET-only.** Other toolchains would need new engine-built runners.
 - **Delegation limits.** At most two files, `replace_text`/`create_file` only, no symbol-level operations, no rollback after a red final attempt, and the main model must paste source into `context` by hand.
 - **Verification is not semantic completion.** Inspect the diff.

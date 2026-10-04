@@ -324,7 +324,7 @@ node scripts/smoke-tiny-transport.mjs --live
 
 **This is not an offline configuration.** Prompts, spec text and the source excerpts in `context.relevant_source` are sent to a third party and on to whichever provider serves the model. `/offline-doctor` reports this as an `endpoint_locality` warning naming the receiving host; it is a warning rather than a readiness failure because the configuration is deliberate. Note that the locality check draws the line at your network, not at this machine — loopback, RFC1918 addresses and bare hostnames all count as local, so a LAN server is not flagged.
 
-The key is only ever sent as an `Authorization` header. It is not written to `events.jsonl`, candidate records or training data, and a `401` body that quotes the key back is redacted before it is persisted. Redaction still applies only to what this engine writes to disk — it says nothing about what the router does with the source you send it.
+The key is only ever sent as an `Authorization` header. It is not written to `events.jsonl`, candidate records or training data, and a `401` body that quotes the key back is redacted before it is persisted — by value, so a gateway token of any shape is removed, not only keys matching a known vendor pattern. Redaction still applies only to what this engine writes to disk — it says nothing about what the router does with the source you send it.
 
 ## ImplementationSpec v1
 

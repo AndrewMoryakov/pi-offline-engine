@@ -61,3 +61,28 @@ test("repair packet carries runner and executed-test evidence", () => {
   assert.equal(check.executedTestCount, 0);
   assert.equal(check.resultArtifact, ".pi/results.trx");
 });
+
+test("carries each check's own diagnostics, not only the merged list", () => {
+  const packet = buildRepairPacket({
+    spec: { spec_id: "diag-001", scope: { allowed_files: ["src/A.cs"] } },
+    attempt: 1,
+    candidate: { status: "candidate", changes: [] },
+    verification: {
+      passed: false,
+      // The merged list is capped, so a failure detail can be missing from it
+      // while the check that produced it still holds the line.
+      diagnostics: ["warn : noise"],
+      checks: [{
+        kind: "tests",
+        passed: false,
+        code: 1,
+        diagnostics: ["Assert.Equal() Failure: expected 3 but was 0"]
+      }]
+    }
+  });
+
+  assert.deepEqual(
+    packet.verification.checks[0].diagnostics,
+    ["Assert.Equal() Failure: expected 3 but was 0"]
+  );
+});

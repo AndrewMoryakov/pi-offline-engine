@@ -9,6 +9,13 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 // long as a build: 18-23 s for the acceptance fixture on a Windows 11
 // workstation, where the earlier 10 s limit failed every preflight.
 const RUNNER_DETECTION_TIMEOUT_MS = DEFAULT_TIMEOUT_MS;
+const MAX_DIAGNOSTICS = 40;
+
+// The verdict line is why the check failed, so it must survive truncation: a
+// capped list used to swallow it whenever the command was noisy enough.
+function withVerdict(diagnostics, verdict) {
+  return [...diagnostics.slice(0, MAX_DIAGNOSTICS - 1), verdict];
+}
 
 export async function runVerification({
   cwd,
@@ -196,12 +203,12 @@ async function attachTrxEvidence(tests, trxPath, { runner, expectedPatterns }) {
 
   if (tests.passed && !(typeof tests.executedTestCount === "number" && tests.executedTestCount > 0)) {
     tests.passed = false;
-    tests.diagnostics = [
-      ...tests.diagnostics,
+    tests.diagnostics = withVerdict(
+      tests.diagnostics,
       tests.executedTestCount === 0
         ? "Test verification failed: zero tests executed."
         : "Test verification failed: no readable TRX execution count was produced."
-    ].slice(0, 40);
+    );
     return tests;
   }
 
@@ -211,10 +218,10 @@ async function attachTrxEvidence(tests, trxPath, { runner, expectedPatterns }) {
     );
     if (missing.length > 0) {
       tests.passed = false;
-      tests.diagnostics = [
-        ...tests.diagnostics,
+      tests.diagnostics = withVerdict(
+        tests.diagnostics,
         `MTP verification failed: declared test pattern(s) not found among executed TRX results: ${missing.join(", ")}`
-      ].slice(0, 40);
+      );
     }
   }
 
@@ -389,7 +396,12 @@ function summarize(results) {
   return {
     passed: results.length > 0 && results.every((x) => x.passed),
     checks: results,
-    diagnostics: results.flatMap((x) => x.diagnostics).slice(0, 40)
+    // Failed checks first: the build runs before the tests, so a noisy but
+    // successful build used to fill the budget and hide the failing test.
+    diagnostics: [
+      ...results.filter((x) => !x.passed).flatMap((x) => x.diagnostics),
+      ...results.filter((x) => x.passed).flatMap((x) => x.diagnostics)
+    ].slice(0, MAX_DIAGNOSTICS)
   };
 }
 
@@ -404,7 +416,7 @@ function extractDiagnostics(stdout = "", stderr = "") {
     /MTP\d+/i.test(line)
   );
   const selected = important.length ? important : lines.slice(-20);
-  return selected.slice(-40);
+  return selected.slice(-MAX_DIAGNOSTICS);
 }
 
 async function writeCommandArtifact(cwd, specId, attempt, kind, result) {

@@ -84,6 +84,8 @@ function countOccurrences(haystack, needle) {
     const index = haystack.indexOf(needle, offset);
     if (index < 0) return count;
     count += 1;
-    offset = index + needle.length;
+    // Advance by one, not by the match length: overlapping positions are
+    // real alternatives, and the anchor must be unambiguous to be applied.
+    offset = index + 1;
   }
 }

@@ -115,3 +115,24 @@ test("replacement content is inserted literally without String.replace expansion
   const text = await fs.readFile(path.join(cwd, "src", "A.cs"), "utf8");
   assert.match(text, /P\$'Q \$\$ \$&/);
 });
+
+test("rejects an anchor whose matches overlap", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-offline-"));
+  await fs.mkdir(path.join(cwd, "src"), { recursive: true });
+  // "aa" matches at index 1 and at index 2: the model's anchor is ambiguous,
+  // even though a non-overlapping scan counts it once.
+  await fs.writeFile(path.join(cwd, "src", "A.cs"), "xaaay\n", "utf8");
+
+  const s = spec();
+  const snapshot = await snapshotAllowedFiles(cwd, s);
+  const candidate = {
+    status: "candidate",
+    changes: [{ path: "src/A.cs", operation: "replace_text", expected: "aa", content: "Z" }]
+  };
+
+  await assert.rejects(
+    () => applyCandidate(cwd, { spec: s, candidate, snapshot }),
+    /exactly once|occurrences|not unique/i
+  );
+  assert.equal(await fs.readFile(path.join(cwd, "src", "A.cs"), "utf8"), "xaaay\n");
+});

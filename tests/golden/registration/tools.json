@@ -188,6 +188,8 @@
       "execute_delegated_implementation attaches the current text of scope.allowed_files (up to 16 KB each) on every attempt; put other relevant snippets (callees, types) in context, since the tiny model is not a repository explorer.",
       "Call execute_delegated_implementation as the only mutating tool in its assistant turn; do not issue sibling edit, write, or mutating shell calls in parallel."
     ],
+    "exposure": "model-only",
+    "executionMode": "sequential",
     "parameters": {
       "type": "object",
       "required": [
@@ -348,6 +350,8 @@
     "otherKeys": [
       "description",
       "execute",
+      "executionMode",
+      "exposure",
       "label",
       "name",
       "parameters",

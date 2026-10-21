@@ -8,9 +8,9 @@
 
 <p align="center">
   <a href="https://nodejs.org/"><img alt="Node.js 22.19+" src="https://img.shields.io/badge/Node.js-22.19%2B-339933.svg?logo=nodedotjs&logoColor=white"></a>
-  <a href="#install"><img alt="Pi 0.86.1 verified" src="https://img.shields.io/badge/Pi-0.86.1%20verified-6E56CF.svg"></a>
+  <a href="#install"><img alt="Pi 1.3.0 verified" src="https://img.shields.io/badge/Pi-1.3.0%20verified-6E56CF.svg"></a>
   <a href="#current-vertical-slice"><img alt="Verification: dotnet build and test" src="https://img.shields.io/badge/verification-dotnet%20build%20%2B%20test-512BD4.svg?logo=dotnet&logoColor=white"></a>
-  <a href="package.json"><img alt="Version 0.0.16" src="https://img.shields.io/badge/version-0.0.16-blue.svg"></a>
+  <a href="package.json"><img alt="Version 0.1.1" src="https://img.shields.io/badge/version-0.1.1-blue.svg"></a>
 </p>
 
 <p align="center"><b>English</b> | <a href="README.ru.md">Русский</a></p>
@@ -23,7 +23,7 @@ pi                                                      # then run /offline-doct
 
 `pi-offline-engine` is a Pi extension package for working with **local** language models, including with no network at all. One install brings the engine and four pinned companion extensions (retrieval, language server, code tool, lean edit). On top of them the engine adds: a readiness doctor and first-run endpoint discovery; two delegation tools that hand a precisely specified change to a much smaller local coding model and let real `dotnet build` / `dotnet test` decide whether it worked; a deterministic repository snapshot and compaction of large build output, so a slow model spends fewer tokens; a trimmed tool set for slow models; local telemetry; and an opt-in recorder that turns verified attempts into training data.
 
-It is experimental (version 0.0.16, a Git-distributed Pi package, not on npm) and verification is **.NET-only** today. The [status and known limits](#status-and-known-limits) say exactly what has and has not been measured.
+It is experimental (version 0.1.1, a Git-distributed Pi package, not on npm) and verification is **.NET-only** today. The [status and known limits](#status-and-known-limits) say exactly what has and has not been measured.
 
 **Contents:** [In plain words](#in-plain-words) · [What's inside](#whats-inside) · [How it works](#how-it-works) · [Quick start](#quick-start) · [Install](#install) · [Delegation in depth](#current-vertical-slice) · [Configuration](#tiny-implementer) · [Safety](#safety) · [Offline operations](#offline-operations) · [Reference](#reference) · [Troubleshooting](#troubleshooting) · [Status](#status-and-known-limits) · [Docs map](#documentation-map)
 
@@ -110,7 +110,7 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 
 ### Not built yet
 
-Post-edit Tree-sitter/LSP validation before build, code embeddings and reranking, 0.5B/1.5B implementer tiers and speculative decoding are **planned**; see [Next layers](#next-layers). Other harnesses (for example an MCP server) are only **proposed** in [docs/PROJECT_REVIEW_2026-10-01.md](docs/PROJECT_REVIEW_2026-10-01.md).
+Post-edit Tree-sitter/LSP validation before build, code embeddings and reranking, 0.5B/1.5B implementer tiers and speculative decoding are **planned**; see [Next layers](#next-layers). The MCP server and Claude Code plugin are implemented; see [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md) and the [code map](docs/ARCHITECTURE.md).
 
 ## How it works
 
@@ -140,7 +140,7 @@ The engine is one Pi extension (`extensions/index.ts`) over a Pi-independent cor
 
 ## Quick start
 
-Needs Pi 0.86.1 (the verified host baseline), Node.js 22.19.0 or newer, a local OpenAI-compatible server for the tiny coder, and the .NET SDK if you want delegation verified. Details, version pinning and the `edit` conflict cases are in [Install](#install).
+Needs Pi 1.3.0 (the verified host baseline), Node.js 22.19.0 or newer, a local OpenAI-compatible server for the tiny coder, and the .NET SDK if you want delegation verified. Details, version pinning and the `edit` conflict cases are in [Install](#install).
 
 ```bash
 pi install git:github.com/AndrewMoryakov/pi-offline-engine
@@ -172,10 +172,16 @@ pi install git:github.com/AndrewMoryakov/pi-offline-engine@<release-tag-or-commi
 ```
 
 This is a Git-distributed Pi package (`private: true`); it is not published to
-npm. The verified host baseline is **Pi 0.86.1** on **Node.js 22.19.0 or newer**.
+npm. The verified host baseline is **Pi 1.3.0** on **Node.js 22.19.0 or newer**.
 The package keeps Pi core modules as `"*"` peer dependencies, as required by
-Pi's package loader, while development and CI pin Pi 0.86.1 for reproducible
+Pi's package loader, while development and CI pin Pi 1.3.0 for reproducible
 integration tests.
+
+On Pi 1.3.0, `execute_delegated_implementation` uses `model-only` exposure and
+sequential execution: call it directly from the main model, rather than from
+codemode or another tool. Candidate-only `delegate_implementation` remains
+callable by other tools. Native codemode is optional; the bundled Python
+`code` tool remains the default. See the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md).
 
 pi clones the repository and runs `npm install`, which brings in the four bundled companion extensions — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool`, `pi-lean-edit` — at exact pinned versions, all loaded through this package's manifest. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for what each one does and which optional packages stay opt-in. Do not `pi install` the bundled four separately; that would register duplicate tools.
 
@@ -514,7 +520,7 @@ See [docs/TRAINING_DATA.md](docs/TRAINING_DATA.md) before enabling it: raw trace
 
 ## Canonical local gate
 
-The repository configures GitHub Actions to run the release gates on pull requests and on pushes to `main` and `feat/**` (see [status](#status-and-known-limits) for their current state). Run the same checks locally, starting with:
+The repository configures GitHub Actions to run the release gates on pull requests and on pushes to `main`, `feat/**` and `fix/**` (see [status](#status-and-known-limits) for their current state). Run the same checks locally, starting with:
 
 ```bash
 npm ci
@@ -522,11 +528,11 @@ npm run gate:local
 npm audit --omit=dev --audit-level=high
 ```
 
-`gate:local` checks syntax, runs the unit tests, dry-runs the offline-profile bootstrap and runs a TinyCoder transport smoke test against an in-process HTTP server.
+`gate:local` checks syntax, runs the unit and real Pi host-contract tests, dry-runs the offline-profile bootstrap, runs a TinyCoder transport smoke test against an in-process HTTP server, and loads the extension through the pinned Pi in RPC mode.
 
-The production tree currently overrides `sharp` to the audited 0.35.4 release
-because the latest `pi-knowledge` still reaches an affected 0.34.x release
-through `@huggingface/transformers`. The lockfile and packaging tests enforce
+The production tree overrides `sharp` to 0.35.5, including the fix for the
+librsvg advisory affecting 0.35.4 (GHSA-wq5f-xc86-pv6w). `pi-knowledge` reaches
+it through `@huggingface/transformers`. The lockfile and packaging tests enforce
 that override; do not remove it until the upstream dependency catches up.
 
 It is designed to run without external network access. Then run:
@@ -646,15 +652,15 @@ The repository's own `.gitignore` ignores `.pi/`; add `/.pi/offline-engine/` to 
 
 ## Status and known limits
 
-Experimental. `pi-offline-engine` is at version 0.0.16 and is a Git-distributed Pi package (`private: true`, not published to npm).
+Experimental. `pi-offline-engine` is at version 0.1.1 and is a Git-distributed Pi package (`private: true`, not published to npm).
 
 - **Measured vs not.** The contract and helpers are covered by unit tests, extension-level tests with a fake Pi and fake TinyCoder, and the gates above. The real-model acceptance run ([docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md)) has no recorded result, and `docs/HYBRID_EDIT_V0.md` states that a real local llama-server has not been run for the hybrid evidence. Success rates of real TinyCoder implementations are therefore unknown.
-- **CI.** The workflow in `.github/workflows/ci.yml` is configured to run `gate:local`, a production dependency audit, `gate:pi`, `gate:edit` and `gate:install` on pull requests and on pushes to `main` and `feat/**`. According to [docs/PROJECT_REVIEW_2026-10-01.md](docs/PROJECT_REVIEW_2026-10-01.md), hosted runs had not started, so the gates had only been run locally. Treat them as locally verified, not as continuously verified by CI.
+- **CI.** The workflow in `.github/workflows/ci.yml` runs `gate:local`, a production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` on pull requests and on pushes to `main`, `feat/**` and `fix/**`. Local Pi 1.3.0 evidence is recorded in the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md); hosted results must be checked in [Actions](https://github.com/AndrewMoryakov/pi-offline-engine/actions).
 - **Verification is .NET-only.** Other toolchains would need new engine-built runners.
-- **Delegation limits.** At most two files, `replace_text`/`create_file` only, no symbol-level operations, no rollback after a red final attempt, and the main model must paste source into `context` by hand.
+- **Delegation limits.** At most two files, `replace_text`/`create_file` only, no symbol-level operations, no rollback after a red final attempt. Allowed files are attached automatically up to 16 KiB each; add other relevant source excerpts to `context`.
 - **Verification is not semantic completion.** Inspect the diff.
 - **Bundled packages** are third-party, pinned and loaded with your permissions; `pi-lean-edit` metrics key on the tool name `edit` and were not checked for `line_edit`; the `pi-tree-sitter` pre-write guard is not qualified with pi-lean-edit.
-- **Proposed, not built.** Extracting the orchestration from `extensions/index.ts`, an MCP server or Claude Code plugin over the core, engine-side context attachment, pluggable verification runners and a frontier-model benchmark appear only as proposals in the project review.
+- **Still proposed.** Pluggable verification runners and a frontier-model benchmark. Host-independent workflows, MCP/Claude Code adapters and automatic allowed-file context attachment are implemented; see the [code map](docs/ARCHITECTURE.md).
 
 ## Next layers
 
@@ -671,6 +677,8 @@ Still planned, after the delegation contract is measured on real tasks:
 
 | Document | What it covers |
 |---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime flow, code map, trust boundaries and test routing (Russian) |
+| [docs/PI_COMPATIBILITY_2026-10-21.md](docs/PI_COMPATIBILITY_2026-10-21.md) | Pi 0.86.1 → 1.3.0 assessment, adaptations and validation evidence (Russian) |
 | [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md) | The delegation runtime contract |
 | [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) | Companion stack, bootstrap, environment, offline checklist, C# language server, MTP note |
 | [docs/HYBRID_EDIT_V0.md](docs/HYBRID_EDIT_V0.md) | The `hybrid` edit provider: task statement, constraints, evidence |

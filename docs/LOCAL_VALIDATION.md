@@ -12,17 +12,18 @@ npm run gate:local
 npm audit --omit=dev --audit-level=high
 ```
 
-`npm ci` reproduces the reviewed lockfile, including Pi 0.86.1 used by the
-integration gate and the security override for `sharp@0.35.4`. The audit is a
+`npm ci` reproduces the reviewed lockfile, including Pi 1.3.0 used by the
+integration gate and the security override for `sharp@0.35.5`. The audit is a
 release check and requires npm registry access; `gate:local` itself remains
 fully offline.
 
 The gate executes:
 
-1. syntax checks for every `.mjs`/`.ts` under `src/`, `scripts/`, `tests/` and `extensions/` (including the Pi extension);
-2. all Node unit tests;
+1. syntax checks for every `.mjs`/`.ts` under `src/`, `scripts/`, `tests/`, `extensions/`, `claude-code/` and `mcp/`;
+2. all Node tests, including the real Pi SDK loadout/nested-call contract;
 3. offline-profile bootstrap in dry-run mode;
-4. a self-contained TinyCoder transport smoke test using a local in-process HTTP server.
+4. a self-contained TinyCoder transport smoke test using a local in-process HTTP server;
+5. the real Pi RPC extension-load gate described below.
 
 No model download, npm install, NuGet restore, GitHub access, or external network call is part of this gate.
 
@@ -32,15 +33,23 @@ A successful run ends with:
 LOCAL GATE: PASS
 ```
 
-Then verify the extension against Pi. After `npm ci`, this resolves the
-repository-pinned Pi 0.86.1; outside an npm script it may use the installed Pi
-from `PATH`:
+The extension-load step can also run separately. It resolves the
+repository-pinned Pi 1.3.0 through its package manifest and starts its CLI with
+the current Node executable, including when invoked directly from another cwd.
+It does not use a global Pi from `PATH`:
 
 ```bash
 npm run gate:pi
 ```
 
-This loads only `extensions/index.ts` through Pi's real extension loader in RPC mode, asks for the registered commands and requires `offline-setup`, `offline-doctor` and `offline-status` to be among them — no LLM request is made. An extension that throws while loading makes pi exit 1 and the gate fail with the thrown message. A successful run ends with `PI LOAD GATE: PASS`.
+This loads only `extensions/index.ts` through Pi's real extension loader in RPC mode and requires all eight `/offline-*` commands — no LLM request is made. An extension that throws while loading makes pi exit 1 and the gate fail with the thrown message. A successful run ends with `PI LOAD GATE: PASS`.
+
+`tests/pi-host-contract.test.mjs` separately creates a real, isolated Pi SDK
+session and checks that delegated execution stays declared to the model,
+retains sequential execution, and cannot be called through `ctx.executeTool()`.
+Candidate-only delegation remains callable. The nested-call test failed before
+the `model-only` adaptation. `tests/pi-rpc.test.mjs` runs the CLI with no Pi on
+`PATH`; it failed before the repository-local CLI resolution.
 
 (The gate used to run `pi --list-models`, which exits 0 even when an extension fails to load, so it could not fail.)
 
@@ -92,7 +101,7 @@ It establishes that the checked-out source is internally consistent at the contr
 
 It does **not** establish:
 
-- compatibility with the locally installed Pi version (that is `gate:pi` and `gate:install`);
+- compatibility with a different global Pi version (the gates use the locked host);
 - correctness of a real Qwen GGUF;
 - llama.cpp tool/JSON behavior;
 - C# LSP availability;

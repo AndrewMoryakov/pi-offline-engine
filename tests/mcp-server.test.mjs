@@ -140,6 +140,29 @@ test("execute applies and verifies after an accepted elicitation, and stops on d
   }
 });
 
+test("a sensitive-path training skip is recorded only once the run is approved", async () => {
+  const tiny = await fakeTiny({ status: "insufficient_spec", reason: "no" });
+  const cwd = await workspaceWithClass();
+  await fs.writeFile(path.join(cwd, "src", "secrets.cs"), "class S {}\n");
+  const sensitive = { ...spec, target: { file: "src/secrets.cs", symbol: "S" }, scope: { ...spec.scope, allowed_files: ["src/secrets.cs"] } };
+  const env = { PI_OFFLINE_WORKSPACE: cwd, PI_OFFLINE_TINY_ENDPOINT: tiny.endpoint, PI_OFFLINE_TINY_MODEL: "tiny", PI_OFFLINE_TRAINING_CAPTURE: "1", PI_CODING_AGENT_DIR: await tempDir("pi-agent-") };
+  const ledger = path.join(cwd, ".pi", "offline-engine", "events.jsonl");
+  const skips = async () => {
+    const text = await fs.readFile(ledger, "utf8").catch((error) => (error.code === "ENOENT" ? "" : Promise.reject(error)));
+    return text.split("\n").filter(Boolean).map((line) => JSON.parse(line)).filter((event) => event.type === "training_capture_skipped_sensitive_path").length;
+  };
+  try {
+    await executeTool(env).tool.call({ spec: sensitive }, ctx(false).value);
+    await assert.rejects(() => executeTool(env).tool.call({ spec: sensitive }, ctx(null).value), /no MCP elicitation/);
+    assert.equal(await skips(), 0, "declined and refused runs record nothing");
+
+    await executeTool(env).tool.call({ spec: sensitive }, ctx(true).value);
+    assert.equal(await skips(), 1);
+  } finally {
+    tiny.close();
+  }
+});
+
 test("the server speaks MCP over stdio", async () => {
   const cwd = await tempDir("pi-mcp-stdio-");
   const child = spawn(process.execPath, [path.join(repoRoot, "mcp", "server.mjs")], {

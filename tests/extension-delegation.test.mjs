@@ -189,12 +189,24 @@ test("execute: user cancellation performs no preflight or model call", async () 
   assert.deepEqual(run.observed.exec, []);
 });
 
-test("execute: sensitive-path training skip is recorded even when the run is then refused", async () => {
-  await execute("sensitive-headless-refused", { spec: sensitiveSpec, hasUI: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+test("execute: sensitive-path training skip is not recorded when the run is refused", async () => {
+  const run = await execute("sensitive-headless-refused", { spec: sensitiveSpec, hasUI: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+  assert.equal(run.observed.events, null, "a refused run writes nothing to the ledger");
 });
 
-test("execute: sensitive-path training skip is recorded even when the user cancels", async () => {
-  await execute("sensitive-user-cancelled", { spec: sensitiveSpec, confirm: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+test("execute: sensitive-path training skip is not recorded when the user cancels", async () => {
+  const run = await execute("sensitive-user-cancelled", { spec: sensitiveSpec, confirm: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+  assert.equal(run.observed.events, null, "a cancelled run writes nothing to the ledger");
+});
+
+test("execute: sensitive-path training skip is the first event of a run that proceeds", async () => {
+  const run = await runTool("execute_delegated_implementation", { spec: sensitiveSpec, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+  assert.deepEqual(
+    { type: run.observed.events?.[0]?.type, specId: run.observed.events?.[0]?.specId },
+    { type: "training_capture_skipped_sensitive_path", specId: "characterize-sensitive" }
+  );
+  assert.equal(run.observed.events.filter((event) => event.type === "training_capture_skipped_sensitive_path").length, 1);
+  assert.equal(run.observed.training, null, "nothing is captured for a sensitive path");
 });
 
 test("execute: verification preflight failure is infrastructure at attempt 0", async () => {

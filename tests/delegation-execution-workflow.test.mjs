@@ -39,7 +39,7 @@ function scriptedTiny(replies) {
   return { callTiny, requests };
 }
 
-async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null, failEvent, specOverride, setup, onAttemptStart } = {}) {
+async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null, failEvent, specOverride, setup, onAttemptStart, trainingSkippedSensitivePath } = {}) {
   const cwd = await makeWorkspace();
   if (setup) await setup(cwd);
   const tiny = scriptedTiny(replies);
@@ -54,6 +54,7 @@ async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null
     model: "tiny",
     maxAttempts,
     trainingRunId,
+    trainingSkippedSensitivePath,
     callTiny: tiny.callTiny,
     exec: fakeDotnet(dotnet),
     withMutationQueues: async (paths, fn) => {
@@ -228,22 +229,34 @@ test("a failed runtime-failure event write propagates", async () => {
   );
 });
 
-test("prepareDelegatedExecution rejects an invalid spec and records sensitive-path skips", async () => {
+test("prepareDelegatedExecution rejects an invalid spec and writes nothing before confirmation", async () => {
   const cwd = await makeWorkspace();
+  const events = [];
+  const appendEvent = async (_cwd, event) => { events.push(event); };
   await assert.rejects(
-    prepareDelegatedExecution({ spec: { ...spec, version: 2 }, cwd, trainingCaptureEnabled: true, appendEvent: async () => {} }),
+    prepareDelegatedExecution({ spec: { ...spec, version: 2 }, cwd, trainingCaptureEnabled: true, appendEvent }),
     { message: "ImplementationSpec rejected: version must be 1" }
   );
 
-  const events = [];
-  const appendEvent = async (_cwd, event) => { events.push(event); };
   const sensitive = { ...spec, target: { file: "src/.env", symbol: "X" }, scope: { ...spec.scope, allowed_files: ["src/.env"] } };
-  assert.deepEqual(await prepareDelegatedExecution({ spec: sensitive, cwd, trainingCaptureEnabled: true, appendEvent }), { trainingRunId: null });
-  assert.deepEqual(events, [{ type: "training_capture_skipped_sensitive_path", specId: "workflow" }]);
+  assert.deepEqual(
+    await prepareDelegatedExecution({ spec: sensitive, cwd, trainingCaptureEnabled: true, appendEvent }),
+    { trainingRunId: null, trainingSkippedSensitivePath: true }
+  );
+  assert.deepEqual(events, [], "the skip is recorded by the run, not before the host's refusal or confirmation");
 
   const opened = await prepareDelegatedExecution({ spec, cwd, trainingCaptureEnabled: true, appendEvent, newTrainingRunId: (id) => `${id}-fixed` });
-  assert.deepEqual(opened, { trainingRunId: "workflow-fixed" });
-  assert.deepEqual(await prepareDelegatedExecution({ spec, cwd, trainingCaptureEnabled: false, appendEvent }), { trainingRunId: null });
+  assert.deepEqual(opened, { trainingRunId: "workflow-fixed", trainingSkippedSensitivePath: false });
+  assert.deepEqual(
+    await prepareDelegatedExecution({ spec: sensitive, cwd, trainingCaptureEnabled: false, appendEvent }),
+    { trainingRunId: null, trainingSkippedSensitivePath: false }
+  );
+});
+
+test("a sensitive-path training skip is the run's first event", async () => {
+  const { events } = await run({ replies: [{ status: "insufficient_spec" }], trainingSkippedSensitivePath: true });
+  assert.deepEqual(events[0], { type: "training_capture_skipped_sensitive_path", specId: "workflow" });
+  assert.equal(events.filter((event) => event.type === "training_capture_skipped_sensitive_path").length, 1);
 });
 
 test("training capture writes one record per attempt plus infrastructure failures", async () => {

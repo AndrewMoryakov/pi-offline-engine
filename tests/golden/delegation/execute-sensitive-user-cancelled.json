@@ -11,13 +11,7 @@
     }
   },
   "error": null,
-  "events": [
-    {
-      "ts": "<TS>",
-      "type": "training_capture_skipped_sensitive_path",
-      "specId": "characterize-sensitive"
-    }
-  ],
+  "events": null,
   "training": null,
   "candidates": {},
   "tinyRequests": [],

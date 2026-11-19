@@ -1,6 +1,6 @@
 {
   "result": null,
-  "error": "EISDIR: illegal operation on a directory, write",
+  "error": "Event ledger .pi/offline-engine/events.jsonl is not writable (EISDIR)",
   "events": null,
   "training": null,
   "candidates": {},

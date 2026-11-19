@@ -369,13 +369,15 @@ test("execute: onUpdate failure is classified by the stage carried from before t
   assert.equal(run.tiny.requests.length, 0);
 });
 
-test("execute: an unwritable event ledger rejects with the raw filesystem error", async () => {
+test("execute: an unwritable event ledger rejects with a classified, platform-independent error", async () => {
   const run = await execute("event-ledger-unwritable", {
     setup: async (cwd) => {
       await fs.mkdir(path.join(cwd, ".pi", "offline-engine", "events.jsonl"), { recursive: true });
     }
   });
-  assert.ok(run.error, "tool rejects");
+  // The raw fs message differs by OS (Linux names the open() call and path,
+  // Windows the write() call); only the error code is stable.
+  assert.equal(run.error, "Event ledger .pi/offline-engine/events.jsonl is not writable (EISDIR)");
   assert.equal(run.rawResult, undefined);
 });
 

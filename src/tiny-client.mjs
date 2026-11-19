@@ -1,3 +1,7 @@
+import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { resolveEndpointUrl } from "./endpoint-url.mjs";
 import { redactString } from "./training-exporter.mjs";
 
@@ -44,7 +48,10 @@ export const CANDIDATE_JSON_SCHEMA = {
   }
 };
 
-export async function callTinyImplementer({ endpoint, model, spec, context = {}, repairPacket = null, currentFiles = null, apiKey = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+export async function callTinyImplementer({ provider = "openai-compatible", claudeBin = "claude", endpoint, model, spec, context = {}, repairPacket = null, currentFiles = null, apiKey = null, signal, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+  if (provider === "claude-code") {
+    return callClaudeCodeImplementer({ claudeBin, model, spec, context, repairPacket, currentFiles, signal, timeoutMs });
+  }
   if (!endpoint) throw new Error("tiny endpoint is required");
   if (!model) throw new Error("tiny model is required");
 
@@ -251,3 +258,152 @@ function normalizeUsage(usage = {}) {
 function finiteOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
+
+// --- provider "claude-code" ------------------------------------------------
+//
+// One Claude Code CLI run per request: `claude -p` with the same system prompt
+// and user message as the HTTP transport, the candidate schema passed as
+// --json-schema, and everything else switched off. --tools "" leaves the model
+// no tools, --strict-mcp-config with no --mcp-config starts no MCP servers,
+// --setting-sources "" loads no user, project or local settings (and so none of
+// the plugins they enable), and --no-session-persistence writes no session to
+// disk. The run happens in an empty temporary directory, so no CLAUDE.md or
+// project memory is found, and without CLAUDE_CODE_PLUGIN_DIRS, so plugins the
+// parent session loads from that variable are not loaded either. --bare would
+// be stricter but reads only ANTHROPIC_API_KEY, not a Claude subscription.
+// Plugins synced to the account itself are still loaded by the CLI.
+//
+// The prompt goes on stdin: two 16 KB files do not fit a Windows command line.
+// The process is spawned without a shell. temperature cannot be set here.
+export const CLAUDE_CODE_STRUCTURED_OUTPUT_MODE = "claude_code_json_schema";
+const CLAUDE_KILL_GRACE_MS = 5_000;
+
+export function buildClaudeCodeArgs(model, systemPrompt) {
+  return [
+    "-p",
+    "--model", model,
+    "--tools", "",
+    "--strict-mcp-config",
+    "--setting-sources", "",
+    "--no-session-persistence",
+    "--output-format", "json",
+    "--system-prompt", systemPrompt,
+    "--json-schema", JSON.stringify(CANDIDATE_JSON_SCHEMA)
+  ];
+}
+
+export function claudeCodeChildEnv(env = process.env) {
+  const out = { ...env };
+  delete out.CLAUDE_CODE_PLUGIN_DIRS;
+  return out;
+}
+
+async function callClaudeCodeImplementer({ claudeBin, model, spec, context, repairPacket, currentFiles, signal, timeoutMs, spawnFn = spawn, env = process.env, tmpRoot = os.tmpdir() }) {
+  if (!model) throw new Error("tiny model is required");
+  const [system, user] = buildMessages(spec, context ?? {}, repairPacket, currentFiles);
+  const cwd = await fs.mkdtemp(path.join(tmpRoot, "pi-offline-claude-"));
+  const startedAt = Date.now();
+  try {
+    const run = await runWithStdin(claudeBin, buildClaudeCodeArgs(model, system.content), {
+      cwd, env: claudeCodeChildEnv(env), input: user.content, timeoutMs, signal, spawnFn
+    });
+    if (run.spawnError) throw new Error(`claude CLI could not start (${claudeBin}): ${run.spawnError}`);
+    if (run.timedOut) throw new Error(`tiny implementer timeout: claude CLI did not finish in ${Math.round(timeoutMs / 1000)} s`);
+    if (run.aborted) throw new Error("tiny implementer aborted");
+
+    let envelope;
+    try {
+      envelope = JSON.parse(run.stdout);
+    } catch {
+      throw new Error(`claude CLI exit ${String(run.code)}: ${redactString((run.stderr || run.stdout).trim()).slice(0, 300)}`);
+    }
+    if (envelope?.is_error === true || run.code !== 0) {
+      const kind = envelope?.api_error_type ? ` ${envelope.api_error_type}` : "";
+      const detail = String(envelope?.result ?? run.stderr ?? "").trim();
+      throw new Error(`claude CLI exit ${String(run.code)}${kind}: ${redactString(detail).slice(0, 300)}`);
+    }
+
+    const structured = envelope.structured_output;
+    const candidate = structured && typeof structured === "object" && !Array.isArray(structured)
+      ? structured
+      : parseJsonObject(String(envelope.result ?? ""));
+    return {
+      candidate: normalizeCandidate(candidate),
+      usage: claudeCodeUsage(envelope.usage),
+      latencyMs: Date.now() - startedAt,
+      structuredOutputMode: CLAUDE_CODE_STRUCTURED_OUTPUT_MODE
+    };
+  } finally {
+    await fs.rm(cwd, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+export { callClaudeCodeImplementer as _callClaudeCodeImplementerForTests };
+
+function runWithStdin(command, args, { cwd, env, input, timeoutMs, signal, spawnFn }) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawnFn(command, args, { cwd, env, shell: false, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    } catch (error) {
+      resolve({ spawnError: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    let timedOut = false;
+    let aborted = false;
+    const stop = () => {
+      child.kill("SIGTERM");
+      setTimeout(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }, CLAUDE_KILL_GRACE_MS).unref();
+    };
+    const timer = setTimeout(() => { timedOut = true; stop(); }, timeoutMs);
+    const onAbort = () => { aborted = true; stop(); };
+    if (signal?.aborted) onAbort();
+    else signal?.addEventListener("abort", onAbort, { once: true });
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      resolve(result);
+    };
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (data) => { stdout += data; });
+    child.stderr.on("data", (data) => { stderr += data; });
+    child.on("error", (error) => finish({ spawnError: error?.message ?? String(error) }));
+    child.on("close", (code) => finish({ code, stdout, stderr, timedOut, aborted }));
+    child.stdin.on("error", () => {});
+    child.stdin.end(input);
+  });
+}
+
+// Anthropic usage: input_tokens excludes cache reads and cache writes.
+function claudeCodeUsage(usage = {}) {
+  const input = finiteOrNull(usage?.input_tokens) ?? 0;
+  const cacheRead = finiteOrNull(usage?.cache_read_input_tokens) ?? 0;
+  const cacheWrite = finiteOrNull(usage?.cache_creation_input_tokens) ?? 0;
+  const output = finiteOrNull(usage?.output_tokens);
+  return {
+    inputTokens: input,
+    outputTokens: output,
+    cacheReadTokens: cacheRead,
+    cacheWriteTokens: cacheWrite,
+    totalTokens: input + cacheRead + cacheWrite + (output ?? 0)
+  };
+}
+
+// For /offline-doctor: is the CLI there, and which version.
+export async function checkClaudeCli({ claudeBin = "claude", exec, cwd, timeoutMs }) {
+  try {
+    const result = await exec(claudeBin, ["--version"], { cwd, timeout: timeoutMs });
+    const line = String(result.stdout ?? "").trim().split("\n")[0];
+    if (result.code === 0 && result.killed !== true && line) return { ok: true, version: line };
+    return { ok: false, error: `exit ${String(result.code)}${result.stderr ? `: ${String(result.stderr).trim().slice(0, 200)}` : ""}` };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+

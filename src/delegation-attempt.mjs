@@ -33,9 +33,10 @@ import { applyCandidate } from "./apply-candidate.mjs";
 import { runVerification } from "./verification.mjs";
 import { makeImplementationAttemptRecord, safeAppendTrainingRecord } from "./training-recorder.mjs";
 
-// Default TinyCoder transport. The API key is resolved per request.
-export function createTinyTransport(resolveApiKey) {
-  return (request) => callTinyImplementer({ ...request, apiKey: resolveApiKey() });
+// Default TinyCoder transport. The API key and the provider (HTTP endpoint or
+// the Claude Code CLI) are resolved per request.
+export function createTinyTransport(resolveApiKey, resolveProvider = () => ({})) {
+  return (request) => callTinyImplementer({ ...request, ...resolveProvider(), apiKey: resolveApiKey() });
 }
 
 // Best-effort training capture: a recorder failure (or its telemetry) never

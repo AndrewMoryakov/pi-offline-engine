@@ -17,7 +17,10 @@ import { formatCancelledResult, formatCandidateResult, formatExecutionResult } f
 
 export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRuntime) {
   // The API key is resolved when each TinyCoder request is made.
-  const callTiny = createTinyTransport(() => runtime.config.settings().apiKey);
+  const callTiny = createTinyTransport(() => runtime.config.settings().apiKey, () => {
+    const current = runtime.config.settings();
+    return { provider: current.provider, claudeBin: current.claudeBin };
+  });
 
   pi.registerTool({
     name: "delegate_implementation",
@@ -81,7 +84,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
           "Bounded local implementation",
           [
             `Spec: ${params.spec.spec_id}`,
-            `Tiny model: ${model}`,
+            `Tiny model: ${model}${runtime.config.settings().provider === "claude-code" ? " via Claude Code (source goes to Anthropic)" : ""}`,
             `Files: ${params.spec.scope.allowed_files.join(", ")}`,
             `Attempts: up to ${maxAttempts}`,
             "Pi will write only inside this declared scope and run the declared dotnet checks."

@@ -20,7 +20,17 @@ const MAX_TIMEOUT_MS = 300_000;
 
 // Keys this engine is willing to persist. Credentials are deliberately absent:
 // an API key stays in the environment and is never written to disk by us.
-const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "timeoutMs", "configuredBy", "configuredAt", "backend", "editProvider", "scriptEditPolicy"]);
+const PERSISTED_KEYS = new Set(["endpoint", "model", "maxAttempts", "timeoutMs", "configuredBy", "configuredAt", "backend", "editProvider", "scriptEditPolicy", "provider"]);
+
+// How the implementer is reached. "openai-compatible" (the default) posts to
+// `<endpoint>/v1/chat/completions`. "claude-code" runs the Claude Code CLI once
+// per request (`claude -p` with a JSON schema, no tools, no MCP servers and no
+// user settings), so a Claude model such as Haiku can be the implementer
+// without any server; the endpoint is then unused and the source goes to
+// Anthropic through Claude Code.
+export const IMPLEMENTER_PROVIDERS = Object.freeze(["openai-compatible", "claude-code"]);
+export const DEFAULT_IMPLEMENTER_PROVIDER = "openai-compatible";
+export const CLAUDE_CODE_DEFAULT_MODEL = "claude-haiku-5-5";
 
 // Who supplies Pi's read/edit/write tools. "lean" loads the bundled
 // pi-lean-edit; "none" leaves them to another package (pi-utils overrides
@@ -91,8 +101,13 @@ export function writeEngineConfig(file, patch) {
 // must stay on top: scripts, the acceptance harness and the documented
 // `export PI_OFFLINE_TINY_*` workflow all rely on overriding persisted state.
 export function resolveEngineSettings({ env = {}, config = {} } = {}) {
+  const provider = pickChoice(env.PI_OFFLINE_TINY_PROVIDER, config.provider, IMPLEMENTER_PROVIDERS, DEFAULT_IMPLEMENTER_PROVIDER);
   const endpoint = pick(env.PI_OFFLINE_TINY_ENDPOINT, config.endpoint, DEFAULT_SETTINGS.endpoint);
-  const model = pick(env.PI_OFFLINE_TINY_MODEL, config.model, DEFAULT_SETTINGS.model);
+  const model = pick(
+    env.PI_OFFLINE_TINY_MODEL,
+    config.model,
+    provider.value === "claude-code" ? CLAUDE_CODE_DEFAULT_MODEL : DEFAULT_SETTINGS.model
+  );
   const maxAttempts = pickAttempts(env.PI_OFFLINE_TINY_MAX_ATTEMPTS, config.maxAttempts);
   const timeoutMs = pickTimeout(env.PI_OFFLINE_TINY_TIMEOUT_MS, config.timeoutMs);
 
@@ -105,6 +120,10 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
   const apiKeyValue = explicitKey ?? (isOpenRouterEndpoint(endpoint.value) ? routerKey : null);
 
   return {
+    provider: provider.value,
+    // The Claude Code CLI the "claude-code" provider runs; resolved on PATH
+    // unless PI_OFFLINE_CLAUDE_BIN names an executable.
+    claudeBin: firstNonBlank(env.PI_OFFLINE_CLAUDE_BIN) ?? "claude",
     endpoint: endpoint.value,
     model: model.value,
     maxAttempts: maxAttempts.value,
@@ -114,6 +133,7 @@ export function resolveEngineSettings({ env = {}, config = {} } = {}) {
     // implementer request unless PI_OFFLINE_ATTACH_CURRENT_FILES=0.
     attachCurrentFiles: env.PI_OFFLINE_ATTACH_CURRENT_FILES !== "0",
     sources: {
+      provider: provider.source,
       endpoint: endpoint.source,
       model: model.source,
       maxAttempts: maxAttempts.source,

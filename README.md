@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://nodejs.org/"><img alt="Node.js 22.19+" src="https://img.shields.io/badge/Node.js-22.19%2B-339933.svg?logo=nodedotjs&logoColor=white"></a>
-  <a href="#install"><img alt="Pi 1.3.0 verified" src="https://img.shields.io/badge/Pi-1.3.0%20verified-6E56CF.svg"></a>
+  <a href="#install"><img alt="Pi 1.5.0 verified" src="https://img.shields.io/badge/Pi-1.5.0%20verified-6E56CF.svg"></a>
   <a href="#current-vertical-slice"><img alt="Verification: dotnet build and test" src="https://img.shields.io/badge/verification-dotnet%20build%20%2B%20test-512BD4.svg?logo=dotnet&logoColor=white"></a>
   <a href="package.json"><img alt="Version 0.1.1" src="https://img.shields.io/badge/version-0.1.1-blue.svg"></a>
 </p>
@@ -140,7 +140,7 @@ The engine is one Pi extension (`extensions/index.ts`) over a Pi-independent cor
 
 ## Quick start
 
-Needs Pi 1.3.0 (the verified host baseline), Node.js 22.19.0 or newer, a local OpenAI-compatible server for the tiny coder, and the .NET SDK if you want delegation verified. Details, version pinning and the `edit` conflict cases are in [Install](#install).
+Needs Pi 1.5.0 (the verified host baseline), Node.js 22.19.0 or newer, a local OpenAI-compatible server for the tiny coder, and the .NET SDK if you want delegation verified. Details, version pinning and the `edit` conflict cases are in [Install](#install).
 
 ```bash
 pi install git:github.com/AndrewMoryakov/pi-offline-engine
@@ -172,12 +172,12 @@ pi install git:github.com/AndrewMoryakov/pi-offline-engine@<release-tag-or-commi
 ```
 
 This is a Git-distributed Pi package (`private: true`); it is not published to
-npm. The verified host baseline is **Pi 1.3.0** on **Node.js 22.19.0 or newer**.
+npm. The verified host baseline is **Pi 1.5.0** on **Node.js 22.19.0 or newer**.
 The package keeps Pi core modules as `"*"` peer dependencies, as required by
-Pi's package loader, while development pins Pi 1.3.0 for reproducible
+Pi's package loader, while development pins Pi 1.5.0 for reproducible
 integration tests.
 
-On Pi 1.3.0, `execute_delegated_implementation` uses `model-only` exposure and
+On Pi 1.5.0, `execute_delegated_implementation` uses `model-only` exposure and
 sequential execution: call it directly from the main model, rather than from
 codemode or another tool. Candidate-only `delegate_implementation` remains
 callable by other tools. Native codemode is optional; the bundled Python

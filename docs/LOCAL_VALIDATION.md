@@ -12,7 +12,7 @@ npm run gate:local
 npm audit --omit=dev --audit-level=high
 ```
 
-`npm ci` reproduces the reviewed lockfile, including Pi 1.3.0 used by the
+`npm ci` reproduces the reviewed lockfile, including Pi 1.5.0 used by the
 integration gate and the security override for `sharp@0.35.5`. The audit is a
 release check and requires npm registry access; `gate:local` itself remains
 fully offline.
@@ -34,7 +34,7 @@ LOCAL GATE: PASS
 ```
 
 The extension-load step can also run separately. It resolves the
-repository-pinned Pi 1.3.0 through its package manifest and starts its CLI with
+repository-pinned Pi 1.5.0 through its package manifest and starts its CLI with
 the current Node executable, including when invoked directly from another cwd.
 It does not use a global Pi from `PATH`:
 

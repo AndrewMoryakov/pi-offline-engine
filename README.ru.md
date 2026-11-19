@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://nodejs.org/"><img alt="Node.js 22.19+" src="https://img.shields.io/badge/Node.js-22.19%2B-339933.svg?logo=nodedotjs&logoColor=white"></a>
-  <a href="#установка"><img alt="Pi 1.3.0 verified" src="https://img.shields.io/badge/Pi-1.3.0%20verified-6E56CF.svg"></a>
+  <a href="#установка"><img alt="Pi 1.5.0 verified" src="https://img.shields.io/badge/Pi-1.5.0%20verified-6E56CF.svg"></a>
   <a href="#текущий-вертикальный-срез"><img alt="Verification: dotnet build and test" src="https://img.shields.io/badge/verification-dotnet%20build%20%2B%20test-512BD4.svg?logo=dotnet&logoColor=white"></a>
   <a href="package.json"><img alt="Version 0.1.1" src="https://img.shields.io/badge/version-0.1.1-blue.svg"></a>
 </p>
@@ -140,7 +140,7 @@ pi                                                      # then run /offline-doct
 
 ## Быстрый старт
 
-Нужны Pi 1.3.0 (проверенная базовая версия хоста), Node.js 22.19.0 или новее, локальный OpenAI-совместимый сервер для крошечного кодера и .NET SDK, если вы хотите проверять делегирование. Подробности, закрепление версий и случаи конфликта `edit` — в разделе [Установка](#установка).
+Нужны Pi 1.5.0 (проверенная базовая версия хоста), Node.js 22.19.0 или новее, локальный OpenAI-совместимый сервер для крошечного кодера и .NET SDK, если вы хотите проверять делегирование. Подробности, закрепление версий и случаи конфликта `edit` — в разделе [Установка](#установка).
 
 ```bash
 pi install git:github.com/AndrewMoryakov/pi-offline-engine
@@ -170,9 +170,9 @@ pi install git:github.com/AndrewMoryakov/pi-offline-engine
 pi install git:github.com/AndrewMoryakov/pi-offline-engine@<release-tag-or-commit>
 ```
 
-Это Git-распространяемый пакет Pi (`private: true`); он не опубликован в npm. Проверенная базовая версия хоста — **Pi 1.3.0** на **Node.js 22.19.0 или новее**. Пакет держит модули ядра Pi как peer-зависимости `"*"`, как того требует загрузчик пакетов Pi, а разработка закрепляет Pi 1.3.0 для воспроизводимых интеграционных тестов.
+Это Git-распространяемый пакет Pi (`private: true`); он не опубликован в npm. Проверенная базовая версия хоста — **Pi 1.5.0** на **Node.js 22.19.0 или новее**. Пакет держит модули ядра Pi как peer-зависимости `"*"`, как того требует загрузчик пакетов Pi, а разработка закрепляет Pi 1.5.0 для воспроизводимых интеграционных тестов.
 
-В Pi 1.3.0 `execute_delegated_implementation` имеет exposure `model-only`
+В Pi 1.5.0 `execute_delegated_implementation` имеет exposure `model-only`
 и последовательное выполнение: основная модель вызывает его напрямую.
 Вызов из codemode или другого инструмента запрещён хостом. Candidate-only
 `delegate_implementation` остаётся доступным для композиции. Встроенный

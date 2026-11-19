@@ -22,8 +22,9 @@
 // attempts_exhausted (see src/delegation-results.mjs for their Pi shape).
 //
 // Error propagation is part of the contract: a failure while writing a
-// decision event for an invalid, terminal or verified attempt becomes a
-// runtime failure at that attempt's stage, while a failure writing the
+// decision event for an invalid or verified attempt becomes a runtime
+// failure at that attempt's stage, and for a terminal status at stage
+// "terminal_status" (delegated_runtime_failure), while a failure writing the
 // malformed-output retry/escalation, runtime-failure or exhaustion event
 // propagates to the caller.
 
@@ -104,7 +105,9 @@ export async function runDelegatedExecution(options) {
       changedFiles: changedFiles()
     });
     await appendEvent(cwd, { type: "delegated_implementation_runtime_failure", specId, attempt, ...outcome });
-    if (trainingRunId && state.stage !== "candidate_validation") {
+    // At these stages the attempt itself was already captured as an
+    // implementation_attempt; only the decision-event write failed.
+    if (trainingRunId && state.stage !== "candidate_validation" && state.stage !== "terminal_status") {
       await captureTrainingRecord({
         cwd,
         appendEvent,
@@ -186,6 +189,9 @@ export async function runDelegatedExecution(options) {
       }
 
       if (result.kind === "terminal_model_status") {
+        // The candidate was valid; a failure writing the decision event below
+        // is a runtime failure, not tiny_invalid_candidate.
+        state.stage = "terminal_status";
         const outcome = buildTinyTerminalOutcome({
           terminalStatus: candidate.status,
           reason: candidate.reason ?? null,

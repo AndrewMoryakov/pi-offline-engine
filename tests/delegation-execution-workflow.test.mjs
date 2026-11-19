@@ -194,9 +194,34 @@ test("a failed decision-event write becomes a runtime failure at that attempt's 
   assert.equal(outcome.outcome.workspace_modified, true);
   assert.equal(outcome.attempts.length, 1, "the attempt record was pushed before the write");
 
-  const terminal = await run({ replies: [{ status: "insufficient_spec" }], failEvent: (event) => event.type === "tiny_terminal_status" });
+});
+
+test("a failed terminal-status event write is a runtime failure, not an invalid candidate", async () => {
+  const terminal = await run({
+    replies: [{ status: "insufficient_spec" }],
+    trainingRunId: "run-terminal",
+    failEvent: (event) => event.type === "tiny_terminal_status"
+  });
   assert.equal(terminal.outcome.kind, "runtime_failure");
-  assert.equal(terminal.outcome.outcome.reason, "tiny_invalid_candidate");
+  assert.equal(terminal.outcome.outcome.stage, "terminal_status");
+  assert.equal(terminal.outcome.outcome.reason, "delegated_runtime_failure");
+  assert.equal(terminal.outcome.outcome.error, "ledger write failed for tiny_terminal_status");
+  // The attempt itself was captured before the write; no second,
+  // infrastructure record is added for the same attempt.
+  const rows = await readJsonLines(path.join(terminal.cwd, ".pi", "offline-engine", "training", "raw.jsonl"));
+  assert.deepEqual(rows.map((row) => [row.kind, row.attempt, row.supervision?.outcome ?? row.reason]), [
+    ["implementation_attempt", 1, "insufficient_spec"]
+  ]);
+
+  const afterMutation = await run({
+    replies: [change("=> 1;", "=> 2;"), { status: "cannot_safely_implement" }],
+    dotnet: { build: [RED] },
+    failEvent: (event) => event.type === "delegated_implementation_escalated"
+  });
+  assert.equal(afterMutation.outcome.kind, "runtime_failure");
+  assert.equal(afterMutation.outcome.outcome.stage, "terminal_status");
+  assert.equal(afterMutation.outcome.outcome.reason, "delegated_runtime_failure");
+  assert.equal(afterMutation.outcome.outcome.workspace_modified, true);
 });
 
 test("a throwing progress callback is classified by its own stage, not the previous attempt's", async () => {

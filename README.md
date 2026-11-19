@@ -416,7 +416,7 @@ Before disconnecting from the network:
 
 checks the configured TinyCoder endpoint/model, whether that endpoint is local, `dotnet` and its `dotnet test` runner mode (VSTest or MTP with TRX), whether `.pi/offline-engine/` is ignored by Git, optional `csharp-ls`, and whether the currently loaded Pi tool set contains the expected retrieval/LSP/code-mode/structural-navigation capabilities and the `edit` provider. The TinyCoder endpoint, `dotnet` and the `execute_delegated_implementation` tool are required; the rest are warnings.
 
-If `.pi/offline-engine/` is not ignored, the doctor suggests adding `/.pi/offline-engine/` to the repository's `.git/info/exclude` so local artifacts are not accidentally staged.
+Before the engine writes into `.pi/offline-engine/` it puts a `.gitignore` containing `*` inside it, so in a repository that does not list the directory its files stay out of `git status` and are not staged by accident. Until that first write (or, for state left by an older version, until the next one) the doctor reports the directory as not ignored yet; that line is informational, not a warning.
 
 For slow local models, reduce the tool schema exposed to the model:
 
@@ -621,7 +621,7 @@ Pi tools: `delegate_implementation`, `execute_delegated_implementation`.
 | `.pi/offline-engine/training/raw.jsonl` | Raw training traces (only when capture is on; may contain source) |
 | `.pi/offline-engine/training/export/` | Exported datasets and manifest |
 
-The repository's own `.gitignore` ignores `.pi/`; add `/.pi/offline-engine/` to a target repository's `.git/info/exclude`, which `/offline-doctor` checks.
+The engine writes `.pi/offline-engine/.gitignore` (containing `*`) itself, so a target repository needs no entry for it; this repository's own `.gitignore` also ignores `.pi/`.
 
 ### Project layout
 
@@ -645,7 +645,7 @@ The repository's own `.gitignore` ignores `.pi/`; add `/.pi/offline-engine/` to 
 | Server answers HTTP 500 `JSON schema conversion failed` | The engine retries once with `json_object`; nothing to do. |
 | `execute_delegated_implementation` is refused without a UI | Headless mutation needs `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1`, only in a separately sandboxed workflow. |
 | Doctor or preflight says MTP is active but TRX reporting is unavailable | Add `Microsoft.Testing.Extensions.TrxReport` to the test project and restore while online. |
-| Doctor warns `.pi/offline-engine` is not ignored | Add `/.pi/offline-engine/` to `.git/info/exclude`. |
+| Doctor says `.pi/offline-engine` is not ignored by Git yet | Nothing to do: the engine adds `.pi/offline-engine/.gitignore` the next time it writes there. To hide the files before that, add `/.pi/offline-engine/` to `.git/info/exclude`. |
 | pi-knowledge cannot download its embedding model | `PI_KNOWLEDGE_OFFLINE=1` was set before the first download; unset it, index a repository online, then set it. |
 | `needs_main_model` | The cheap loop could not finish; read `reason` and `stage`. The last candidate may still be in the workspace if verification stayed red; inspect `git diff`. |
 | A local model calls `line_edit` with empty arguments | The engine already flattens that schema for both `lean` and `hybrid` (HE-11); the remaining ik_llama.cpp parser bug that drops one leading space of a parameter value is documented there and not fixable in this package. |

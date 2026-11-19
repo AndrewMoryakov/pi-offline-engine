@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { isSafeRelativePath } from "./implementation-spec.mjs";
+import { ensureStateSubdir } from "./state-dir.mjs";
 import { resolveInside, sha256 } from "./workspace-snapshot.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -321,7 +322,7 @@ async function prepareTestRun(cwd, specId, attempt, discriminator) {
   const id = sha256(`${specId}:${attempt}:trx:${discriminator}`).slice(0, 20);
   const directory = path.join(cwd, ".pi", "offline-engine", "test-results", id);
   await fs.rm(directory, { recursive: true, force: true });
-  await fs.mkdir(directory, { recursive: true });
+  await ensureStateSubdir(cwd, "test-results", id);
   const fileName = "results.trx";
   return { directory, fileName, filePath: path.join(directory, fileName) };
 }
@@ -420,8 +421,7 @@ function extractDiagnostics(stdout = "", stderr = "") {
 }
 
 async function writeCommandArtifact(cwd, specId, attempt, kind, result) {
-  const dir = path.join(cwd, ".pi", "offline-engine", "artifacts");
-  await fs.mkdir(dir, { recursive: true });
+  await ensureStateSubdir(cwd, "artifacts");
   const id = sha256(`${specId}:${attempt}:${kind}`).slice(0, 20);
   const relative = path.join(".pi", "offline-engine", "artifacts", `${id}.log`);
   const absolute = path.join(cwd, relative);

@@ -687,4 +687,6 @@ npm test
 npm run check
 ```
 
+Тесты напрямую импортируют `extensions/*.ts`, поэтому им нужен Node.js со встроенным удалением типов TypeScript: официальные сборки, начиная с 22.18. В дистрибутивном пакете вроде `nodejs` 22.22.1 из Ubuntu её может не быть (`process.features.typescript` равно `false`), и тогда семь файлов тестов не загружаются с `ERR_UNKNOWN_FILE_EXTENSION` для `.ts`.
+
 Контракт рантайма — в [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md), а полные предрелизные проверки — в [Канонический локальный гейт](#канонический-локальный-гейт).

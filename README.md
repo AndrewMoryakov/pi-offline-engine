@@ -696,4 +696,6 @@ npm test
 npm run check
 ```
 
+The tests import `extensions/*.ts` directly, so they need a Node.js with built-in TypeScript type stripping: the official builds from 22.18 on. A distribution package such as Ubuntu's `nodejs` 22.22.1 can lack it (`process.features.typescript` is `false`), and then seven test files fail to load with `ERR_UNKNOWN_FILE_EXTENSION` for `.ts`.
+
 See [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md) for the runtime contract and [Canonical local gate](#canonical-local-gate) for the full pre-release checks.

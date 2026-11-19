@@ -297,7 +297,7 @@ main local model
   -> verification_passed evidence or escalation to main model
 ```
 
-The main model does not participate in the cheap repair loop. The tools carry prompt guidelines for the main model: delegate only after architecture and scope are decided, keep `allowed_files` at two or fewer, paste the exact relevant source into `context` (the engine does not read the files for the TinyCoder, and the tiny model is not a repository explorer), and call `execute_delegated_implementation` as the only mutating tool in its assistant turn so that sibling writes cannot contaminate verification. These are instructions to the model, not enforcement.
+The main model does not participate in the cheap repair loop. The tools carry prompt guidelines for the main model: delegate only after architecture and scope are decided, keep `allowed_files` at two or fewer, put other relevant snippets such as callees and types into `context` (the engine attaches the current text of the allowed files itself, up to 16 KB each, on every attempt; `PI_OFFLINE_ATTACH_CURRENT_FILES=0` turns that off; the tiny model is not a repository explorer), and call `execute_delegated_implementation` as the only mutating tool in its assistant turn so that sibling writes cannot contaminate verification. These are instructions to the model, not enforcement.
 
 ### Repair and escalation
 

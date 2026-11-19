@@ -327,6 +327,26 @@ test("fails fast when MTP has no TRX report extension", async () => {
   assert.equal(actualTestRuns, 0);
 });
 
+test("the TRX-unavailable message also names a test host that cannot start", async () => {
+  // `dotnet test --help --project` exits 0 and lists no TRX options when the
+  // runtime the project targets is missing, so this message is the only place
+  // the user can learn about that cause.
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return mtpHelp({ trx: false });
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+  await assert.rejects(
+    () => runVerification({ cwd, spec: baseSpec, exec, attempt: 1 }),
+    /test host cannot start[\s\S]*dotnet --list-runtimes/
+  );
+  await assert.rejects(
+    () => preflightVerificationInfrastructure({ cwd, spec: baseSpec, exec }),
+    /test host cannot start[\s\S]*dotnet --list-runtimes/
+  );
+});
+
 test("project-qualified runner detection gets a build-sized timeout and reports a kill as a timeout", async () => {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
   await createProjects(cwd);

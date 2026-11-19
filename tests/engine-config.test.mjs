@@ -23,7 +23,10 @@ test("falls back to built-in defaults when nothing is configured", () => {
   assert.equal(settings.maxAttempts, 3);
   assert.equal(settings.timeoutMs, 120_000);
   assert.equal(settings.apiKey, null);
+  assert.equal(settings.provider, "openai-compatible");
+  assert.equal(settings.claudeBin, "claude");
   assert.deepEqual(settings.sources, {
+    provider: "default",
     endpoint: "default",
     model: "default",
     maxAttempts: "default",

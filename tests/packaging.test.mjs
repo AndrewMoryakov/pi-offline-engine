@@ -100,4 +100,9 @@ test("peer-dependency resolution is disabled for git installs", () => {
   // would install a second pi core to satisfy pi-lean-edit's ^0.84 peer.
   const npmrc = fs.readFileSync(new URL("../.npmrc", import.meta.url), "utf8");
   assert.match(npmrc, /^legacy-peer-deps=true$/m);
+  assert.match(
+    npmrc,
+    /^onnxruntime-node-install-cuda=skip$/m,
+    "a fresh Linux x64 install must not download the CUDA build of onnxruntime-node (the release asset returns 404)"
+  );
 });

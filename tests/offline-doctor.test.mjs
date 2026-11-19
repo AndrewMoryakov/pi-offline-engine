@@ -81,7 +81,9 @@ test("defers MTP TRX reporting checks to the declared project preflight", async 
 });
 
 
-test("warns when runtime state is not ignored by Git", async () => {
+// `checkIgnoreCode` is what `git check-ignore` exits with for the state
+// directory; `gitFails` makes git itself unrunnable.
+async function runtimeStateCheck({ checkIgnoreCode, gitFails = false }) {
   const fetchFn = async (url) => {
     const pathname = new URL(url).pathname;
     if (pathname === "/health") return { ok: true, async json() { return {}; } };
@@ -96,11 +98,12 @@ test("warns when runtime state is not ignored by Git", async () => {
     if (command === "dotnet" && args[0] === "test") {
       return { code: 0, killed: false, stdout: "--logger\n--filter", stderr: "" };
     }
+    if (command === "git" && gitFails) throw new Error("git: command not found");
     if (command === "git" && args[0] === "rev-parse") {
       return { code: 0, killed: false, stdout: "/repo\n", stderr: "" };
     }
     if (command === "git" && args[0] === "check-ignore") {
-      return { code: 1, killed: false, stdout: "", stderr: "" };
+      return { code: checkIgnoreCode, killed: false, stdout: "", stderr: "" };
     }
     throw new Error("missing");
   };
@@ -113,9 +116,31 @@ test("warns when runtime state is not ignored by Git", async () => {
     exec,
     fetchFn
   });
+  return { report, check: report.checks.find((x) => x.id === "runtime_state_ignore") };
+}
 
+test("reports runtime state as ignored when Git says so", async () => {
+  const { report, check } = await runtimeStateCheck({ checkIgnoreCode: 0 });
+  assert.equal(check.message, ".pi/offline-engine is ignored by Git");
+  assert.equal(report.warnings.includes("runtime_state_ignore"), false);
+});
+
+test("does not send the user to .git/info/exclude when the engine ignores its own state", async () => {
+  // Git cannot see the engine's own .gitignore until the directory holds it,
+  // so before the first write the probe fails. That is not a problem the user
+  // has to fix: every writer creates the file (src/state-dir.mjs).
+  const { report, check } = await runtimeStateCheck({ checkIgnoreCode: 1 });
+  assert.equal(report.warnings.includes("runtime_state_ignore"), false);
+  assert.equal(check.status, "ok");
+  assert.match(check.message, /not ignored by Git yet; the engine adds a \.gitignore inside it/);
+  assert.doesNotMatch(formatDoctorReport(report), /\.git\/info\/exclude/);
+});
+
+test("still warns when Git cannot be queried about the runtime state", async () => {
+  const { report, check } = await runtimeStateCheck({ checkIgnoreCode: 1, gitFails: true });
+  assert.equal(check.status, "warn");
+  assert.match(check.message, /git: command not found/);
   assert.ok(report.warnings.includes("runtime_state_ignore"));
-  assert.match(formatDoctorReport(report), /\.git\/info\/exclude/);
 });
 
 

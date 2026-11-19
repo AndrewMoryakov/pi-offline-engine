@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { isSafeRelativePath } from "./implementation-spec.mjs";
+import { ensureStateSubdir } from "./state-dir.mjs";
 import { resolveInside, sha256 } from "./workspace-snapshot.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -59,10 +60,7 @@ export async function runVerification({
     const names = spec.verification.tests.names ?? [];
 
     if (runner === "mtp" && !testCapabilities.trxReporting) {
-      throw new Error(
-        "Microsoft.Testing.Platform is active but TRX reporting is unavailable. " +
-        "Add/enable Microsoft.Testing.Extensions.TrxReport (or an SDK profile that includes it) before offline verification."
-      );
+      throw new Error(TRX_UNAVAILABLE_MESSAGE);
     }
 
     if (runner === "mtp") {
@@ -253,15 +251,23 @@ export async function preflightVerificationInfrastructure({
     });
 
     if (testCapabilities.runner === "mtp" && !testCapabilities.trxReporting) {
-      throw new Error(
-        "Microsoft.Testing.Platform is active but TRX reporting is unavailable. " +
-        "Add/enable Microsoft.Testing.Extensions.TrxReport (or an SDK profile that includes it) before offline verification."
-      );
+      throw new Error(TRX_UNAVAILABLE_MESSAGE);
     }
   }
 
   return { root, testCapabilities };
 }
+
+// `dotnet test --help --project <project>` starts the test host to learn which
+// options the project's extensions contribute. When the host cannot start (for
+// example the project targets net8.0 and only the .NET 10 runtime is installed)
+// the help still exits 0 and simply lists no TRX options, so the two causes
+// look identical from here and the message has to name both.
+export const TRX_UNAVAILABLE_MESSAGE =
+  "Microsoft.Testing.Platform is active but TRX reporting is unavailable. " +
+  "Add/enable Microsoft.Testing.Extensions.TrxReport (or an SDK profile that includes it) before offline verification. " +
+  "The same report appears when the test host cannot start, because `dotnet test --help` launches it to list the project's options: " +
+  "check that the runtime the test project targets is installed (`dotnet --list-runtimes`).";
 
 export async function inspectDotnetTestRunner({ cwd, project = null, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {
   // MTP extensions (including TRX reporting) are contributed by the test
@@ -321,7 +327,7 @@ async function prepareTestRun(cwd, specId, attempt, discriminator) {
   const id = sha256(`${specId}:${attempt}:trx:${discriminator}`).slice(0, 20);
   const directory = path.join(cwd, ".pi", "offline-engine", "test-results", id);
   await fs.rm(directory, { recursive: true, force: true });
-  await fs.mkdir(directory, { recursive: true });
+  await ensureStateSubdir(cwd, "test-results", id);
   const fileName = "results.trx";
   return { directory, fileName, filePath: path.join(directory, fileName) };
 }
@@ -420,8 +426,7 @@ function extractDiagnostics(stdout = "", stderr = "") {
 }
 
 async function writeCommandArtifact(cwd, specId, attempt, kind, result) {
-  const dir = path.join(cwd, ".pi", "offline-engine", "artifacts");
-  await fs.mkdir(dir, { recursive: true });
+  await ensureStateSubdir(cwd, "artifacts");
   const id = sha256(`${specId}:${attempt}:${kind}`).slice(0, 20);
   const relative = path.join(".pi", "offline-engine", "artifacts", `${id}.log`);
   const absolute = path.join(cwd, relative);

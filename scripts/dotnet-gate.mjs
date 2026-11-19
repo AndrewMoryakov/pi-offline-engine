@@ -26,6 +26,17 @@ if (spawnSync(dotnet, ["--version"], { stdio: "ignore" }).status !== 0) {
   process.exit(0);
 }
 
+// The acceptance fixture targets net8.0. `dotnet test --help --project` starts
+// the test host to list the project's extension options, so on a machine that
+// has only a newer runtime (a .NET 10 SDK alone) the host cannot start, the
+// help lists no --report-trx and preflight stops with "TRX reporting is
+// unavailable". Letting the fixture roll forward to the installed major makes
+// the gate runnable there; where .NET 8 is installed it still runs on 8.
+if (!process.env.DOTNET_ROLL_FORWARD) {
+  process.env.DOTNET_ROLL_FORWARD = "Major";
+  console.log("note: DOTNET_ROLL_FORWARD=Major set for the fixture (net8.0 on a newer runtime)");
+}
+
 const work = await fs.mkdtemp(path.join(os.tmpdir(), "pi-offline-dotnet-gate-"));
 const fixture = path.join(work, "fixture");
 const prepared = spawnSync(process.execPath, [path.join(root, "scripts", "prepare-acceptance-v0.mjs"), "--restore", "--out", fixture], {

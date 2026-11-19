@@ -39,7 +39,7 @@ function scriptedTiny(replies) {
   return { callTiny, requests };
 }
 
-async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null, failEvent, specOverride, setup } = {}) {
+async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null, failEvent, specOverride, setup, onAttemptStart, trainingSkippedSensitivePath } = {}) {
   const cwd = await makeWorkspace();
   if (setup) await setup(cwd);
   const tiny = scriptedTiny(replies);
@@ -54,6 +54,7 @@ async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null
     model: "tiny",
     maxAttempts,
     trainingRunId,
+    trainingSkippedSensitivePath,
     callTiny: tiny.callTiny,
     exec: fakeDotnet(dotnet),
     withMutationQueues: async (paths, fn) => {
@@ -63,7 +64,8 @@ async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null
     appendEvent: async (_cwd, event) => {
       if (failEvent?.(event)) throw new Error(`ledger write failed for ${event.type}`);
       events.push(event);
-    }
+    },
+    onAttemptStart
   });
   return { outcome, events, tiny, queued, cwd };
 }
@@ -192,9 +194,50 @@ test("a failed decision-event write becomes a runtime failure at that attempt's 
   assert.equal(outcome.outcome.workspace_modified, true);
   assert.equal(outcome.attempts.length, 1, "the attempt record was pushed before the write");
 
-  const terminal = await run({ replies: [{ status: "insufficient_spec" }], failEvent: (event) => event.type === "tiny_terminal_status" });
+});
+
+test("a failed terminal-status event write is a runtime failure, not an invalid candidate", async () => {
+  const terminal = await run({
+    replies: [{ status: "insufficient_spec" }],
+    trainingRunId: "run-terminal",
+    failEvent: (event) => event.type === "tiny_terminal_status"
+  });
   assert.equal(terminal.outcome.kind, "runtime_failure");
-  assert.equal(terminal.outcome.outcome.reason, "tiny_invalid_candidate");
+  assert.equal(terminal.outcome.outcome.stage, "terminal_status");
+  assert.equal(terminal.outcome.outcome.reason, "delegated_runtime_failure");
+  assert.equal(terminal.outcome.outcome.error, "ledger write failed for tiny_terminal_status");
+  // The attempt itself was captured before the write; no second,
+  // infrastructure record is added for the same attempt.
+  const rows = await readJsonLines(path.join(terminal.cwd, ".pi", "offline-engine", "training", "raw.jsonl"));
+  assert.deepEqual(rows.map((row) => [row.kind, row.attempt, row.supervision?.outcome ?? row.reason]), [
+    ["implementation_attempt", 1, "insufficient_spec"]
+  ]);
+
+  const afterMutation = await run({
+    replies: [change("=> 1;", "=> 2;"), { status: "cannot_safely_implement" }],
+    dotnet: { build: [RED] },
+    failEvent: (event) => event.type === "delegated_implementation_escalated"
+  });
+  assert.equal(afterMutation.outcome.kind, "runtime_failure");
+  assert.equal(afterMutation.outcome.outcome.stage, "terminal_status");
+  assert.equal(afterMutation.outcome.outcome.reason, "delegated_runtime_failure");
+  assert.equal(afterMutation.outcome.outcome.workspace_modified, true);
+});
+
+test("a throwing progress callback is classified by its own stage, not the previous attempt's", async () => {
+  const { outcome, tiny } = await run({
+    replies: [change("=> 1;", "=> 2;")],
+    dotnet: { build: [RED] },
+    onAttemptStart: ({ attempt }) => {
+      if (attempt === 2) throw new Error("presentation failed");
+    }
+  });
+  assert.equal(tiny.requests.length, 1, "no model call after the callback failed");
+  assert.equal(outcome.kind, "runtime_failure");
+  assert.equal(outcome.outcome.stage, "progress_report");
+  assert.equal(outcome.outcome.reason, "delegated_runtime_failure");
+  assert.equal(outcome.outcome.workspace_modified, true, "attempt 1 was applied");
+  assert.equal(outcome.outcome.error, "presentation failed");
 });
 
 test("a failed malformed-output retry-event write propagates", async () => {
@@ -211,22 +254,34 @@ test("a failed runtime-failure event write propagates", async () => {
   );
 });
 
-test("prepareDelegatedExecution rejects an invalid spec and records sensitive-path skips", async () => {
+test("prepareDelegatedExecution rejects an invalid spec and writes nothing before confirmation", async () => {
   const cwd = await makeWorkspace();
+  const events = [];
+  const appendEvent = async (_cwd, event) => { events.push(event); };
   await assert.rejects(
-    prepareDelegatedExecution({ spec: { ...spec, version: 2 }, cwd, trainingCaptureEnabled: true, appendEvent: async () => {} }),
+    prepareDelegatedExecution({ spec: { ...spec, version: 2 }, cwd, trainingCaptureEnabled: true, appendEvent }),
     { message: "ImplementationSpec rejected: version must be 1" }
   );
 
-  const events = [];
-  const appendEvent = async (_cwd, event) => { events.push(event); };
   const sensitive = { ...spec, target: { file: "src/.env", symbol: "X" }, scope: { ...spec.scope, allowed_files: ["src/.env"] } };
-  assert.deepEqual(await prepareDelegatedExecution({ spec: sensitive, cwd, trainingCaptureEnabled: true, appendEvent }), { trainingRunId: null });
-  assert.deepEqual(events, [{ type: "training_capture_skipped_sensitive_path", specId: "workflow" }]);
+  assert.deepEqual(
+    await prepareDelegatedExecution({ spec: sensitive, cwd, trainingCaptureEnabled: true, appendEvent }),
+    { trainingRunId: null, trainingSkippedSensitivePath: true }
+  );
+  assert.deepEqual(events, [], "the skip is recorded by the run, not before the host's refusal or confirmation");
 
   const opened = await prepareDelegatedExecution({ spec, cwd, trainingCaptureEnabled: true, appendEvent, newTrainingRunId: (id) => `${id}-fixed` });
-  assert.deepEqual(opened, { trainingRunId: "workflow-fixed" });
-  assert.deepEqual(await prepareDelegatedExecution({ spec, cwd, trainingCaptureEnabled: false, appendEvent }), { trainingRunId: null });
+  assert.deepEqual(opened, { trainingRunId: "workflow-fixed", trainingSkippedSensitivePath: false });
+  assert.deepEqual(
+    await prepareDelegatedExecution({ spec: sensitive, cwd, trainingCaptureEnabled: false, appendEvent }),
+    { trainingRunId: null, trainingSkippedSensitivePath: false }
+  );
+});
+
+test("a sensitive-path training skip is the run's first event", async () => {
+  const { events } = await run({ replies: [{ status: "insufficient_spec" }], trainingSkippedSensitivePath: true });
+  assert.deepEqual(events[0], { type: "training_capture_skipped_sensitive_path", specId: "workflow" });
+  assert.equal(events.filter((event) => event.type === "training_capture_skipped_sensitive_path").length, 1);
 });
 
 test("training capture writes one record per attempt plus infrastructure failures", async () => {

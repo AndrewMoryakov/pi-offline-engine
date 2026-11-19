@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { ensureStateSubdir } from "./state-dir.mjs";
 
 // Key names that mark the right-hand side as credential-shaped. The fragment is
 // deliberately permissive (it also matches `cancellationToken`, `maxTokens`);
@@ -73,10 +74,13 @@ const SENSITIVE_PATH_PATTERNS = [
 export async function exportTrainingData({
   cwd,
   inputFile = path.join(cwd, ".pi", "offline-engine", "training", "raw.jsonl"),
-  outputDir = path.join(cwd, ".pi", "offline-engine", "training", "export"),
+  outputDir,
   includeFailedPreference = true
 }) {
   const rows = await readJsonl(inputFile);
+  // The default output is the state directory's own training/export, which
+  // has to ignore itself; an explicit outputDir is the caller's business.
+  outputDir ??= await ensureStateSubdir(cwd, "training", "export");
   await fs.mkdir(outputDir, { recursive: true });
 
   const sft = [];

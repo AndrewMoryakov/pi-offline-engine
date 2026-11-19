@@ -35,8 +35,12 @@ export function nodeExec(command, args, { cwd, timeout, signal } = {}) {
       resolve({ stdout, stderr: stderr + extraError, code, killed });
     };
 
-    child.stdout.on("data", (data) => { stdout += data.toString(); });
-    child.stderr.on("data", (data) => { stderr += data.toString(); });
+    // setEncoding keeps a decoder per stream, so a multi-byte character split
+    // across two chunks is not turned into two replacement characters.
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (data) => { stdout += data; });
+    child.stderr.on("data", (data) => { stderr += data; });
     child.on("error", (error) => finish(1, String(error?.message ?? error)));
     child.on("close", (code) => finish(code ?? 1));
   });

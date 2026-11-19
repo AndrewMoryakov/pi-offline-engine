@@ -68,7 +68,7 @@ hybrid mode and whether `edit` is offered, and why, because a hidden `edit`
 otherwise looks like a missing one.
 
 **HE-9 (decision).** `gate:pi` loads the engine alone and cannot see a clash
-with another package. `gate:edit` (also in CI) loads
+with another package. `gate:edit` loads
 `extensions/pi-lean-edit.ts` next to a fixture that registers `edit`, in a
 throwaway agent dir, for each mode. `lean` must still be refused, which shows
 the gate can fail.

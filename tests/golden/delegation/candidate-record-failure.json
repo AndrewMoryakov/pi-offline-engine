@@ -1,6 +1,6 @@
 {
   "result": null,
-  "error": "Tiny implementer failed: EEXIST: file already exists, mkdir '<WS>/.pi/offline-engine/candidates'",
+  "error": "Candidate record failed: EEXIST: file already exists, mkdir '<WS>/.pi/offline-engine/candidates'",
   "events": [
     {
       "ts": "<TS>",
@@ -30,7 +30,7 @@
     },
     {
       "ts": "<TS>",
-      "type": "tiny_failed",
+      "type": "candidate_record_failed",
       "specId": "characterize-build",
       "model": "fake-tiny",
       "error": "EEXIST: file already exists, mkdir '<WS>/.pi/offline-engine/candidates'",

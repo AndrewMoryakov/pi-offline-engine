@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { ensureStateSubdir } from "./state-dir.mjs";
 
 const SENSITIVE_PATH_PATTERNS = [
   /(^|\/)\.env(?:\.|$)/i,
@@ -23,8 +24,7 @@ export function hasSensitiveTrainingPath(spec, candidate = null) {
 }
 
 export async function appendTrainingRecord(cwd, record) {
-  const dir = path.join(cwd, ".pi", "offline-engine", "training");
-  await fs.mkdir(dir, { recursive: true });
+  const dir = await ensureStateSubdir(cwd, "training");
   const file = path.join(dir, "raw.jsonl");
   const row = {
     schema_version: 1,

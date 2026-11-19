@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { ensureStateSubdir } from "./state-dir.mjs";
 
 const DEFAULT_MIN_CHARS = 8000;
 const MAX_DIAGNOSTIC_LINES = 50;
@@ -109,8 +110,7 @@ function isShellTool(toolName) {
 }
 
 async function writeToolArtifact(cwd, toolCallId, command, text) {
-  const dir = path.join(cwd, ".pi", "offline-engine", "tool-results");
-  await fs.mkdir(dir, { recursive: true });
+  const dir = await ensureStateSubdir(cwd, "tool-results");
   const safeId = String(toolCallId ?? "tool").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 96);
   const file = path.join(dir, `${safeId || "tool"}.log`);
   const body = [`command=${command}`, "", text].join("\n");

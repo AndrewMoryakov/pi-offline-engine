@@ -73,8 +73,8 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
     async call(args, ctx) {
       const cwd = await workspace(ctx);
       await ensureSelfIgnoringStateDir(cwd);
-      const { trainingRunId } = await prepareDelegatedExecution({
-        spec: args.spec, cwd, trainingCaptureEnabled: env.PI_OFFLINE_TRAINING_CAPTURE === "1", appendEvent
+      const { trainingRunId, trainingSkippedSensitivePath } = await prepareDelegatedExecution({
+        spec: args.spec, trainingCaptureEnabled: env.PI_OFFLINE_TRAINING_CAPTURE === "1"
       });
       const { endpoint, model, maxAttempts, attachCurrentFiles, timeoutMs } = settings();
 
@@ -105,6 +105,7 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
         model,
         maxAttempts,
         trainingRunId,
+        trainingSkippedSensitivePath,
         callTiny,
         exec,
         // No Pi mutation queue across processes; the SHA-256 preimage check

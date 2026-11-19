@@ -10,7 +10,23 @@
           "changed_files": [
             "src/A.cs"
           ],
-          "attempts": 1,
+          "attempts": [
+            {
+              "attempt": 1,
+              "usage": {
+                "inputTokens": 101,
+                "outputTokens": 11,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0,
+                "totalTokens": 112
+              },
+              "latencyMs": "<MS>",
+              "changedFiles": [
+                "src/A.cs"
+              ],
+              "verificationPassed": false
+            }
+          ],
           "verification": {
             "passed": false,
             "checks": [

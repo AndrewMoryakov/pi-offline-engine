@@ -189,12 +189,24 @@ test("execute: user cancellation performs no preflight or model call", async () 
   assert.deepEqual(run.observed.exec, []);
 });
 
-test("execute: sensitive-path training skip is recorded even when the run is then refused", async () => {
-  await execute("sensitive-headless-refused", { spec: sensitiveSpec, hasUI: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+test("execute: sensitive-path training skip is not recorded when the run is refused", async () => {
+  const run = await execute("sensitive-headless-refused", { spec: sensitiveSpec, hasUI: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+  assert.equal(run.observed.events, null, "a refused run writes nothing to the ledger");
 });
 
-test("execute: sensitive-path training skip is recorded even when the user cancels", async () => {
-  await execute("sensitive-user-cancelled", { spec: sensitiveSpec, confirm: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+test("execute: sensitive-path training skip is not recorded when the user cancels", async () => {
+  const run = await execute("sensitive-user-cancelled", { spec: sensitiveSpec, confirm: false, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+  assert.equal(run.observed.events, null, "a cancelled run writes nothing to the ledger");
+});
+
+test("execute: sensitive-path training skip is the first event of a run that proceeds", async () => {
+  const run = await runTool("execute_delegated_implementation", { spec: sensitiveSpec, factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" } });
+  assert.deepEqual(
+    { type: run.observed.events?.[0]?.type, specId: run.observed.events?.[0]?.specId },
+    { type: "training_capture_skipped_sensitive_path", specId: "characterize-sensitive" }
+  );
+  assert.equal(run.observed.events.filter((event) => event.type === "training_capture_skipped_sensitive_path").length, 1);
+  assert.equal(run.observed.training, null, "nothing is captured for a sensitive path");
 });
 
 test("execute: verification preflight failure is infrastructure at attempt 0", async () => {
@@ -356,26 +368,29 @@ test("execute: exhausted red verifications return cumulative state", async () =>
     factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" }
   });
   assert.equal(run.tiny.requests.length, 3);
-  assert.equal(JSON.parse(run.rawResult.content[0].text).attempts, 3);
+  assert.equal(JSON.parse(run.rawResult.content[0].text).attempts.length, 3);
 });
 
 // --- edge paths that must survive extraction ---------------------------------
 
-test("execute: onUpdate failure is classified by the stage carried from before the loop", async () => {
+test("execute: onUpdate failure is a runtime failure at its own stage", async () => {
   const run = await execute("on-update-throws", {
     onUpdate: () => { throw new Error("presentation failed"); }
   });
-  assert.equal(run.rawResult.details.reason, "verification_infrastructure_failure");
+  assert.equal(run.rawResult.details.stage, "progress_report");
+  assert.equal(run.rawResult.details.reason, "delegated_runtime_failure");
   assert.equal(run.tiny.requests.length, 0);
 });
 
-test("execute: an unwritable event ledger rejects with the raw filesystem error", async () => {
+test("execute: an unwritable event ledger rejects with a classified, platform-independent error", async () => {
   const run = await execute("event-ledger-unwritable", {
     setup: async (cwd) => {
       await fs.mkdir(path.join(cwd, ".pi", "offline-engine", "events.jsonl"), { recursive: true });
     }
   });
-  assert.ok(run.error, "tool rejects");
+  // The raw fs message differs by OS (Linux names the open() call and path,
+  // Windows the write() call); only the error code is stable.
+  assert.equal(run.error, "Event ledger .pi/offline-engine/events.jsonl is not writable (EISDIR)");
   assert.equal(run.rawResult, undefined);
 });
 
@@ -411,14 +426,16 @@ test("candidate: malformed output emits tiny_failed and throws", async () => {
   assert.match(run.error, /^Tiny implementer failed: /);
 });
 
-test("candidate: candidate record failure surfaces as tiny_failed", async () => {
-  await candidateOnly("record-failure", {
+test("candidate: candidate record failure is reported as a storage failure, not a Tiny failure", async () => {
+  const run = await candidateOnly("record-failure", {
     replies: [ONE_TO_TWO],
     setup: async (cwd) => {
       await fs.mkdir(path.join(cwd, ".pi", "offline-engine"), { recursive: true });
       await fs.writeFile(path.join(cwd, ".pi", "offline-engine", "candidates"), "not a directory");
     }
   });
+  assert.match(run.error, /^Candidate record failed: EEXIST/);
+  assert.deepEqual(run.observed.events.map((event) => event.type), ["tiny_started", "tiny_finished", "candidate_record_failed"]);
 });
 
 test("candidate: snapshot failure propagates raw", async () => {

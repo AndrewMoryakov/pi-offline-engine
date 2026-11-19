@@ -66,11 +66,9 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
     ],
     parameters: DelegationParametersSchema,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
-      const { trainingRunId } = await prepareDelegatedExecution({
+      const { trainingRunId, trainingSkippedSensitivePath } = await prepareDelegatedExecution({
         spec: params.spec,
-        cwd: ctx.cwd,
-        trainingCaptureEnabled: runtime.state.trainingCaptureEnabled,
-        appendEvent
+        trainingCaptureEnabled: runtime.state.trainingCaptureEnabled
       });
       const { endpoint, model, maxAttempts, attachCurrentFiles, timeoutMs } = runtime.config.settings();
 
@@ -101,6 +99,7 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
         model,
         maxAttempts,
         trainingRunId,
+        trainingSkippedSensitivePath,
         callTiny,
         exec: runtime.exec,
         withMutationQueues: runtime.withMutationQueues,

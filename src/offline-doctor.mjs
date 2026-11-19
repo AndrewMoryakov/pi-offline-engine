@@ -236,15 +236,20 @@ async function checkRuntimeStateIgnore({ exec, cwd, timeoutMs }) {
       { cwd, timeout: timeoutMs }
     );
 
-    const ok = ignored.code === 0;
+    // Not a warning: the engine puts a `.gitignore` containing `*` into
+    // .pi/offline-engine/ before every write (src/state-dir.mjs), and only
+    // that file makes this probe succeed. So the probe fails in a repository
+    // the engine has not written to yet, and in one holding state from a
+    // version that did not have the file; the next write fixes both.
+    const message = ignored.code === 0
+      ? ".pi/offline-engine is ignored by Git"
+      : ".pi/offline-engine is not ignored by Git yet; the engine adds a .gitignore inside it the next time it writes there, so its files are not staged by accident";
     return {
       id: "runtime_state_ignore",
       required: false,
-      ok,
-      status: ok ? "ok" : "warn",
-      message: ok
-        ? ".pi/offline-engine is ignored by Git"
-        : ".pi/offline-engine is not ignored; add '/.pi/offline-engine/' to .git/info/exclude before real use to avoid accidental commits"
+      ok: true,
+      status: "ok",
+      message
     };
   } catch (error) {
     return {

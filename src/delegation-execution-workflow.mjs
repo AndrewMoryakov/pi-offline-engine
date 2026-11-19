@@ -11,6 +11,8 @@
 //   withMutationQueues(paths, fn)    serializes writes to candidate targets
 //   appendEvent(cwd, event)          event-ledger writer
 //   onAttemptStart({attempt, maxAttempts})  optional progress callback
+//   trainingRunId, trainingSkippedSensitivePath
+//                                    as returned by prepareDelegatedExecution
 //   attachCurrentFiles               send the allowed files' current text
 //                                    with every TinyCoder request
 //   tinyTimeoutMs                    per-request TinyCoder timeout
@@ -20,8 +22,9 @@
 // attempts_exhausted (see src/delegation-results.mjs for their Pi shape).
 //
 // Error propagation is part of the contract: a failure while writing a
-// decision event for an invalid, terminal or verified attempt becomes a
-// runtime failure at that attempt's stage, while a failure writing the
+// decision event for an invalid or verified attempt becomes a runtime
+// failure at that attempt's stage, and for a terminal status at stage
+// "terminal_status" (delegated_runtime_failure), while a failure writing the
 // malformed-output retry/escalation, runtime-failure or exhaustion event
 // propagates to the caller.
 
@@ -37,26 +40,28 @@ import { captureTrainingRecord, runDelegationAttempt } from "./delegation-attemp
 export { createTinyTransport } from "./delegation-attempt.mjs";
 
 // Runs before any host confirmation: rejects an invalid spec (throws) and
-// opens the training run. A sensitive-path skip is recorded here, i.e. even
-// if the host then refuses or the user cancels.
-export async function prepareDelegatedExecution({ spec, cwd, trainingCaptureEnabled, appendEvent, newTrainingRunId = createTrainingRunId }) {
+// opens the training run. It writes nothing: a sensitive-path skip is only
+// reported back, and runDelegatedExecution records it once the host has let
+// the run proceed, so a refused or cancelled run leaves no ledger entry.
+export async function prepareDelegatedExecution({ spec, trainingCaptureEnabled, newTrainingRunId = createTrainingRunId }) {
   const checked = validateImplementationSpec(spec);
   if (!checked.ok) throw new Error(`ImplementationSpec rejected: ${checked.errors.join("; ")}`);
 
   const trainingSensitive = hasSensitiveTrainingPath(spec);
   const trainingRunId = trainingCaptureEnabled && !trainingSensitive ? newTrainingRunId(spec.spec_id) : null;
-  if (trainingCaptureEnabled && trainingSensitive) {
-    await appendEvent(cwd, { type: "training_capture_skipped_sensitive_path", specId: spec.spec_id });
-  }
-  return { trainingRunId };
+  return { trainingRunId, trainingSkippedSensitivePath: Boolean(trainingCaptureEnabled && trainingSensitive) };
 }
 
 export async function runDelegatedExecution(options) {
-  const { spec, cwd, signal, maxAttempts, trainingRunId, exec, appendEvent } = options;
+  const { spec, cwd, signal, maxAttempts, trainingRunId, trainingSkippedSensitivePath, exec, appendEvent } = options;
   const specId = spec.spec_id;
 
-  // The stage survives across attempts: a failure before an attempt sets its
-  // first stage is classified by the stage reached previously.
+  if (trainingSkippedSensitivePath) {
+    await appendEvent(cwd, { type: "training_capture_skipped_sensitive_path", specId });
+  }
+
+  // `stage` is the last stage reached: the preflight, then the stage each
+  // attempt returns. An attempt never inherits it.
   const state = {
     stage: "verification_preflight",
     repairPacket: null,
@@ -100,7 +105,9 @@ export async function runDelegatedExecution(options) {
       changedFiles: changedFiles()
     });
     await appendEvent(cwd, { type: "delegated_implementation_runtime_failure", specId, attempt, ...outcome });
-    if (trainingRunId && state.stage !== "candidate_validation") {
+    // At these stages the attempt itself was already captured as an
+    // implementation_attempt; only the decision-event write failed.
+    if (trainingRunId && state.stage !== "candidate_validation" && state.stage !== "terminal_status") {
       await captureTrainingRecord({
         cwd,
         appendEvent,
@@ -129,7 +136,6 @@ export async function runDelegatedExecution(options) {
     const result = await runDelegationAttempt({
       ...options,
       attempt,
-      stage: state.stage,
       repairPacket: priorRepairPacket,
       verificationPreflight
     });
@@ -183,6 +189,9 @@ export async function runDelegatedExecution(options) {
       }
 
       if (result.kind === "terminal_model_status") {
+        // The candidate was valid; a failure writing the decision event below
+        // is a runtime failure, not tiny_invalid_candidate.
+        state.stage = "terminal_status";
         const outcome = buildTinyTerminalOutcome({
           terminalStatus: candidate.status,
           reason: candidate.reason ?? null,

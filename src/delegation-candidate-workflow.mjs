@@ -12,8 +12,10 @@
 //   { kind: "spec_rejected", errors }
 //   { kind: "invalid_candidate", candidate, usage, latencyMs, errors }
 //   { kind: "accepted", candidate, usage, latencyMs }
-// A TinyCoder (or post-call persistence) failure is recorded as `tiny_failed`
-// and rethrown as `Tiny implementer failed: <message>`.
+// A TinyCoder failure is recorded as `tiny_failed` and rethrown as
+// `Tiny implementer failed: <message>`. A candidate-store failure after a
+// valid candidate is recorded as `candidate_record_failed` and rethrown as
+// `Candidate record failed: <message>`.
 
 import { validateCandidate, validateImplementationSpec } from "./implementation-spec.mjs";
 import { captureAllowedFiles } from "./workspace-snapshot.mjs";
@@ -38,9 +40,11 @@ export async function runCandidateDelegation({
   const { snapshot, currentFiles } = await captureAllowedFiles(cwd, spec, { withContent: attachCurrentFiles });
   await appendEvent(cwd, { type: "tiny_started", specId: spec.spec_id, model, endpoint, mode: "candidate_only" });
 
+  let result;
+  let candidateCheck;
   try {
-    const result = await callTiny({ endpoint, model, spec, context: context ?? {}, ...(currentFiles ? { currentFiles } : {}), ...(tinyTimeoutMs ? { timeoutMs: tinyTimeoutMs } : {}), signal });
-    const candidateCheck = validateCandidate(result.candidate, spec);
+    result = await callTiny({ endpoint, model, spec, context: context ?? {}, ...(currentFiles ? { currentFiles } : {}), ...(tinyTimeoutMs ? { timeoutMs: tinyTimeoutMs } : {}), signal });
+    candidateCheck = validateCandidate(result.candidate, spec);
     await appendEvent(cwd, {
       type: "tiny_finished",
       specId: spec.spec_id,
@@ -52,25 +56,35 @@ export async function runCandidateDelegation({
       validationErrors: candidateCheck.errors,
       mode: "candidate_only"
     });
-
-    if (!candidateCheck.ok) {
-      return {
-        kind: "invalid_candidate",
-        candidate: result.candidate,
-        usage: result.usage,
-        latencyMs: result.latencyMs,
-        errors: candidateCheck.errors
-      };
-    }
-
-    if (result.candidate.status === "candidate") {
-      await saveCandidate(cwd, { spec, candidate: result.candidate, snapshot, attempt: 1, model, usage: result.usage });
-    }
-
-    return { kind: "accepted", candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     await appendEvent(cwd, { type: "tiny_failed", specId: spec.spec_id, model, error: message, mode: "candidate_only" });
     throw new Error(`Tiny implementer failed: ${message}`);
   }
+
+  if (!candidateCheck.ok) {
+    return {
+      kind: "invalid_candidate",
+      candidate: result.candidate,
+      usage: result.usage,
+      latencyMs: result.latencyMs,
+      errors: candidateCheck.errors
+    };
+  }
+
+  if (result.candidate.status === "candidate") {
+    try {
+      await saveCandidate(cwd, { spec, candidate: result.candidate, snapshot, attempt: 1, model, usage: result.usage });
+    } catch (error) {
+      const message = errorMessage(error);
+      await appendEvent(cwd, { type: "candidate_record_failed", specId: spec.spec_id, model, error: message, mode: "candidate_only" });
+      throw new Error(`Candidate record failed: ${message}`);
+    }
+  }
+
+  return { kind: "accepted", candidate: result.candidate, usage: result.usage, latencyMs: result.latencyMs };
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
 }

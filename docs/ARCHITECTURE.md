@@ -2,7 +2,8 @@
 
 Карта составлена 2026-10-21 по импортам, точкам регистрации и тестам проекта.
 Она описывает устройство кода; результаты запусков и решение по обновлению
-хоста вынесены в [PI_COMPATIBILITY_2026-10-21.md](PI_COMPATIBILITY_2026-10-21.md).
+хоста вынесены в [PI_COMPATIBILITY_2026-10-21.md](PI_COMPATIBILITY_2026-10-21.md);
+проверка совместимости с Pi 1.5.0 — в [PI_COMPATIBILITY_2026-11-19.md](PI_COMPATIBILITY_2026-11-19.md).
 
 ## Общая схема
 
@@ -110,7 +111,11 @@ flowchart TD
 - MCP работает в другом процессе и не использует очереди файлов Pi;
   остаются preimage-check и запрет sibling mutations как договорённость с хостом.
 - Репозиторный state лежит в `.pi/offline-engine/`: events, candidates,
-  verification/tool-results, opt-in training. Пользовательский endpoint/config
+  verification/tool-results, opt-in training. Каждый писатель (`event-log`,
+  `candidate-store`, `verification`, `tool-result-compactor`, `training-recorder`,
+  `training-exporter`) создаёт каталог через `src/state-dir.mjs`, который кладёт
+  внутрь `.gitignore` с `*`, поэтому state не виден git ни в Pi, ни в MCP, ни в
+  hook Claude Code. Пользовательский endpoint/config
   хранится в agent-dir, ключ API туда не сохраняется.
 
 ## Что читать и проверять при изменениях

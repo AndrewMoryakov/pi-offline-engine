@@ -77,7 +77,7 @@ test("pins compatibility and security-sensitive transitive dependencies", () => 
 
 test("declares the minimum runtime and pins the Pi used by integration gates", () => {
   assert.equal(manifest.engines?.node, ">=22.19.0");
-  assert.equal(manifest.devDependencies?.["@earendil-works/pi-coding-agent"], "1.3.0");
+  assert.equal(manifest.devDependencies?.["@earendil-works/pi-coding-agent"], "1.5.0");
   assert.equal(manifest.peerDependencies?.["@earendil-works/pi-coding-agent"], "*");
 });
 
@@ -89,7 +89,7 @@ test("ships the resolved tree that was actually verified", () => {
   assert.ok(lock.lockfileVersion >= 3);
   assert.equal(lock.packages["node_modules/vscode-languageserver-protocol"].version, "3.17.5");
   assert.equal(lock.packages["node_modules/sharp"].version, "0.35.5");
-  assert.equal(lock.packages["node_modules/@earendil-works/pi-coding-agent"].version, "1.3.0");
+  assert.equal(lock.packages["node_modules/@earendil-works/pi-coding-agent"].version, "1.5.0");
   for (const [name, version] of Object.entries(manifest.dependencies)) {
     assert.equal(lock.packages[`node_modules/${name}`]?.version, version, `${name} missing or mismatched in lockfile`);
   }
@@ -100,4 +100,9 @@ test("peer-dependency resolution is disabled for git installs", () => {
   // would install a second pi core to satisfy pi-lean-edit's ^0.84 peer.
   const npmrc = fs.readFileSync(new URL("../.npmrc", import.meta.url), "utf8");
   assert.match(npmrc, /^legacy-peer-deps=true$/m);
+  assert.match(
+    npmrc,
+    /^onnxruntime-node-install-cuda=skip$/m,
+    "a fresh Linux x64 install must not download the CUDA build of onnxruntime-node (the release asset returns 404)"
+  );
 });

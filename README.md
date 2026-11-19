@@ -181,7 +181,7 @@ On Pi 1.3.0, `execute_delegated_implementation` uses `model-only` exposure and
 sequential execution: call it directly from the main model, rather than from
 codemode or another tool. Candidate-only `delegate_implementation` remains
 callable by other tools. Native codemode is optional; the bundled Python
-`code` tool remains the default. See the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md).
+`code` tool remains the default. See the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md). A later [Pi 1.5.0 check](docs/PI_COMPATIBILITY_2026-11-19.md) covers the engine itself; bundled companions and the install gate on 1.5.0 are not yet verified.
 
 pi clones the repository and runs `npm install`, which brings in the four bundled companion extensions — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool`, `pi-lean-edit` — at exact pinned versions, all loaded through this package's manifest. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for what each one does and which optional packages stay opt-in. Do not `pi install` the bundled four separately; that would register duplicate tools.
 
@@ -655,7 +655,7 @@ The engine writes `.pi/offline-engine/.gitignore` (containing `*`) itself, so a 
 Experimental. `pi-offline-engine` is at version 0.1.1 and is a Git-distributed Pi package (`private: true`, not published to npm).
 
 - **Measured vs not.** The contract and helpers are covered by unit tests, extension-level tests with a fake Pi and fake TinyCoder, and the gates above. The real-model acceptance run ([docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md)) has no recorded result, and `docs/HYBRID_EDIT_V0.md` states that a real local llama-server has not been run for the hybrid evidence. Success rates of real TinyCoder implementations are therefore unknown.
-- **No CI.** The project does not use GitHub Actions. `gate:local`, the production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` are run by hand before a merge; the Pi 1.3.0 evidence is recorded in the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md).
+- **No CI.** The project does not use GitHub Actions. `gate:local`, the production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` are run by hand before a merge; the Pi 1.3.0 evidence is recorded in the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md) and the Pi 1.5.0 evidence in the [1.5.0 compatibility check](docs/PI_COMPATIBILITY_2026-11-19.md).
 - **Verification is .NET-only.** Other toolchains would need new engine-built runners.
 - **Delegation limits.** At most two files, `replace_text`/`create_file` only, no symbol-level operations, no rollback after a red final attempt. Allowed files are attached automatically up to 16 KiB each; add other relevant source excerpts to `context`.
 - **Verification is not semantic completion.** Inspect the diff.
@@ -679,6 +679,7 @@ Still planned, after the delegation contract is measured on real tasks:
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime flow, code map, trust boundaries and test routing (Russian) |
 | [docs/PI_COMPATIBILITY_2026-10-21.md](docs/PI_COMPATIBILITY_2026-10-21.md) | Pi 0.86.1 → 1.3.0 assessment, adaptations and validation evidence (Russian) |
+| [docs/PI_COMPATIBILITY_2026-11-19.md](docs/PI_COMPATIBILITY_2026-11-19.md) | Pi 1.3.0 → 1.5.0 compatibility check, evidence and what a pin bump touches (Russian) |
 | [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md) | The delegation runtime contract |
 | [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) | Companion stack, bootstrap, environment, offline checklist, C# language server, MTP note |
 | [docs/HYBRID_EDIT_V0.md](docs/HYBRID_EDIT_V0.md) | The `hybrid` edit provider: task statement, constraints, evidence |

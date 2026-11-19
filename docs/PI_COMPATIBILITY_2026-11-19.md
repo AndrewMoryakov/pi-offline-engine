@@ -21,6 +21,41 @@ Pi 1.5.0 (наблюдалось; загрузку, команды и `edit` —
 gates. Условие слияния — `gate:install` на перегенерированном lockfile. Перечень
 затрагиваемых мест — в разделе «Закрепление devDependency».
 
+## Статус после повышения закрепления
+
+Закрепление повышено до 1.5.0 в этой же ветке (`package.json`, `package-lock.json`,
+`tests/packaging.test.mjs`, документы). Оговорки раздела «Решение» закрыты так.
+Все результаты ниже **наблюдались** 2026-11-19 на коммите `ed0d1ae`: свежий клон,
+Ubuntu 26.04 (машина `andrewm-hardware`, без GPU), официальный Node 22.19.0 с
+nodejs.org (контрольная сумма сверена), npm 10.9.3, `npm ci` без обходных
+переменных окружения, Pi 1.5.0 из lockfile.
+
+- Загрузка трёх bundled companion под 1.5.0: `npm run gate:install` PASS. Активны
+  `execute_delegated_implementation`, `knowledge_search`, `lsp_diagnostics`, `code`,
+  `lsp_symbols`, провайдер `edit` из `pi-lean-edit`.
+- `node --test`: 338 тестов, 337 pass, 0 fail, 1 skipped. `gate:local`, `gate:pi`,
+  `gate:edit` PASS. `npm audit --omit=dev --audit-level=high`: 0 уязвимостей.
+- `npm run gate:dotnet` PASS в двух окружениях: только .NET 10 (SDK 10.0.404; гейт сам
+  включает `DOTNET_ROLL_FORWARD=Major`) и .NET 8 + 10 с `DOTNET_ROLL_FORWARD=Minor`.
+- `pi install git:github.com/AndrewMoryakov/pi-offline-engine@<полный sha>` в отдельном
+  `PI_CODING_AGENT_DIR` (Pi 1.5.2): код 0, установлен ровно этот коммит.
+
+Две находки, не относящиеся к самому Pi:
+
+- Свежая установка на Linux x64 падала: postinstall `onnxruntime-node` 1.21.0 скачивает
+  CUDA-сборку с GitHub-релиза `microsoft/onnxruntime` v1.21.0, который больше не
+  отвечает (404). Падали `npm ci`, `gate:install` и `pi install ...@v0.1.1`. Исправлено
+  строкой `onnxruntime-node-install-cuda=skip` в `.npmrc`; npm 11 предупреждает, что
+  неизвестный ключ перестанет работать в следующей мажорной версии npm.
+- На дистрибутивном Node Ubuntu (22.22.1, `process.features.typescript === false`)
+  семь файлов тестов не загружаются (`ERR_UNKNOWN_FILE_EXTENSION` для `.ts`): тесты
+  импортируют `extensions/*.ts` напрямую и требуют Node с встроенной поддержкой
+  TypeScript, как в официальных сборках начиная с 22.18.
+
+Не наблюдалось: работа с реальной моделью, запуск на Windows, вызовы `dotnet` через
+`pi.exec` в живой сессии Pi (`gate:dotnet` идёт через `nodeExec`), а также
+`pi install ...@<тег>` после исправления (проверен вариант с полным sha).
+
 ## Как помечены утверждения
 
 - **прочитано** — указаны файл и версия источника;

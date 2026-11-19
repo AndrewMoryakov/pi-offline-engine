@@ -174,7 +174,7 @@ pi install git:github.com/AndrewMoryakov/pi-offline-engine@<release-tag-or-commi
 This is a Git-distributed Pi package (`private: true`); it is not published to
 npm. The verified host baseline is **Pi 1.3.0** on **Node.js 22.19.0 or newer**.
 The package keeps Pi core modules as `"*"` peer dependencies, as required by
-Pi's package loader, while development and CI pin Pi 1.3.0 for reproducible
+Pi's package loader, while development pins Pi 1.3.0 for reproducible
 integration tests.
 
 On Pi 1.3.0, `execute_delegated_implementation` uses `model-only` exposure and
@@ -520,7 +520,7 @@ See [docs/TRAINING_DATA.md](docs/TRAINING_DATA.md) before enabling it: raw trace
 
 ## Canonical local gate
 
-The repository configures GitHub Actions to run the release gates on pull requests and on pushes to `main`, `feat/**` and `fix/**` (see [status](#status-and-known-limits) for their current state). Run the same checks locally, starting with:
+The project does not use GitHub Actions: the release gates are run by hand, and a green gate is evidence only for the run that recorded it (see [status](#status-and-known-limits)). Run them locally, starting with:
 
 ```bash
 npm ci
@@ -557,7 +557,7 @@ To check the whole turnkey path — the same `npm install --omit=dev` pi runs fo
 npm run gate:install
 ```
 
-CI invokes it as `npm run gate:install -- --package-dir .`, which reuses the already-installed repository tree and therefore **skips** the production install. Only the plain invocation above exercises what pi does for a git package.
+`npm run gate:install -- --package-dir .` reuses the already-installed repository tree and therefore **skips** the production install. Only the plain invocation above exercises what pi does for a git package.
 
 ## First real acceptance run
 
@@ -655,7 +655,7 @@ The engine writes `.pi/offline-engine/.gitignore` (containing `*`) itself, so a 
 Experimental. `pi-offline-engine` is at version 0.1.1 and is a Git-distributed Pi package (`private: true`, not published to npm).
 
 - **Measured vs not.** The contract and helpers are covered by unit tests, extension-level tests with a fake Pi and fake TinyCoder, and the gates above. The real-model acceptance run ([docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md)) has no recorded result, and `docs/HYBRID_EDIT_V0.md` states that a real local llama-server has not been run for the hybrid evidence. Success rates of real TinyCoder implementations are therefore unknown.
-- **CI.** The workflow in `.github/workflows/ci.yml` runs `gate:local`, a production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` on pull requests and on pushes to `main`, `feat/**` and `fix/**`. Local Pi 1.3.0 evidence is recorded in the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md); hosted results must be checked in [Actions](https://github.com/AndrewMoryakov/pi-offline-engine/actions).
+- **No CI.** The project does not use GitHub Actions. `gate:local`, the production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` are run by hand before a merge; the Pi 1.3.0 evidence is recorded in the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md).
 - **Verification is .NET-only.** Other toolchains would need new engine-built runners.
 - **Delegation limits.** At most two files, `replace_text`/`create_file` only, no symbol-level operations, no rollback after a red final attempt. Allowed files are attached automatically up to 16 KiB each; add other relevant source excerpts to `context`.
 - **Verification is not semantic completion.** Inspect the diff.

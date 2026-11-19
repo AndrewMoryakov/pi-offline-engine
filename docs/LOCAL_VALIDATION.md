@@ -1,6 +1,6 @@
 # Local validation
 
-GitHub Actions runs the locked install, local contract gate, production dependency audit, pinned-Pi load gate, and isolated package install gate. The first gate remains network-independent and can be run locally at any time.
+The project does not use GitHub Actions; these gates are run by hand before a merge: the locked install, the local contract gate, the production dependency audit, the pinned-Pi load gate and the isolated package install gate. The first gate is network-independent and can be run at any time.
 
 ## One command
 
@@ -61,7 +61,7 @@ npm run gate:install
 
 This one needs network access and is not part of `gate:local`. It stages the working tree the way a clone would see it, runs the exact `npm install --omit=dev` pi runs for git packages (raw output goes to a log whose path is printed first; the step is deliberately not time-bounded), checks every manifest extension exists on disk, runs `pi install` into a throwaway `PI_CODING_AGENT_DIR` — your own `~/.pi` is never touched — and finally starts pi in RPC mode and runs `/offline-doctor`, requiring the tools of all four bundled companion extensions to be active. Pass `--keep` to keep the work directory, or `--package-dir <dir>` to reuse an already installed staging directory. A successful run ends with `INSTALL GATE: PASS`.
 
-CI also runs the install gate against the already locked tree:
+The install gate can also run against the already locked tree:
 
 ```bash
 npm run gate:install -- --package-dir .

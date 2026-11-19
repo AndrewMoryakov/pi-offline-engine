@@ -426,14 +426,16 @@ test("candidate: malformed output emits tiny_failed and throws", async () => {
   assert.match(run.error, /^Tiny implementer failed: /);
 });
 
-test("candidate: candidate record failure surfaces as tiny_failed", async () => {
-  await candidateOnly("record-failure", {
+test("candidate: candidate record failure is reported as a storage failure, not a Tiny failure", async () => {
+  const run = await candidateOnly("record-failure", {
     replies: [ONE_TO_TWO],
     setup: async (cwd) => {
       await fs.mkdir(path.join(cwd, ".pi", "offline-engine"), { recursive: true });
       await fs.writeFile(path.join(cwd, ".pi", "offline-engine", "candidates"), "not a directory");
     }
   });
+  assert.match(run.error, /^Candidate record failed: EEXIST/);
+  assert.deepEqual(run.observed.events.map((event) => event.type), ["tiny_started", "tiny_finished", "candidate_record_failed"]);
 });
 
 test("candidate: snapshot failure propagates raw", async () => {

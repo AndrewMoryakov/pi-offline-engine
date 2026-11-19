@@ -81,6 +81,18 @@ test("valid candidate is persisted but never applied", async () => {
   assert.equal(await fs.readFile(path.join(cwd, "src", "A.cs"), "utf8"), "class A { int Value() => 1; }\n");
 });
 
+test("a candidate store failure is a storage failure, not a Tiny failure", async () => {
+  const cwd = await makeWorkspace();
+  const reply = { status: "candidate", changes: [{ path: "src/A.cs", operation: "replace_text", expected: "=> 1;", content: "=> 2;" }] };
+  const h = harness(reply);
+  await assert.rejects(
+    runCandidateDelegation({ ...h.options, cwd, spec, context: {}, saveCandidate: async () => { throw new Error("disk full"); } }),
+    { message: "Candidate record failed: disk full" }
+  );
+  assert.deepEqual(h.events.map((e) => e.type), ["tiny_started", "tiny_finished", "candidate_record_failed"]);
+  assert.deepEqual(h.events[2], { type: "candidate_record_failed", specId: "candidate-workflow", model: "tiny", error: "disk full", mode: "candidate_only" });
+});
+
 test("transport failure emits tiny_failed and throws the current error contract", async () => {
   const cwd = await makeWorkspace();
   const h = harness(new Error("connection refused"));

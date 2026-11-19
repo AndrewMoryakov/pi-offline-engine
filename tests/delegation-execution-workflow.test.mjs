@@ -39,7 +39,7 @@ function scriptedTiny(replies) {
   return { callTiny, requests };
 }
 
-async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null, failEvent, specOverride, setup } = {}) {
+async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null, failEvent, specOverride, setup, onAttemptStart } = {}) {
   const cwd = await makeWorkspace();
   if (setup) await setup(cwd);
   const tiny = scriptedTiny(replies);
@@ -63,7 +63,8 @@ async function run({ replies, dotnet = {}, maxAttempts = 3, trainingRunId = null
     appendEvent: async (_cwd, event) => {
       if (failEvent?.(event)) throw new Error(`ledger write failed for ${event.type}`);
       events.push(event);
-    }
+    },
+    onAttemptStart
   });
   return { outcome, events, tiny, queued, cwd };
 }
@@ -195,6 +196,22 @@ test("a failed decision-event write becomes a runtime failure at that attempt's 
   const terminal = await run({ replies: [{ status: "insufficient_spec" }], failEvent: (event) => event.type === "tiny_terminal_status" });
   assert.equal(terminal.outcome.kind, "runtime_failure");
   assert.equal(terminal.outcome.outcome.reason, "tiny_invalid_candidate");
+});
+
+test("a throwing progress callback is classified by its own stage, not the previous attempt's", async () => {
+  const { outcome, tiny } = await run({
+    replies: [change("=> 1;", "=> 2;")],
+    dotnet: { build: [RED] },
+    onAttemptStart: ({ attempt }) => {
+      if (attempt === 2) throw new Error("presentation failed");
+    }
+  });
+  assert.equal(tiny.requests.length, 1, "no model call after the callback failed");
+  assert.equal(outcome.kind, "runtime_failure");
+  assert.equal(outcome.outcome.stage, "progress_report");
+  assert.equal(outcome.outcome.reason, "delegated_runtime_failure");
+  assert.equal(outcome.outcome.workspace_modified, true, "attempt 1 was applied");
+  assert.equal(outcome.outcome.error, "presentation failed");
 });
 
 test("a failed malformed-output retry-event write propagates", async () => {

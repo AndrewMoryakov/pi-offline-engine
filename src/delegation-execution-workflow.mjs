@@ -55,8 +55,8 @@ export async function runDelegatedExecution(options) {
   const { spec, cwd, signal, maxAttempts, trainingRunId, exec, appendEvent } = options;
   const specId = spec.spec_id;
 
-  // The stage survives across attempts: a failure before an attempt sets its
-  // first stage is classified by the stage reached previously.
+  // `stage` is the last stage reached: the preflight, then the stage each
+  // attempt returns. An attempt never inherits it.
   const state = {
     stage: "verification_preflight",
     repairPacket: null,
@@ -129,7 +129,6 @@ export async function runDelegatedExecution(options) {
     const result = await runDelegationAttempt({
       ...options,
       attempt,
-      stage: state.stage,
       repairPacket: priorRepairPacket,
       verificationPreflight
     });

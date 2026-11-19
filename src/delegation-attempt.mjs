@@ -14,9 +14,10 @@
 //   verification_failed    candidate applied, verification red
 //   runtime_failure        any other error, classified later by `stage`
 //
-// Every outcome carries `stage` (the last stage reached, starting from the
-// carried-in stage), `tinyResult` (when TinyCoder returned), `applied` (when
-// the write completed) and `verification` (when it returned). The kinds are
+// Every outcome carries `stage` (the last stage reached; the first is
+// "progress_report", the onAttemptStart callback), `tinyResult` (when
+// TinyCoder returned), `applied` (when the write completed) and
+// `verification` (when it returned). The kinds are
 // internal control-flow labels, not public status or event strings.
 //
 // This module is the only importer of the TinyCoder client, so the
@@ -62,7 +63,6 @@ export function uniqueAbsolutePaths(cwd, candidate) {
 export async function runDelegationAttempt({
   attempt,
   maxAttempts,
-  stage: carriedStage,
   spec,
   context,
   cwd,
@@ -80,7 +80,7 @@ export async function runDelegationAttempt({
   attachCurrentFiles = false,
   tinyTimeoutMs = undefined
 }) {
-  let stage = carriedStage;
+  let stage = "progress_report";
   let tinyResult = null;
   let applied = null;
   let currentFiles = null;
@@ -108,7 +108,8 @@ export async function runDelegationAttempt({
     : null;
 
   try {
-    // A throwing progress callback is classified by the carried-in stage.
+    // A throwing progress callback is a runtime failure of its own stage
+    // (delegated_runtime_failure), not of whatever stage came before it.
     onAttemptStart?.({ attempt, maxAttempts });
 
     stage = "snapshot";

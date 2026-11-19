@@ -93,9 +93,9 @@ test("apply failure is a runtime failure at apply with nothing applied", async (
   assert.equal(outcome.applied, null);
 });
 
-test("a throwing progress callback is classified by the carried-in stage", async () => {
+test("a throwing progress callback is classified by its own stage, whatever stage is passed in", async () => {
   const { outcome } = await attempt(GOOD, { stage: "tiny_call", onAttemptStart: () => { throw new Error("ui"); } });
-  assert.deepEqual({ kind: outcome.kind, stage: outcome.stage, error: outcome.error }, { kind: "runtime_failure", stage: "tiny_call", error: "ui" });
+  assert.deepEqual({ kind: outcome.kind, stage: outcome.stage, error: outcome.error }, { kind: "runtime_failure", stage: "progress_report", error: "ui" });
 });
 
 test("uniqueAbsolutePaths resolves, de-duplicates and sorts candidate targets inside the workspace", () => {

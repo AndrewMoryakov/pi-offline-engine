@@ -361,11 +361,12 @@ test("execute: exhausted red verifications return cumulative state", async () =>
 
 // --- edge paths that must survive extraction ---------------------------------
 
-test("execute: onUpdate failure is classified by the stage carried from before the loop", async () => {
+test("execute: onUpdate failure is a runtime failure at its own stage", async () => {
   const run = await execute("on-update-throws", {
     onUpdate: () => { throw new Error("presentation failed"); }
   });
-  assert.equal(run.rawResult.details.reason, "verification_infrastructure_failure");
+  assert.equal(run.rawResult.details.stage, "progress_report");
+  assert.equal(run.rawResult.details.reason, "delegated_runtime_failure");
   assert.equal(run.tiny.requests.length, 0);
 });
 

@@ -169,7 +169,7 @@ pi install git:github.com/AndrewMoryakov/pi-offline-engine
 pi
 ```
 
-On first start the engine looks for a model server on `127.0.0.1` ports 8080, 8081, 1234 (LM Studio) and 11434 (Ollama). It skips embedding and reranking models, prefers a model with `coder` in its name, saves its choice and tells you in one line what it found. It never probes other machines. To set the exact server and model, run `/offline-setup http://127.0.0.1:8080 <model>`; the address works with or without `/v1`.
+On first start the engine looks for a model server on `127.0.0.1` ports 8080, 8081, 1234 (LM Studio) and 11434 (Ollama). It skips embedding and reranking models, prefers a model with `coder` in its name, saves its choice and tells you in one line what it found. It never probes other machines. Start `pi` from the root of your repository: the engine works on the folder Pi runs in. If your main model is local too, read that one-line message; if it picked the wrong model, set the small one with `/offline-setup http://127.0.0.1:8080 <model>`. The model id is what your server lists at `http://127.0.0.1:8080/v1/models`, and the address works with or without `/v1`.
 
 **6. Check:**
 
@@ -179,11 +179,11 @@ On first start the engine looks for a model server on `127.0.0.1` ports 8080, 80
 
 It answers one question: *is everything here working?* It checks the small model server, `dotnet` and how your tests run, and whether the bundled tools are loaded, one line per check marked ✓ or ✗. The model server, `dotnet` and the delegation tool must pass; the rest are optional. The usual ✗ fixes: start your model server or point the engine at it with `/offline-setup`, install the .NET SDK, or add the TRX package named above to the test project. The rest are in [Troubleshooting](docs/REFERENCE.md#troubleshooting). `/offline-status` shows where each setting came from.
 
-**7. Your first task.** Pick something small in one or two files, from a clean git working tree. Tests make it much more useful, but a task can also name only a build, and then only compilation is checked. You can ask directly, for example:
+**7. Your first task.** Before the first delegation, the project must already build and its tests must pass, with packages restored by `dotnet restore`: the engine runs `dotnet` with `--no-restore` and never downloads packages itself. Pick something small in one or two files, from a clean git working tree. Tests make it much more useful, but a task can also name only a build, and then only compilation is checked. You can ask directly, for example:
 
 > Delegate this to the small model: make `PriceCalculator.Total` throw `ArgumentNullException` when `order` is null. `PriceCalculatorTests` must pass.
 
-The main model then calls the tool `execute_delegated_implementation`. You see one approval prompt naming the model, the files and the number of attempts; during a delegation that is the only moment the engine asks you anything. The tool's result shows the outcome, and `/offline-stats` counts the small model's calls, so you can tell a delegated edit from one the main model made itself. A sibling tool, `delegate_implementation`, only proposes a patch and writes nothing, if you want to see what the small model would do first.
+The main model then calls the tool `execute_delegated_implementation`. You see one approval prompt naming the model, the files and the number of attempts; during a delegation that is the only moment the engine asks you anything. Each request to the small model may take up to 120 seconds by default (`PI_OFFLINE_TINY_TIMEOUT_MS` changes that). The tool's result shows the outcome, and `/offline-stats` counts the small model's calls, so you can tell a delegated edit from one the main model made itself. If the main model makes the edit itself instead, ask it explicitly to use `execute_delegated_implementation`. A sibling tool, `delegate_implementation`, only proposes a patch and writes nothing, if you want to see what the small model would do first.
 
 **Updating and removing.** `pi update` updates installed extensions, `pi list` shows them, and `pi remove git:github.com/AndrewMoryakov/pi-offline-engine` removes the engine. For a team or a trip, pin a version: `pi install git:github.com/AndrewMoryakov/pi-offline-engine@<tag-or-commit>`.
 
@@ -198,11 +198,11 @@ You need Node.js 22.19 or newer, the .NET SDK and a running small model server, 
 /plugin install pi-offline-engine@pi-offline-engine
 ```
 
-Export `PI_OFFLINE_TINY_ENDPOINT` and `PI_OFFLINE_TINY_MODEL` in the shell you start Claude Code from (the defaults are `http://127.0.0.1:8080` and `qwen2.5-coder-3b-instruct`; there is no automatic discovery outside Pi), start Claude Code, and ask Claude to run the `offline_doctor` tool once; if it answers, the plugin's MCP server is running. The tools have the same names as in Pi, and the plugin gives Claude a short guide on when to delegate. Approval comes as a question from the MCP server inside Claude Code; `claude -p` and other runs with nobody to answer do not write, unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is set. Update or remove the plugin with Claude Code's `/plugin` command. For other MCP clients and the exact behaviour, see [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md).
+There is no automatic discovery outside Pi; the defaults are `http://127.0.0.1:8080` and the model id `qwen2.5-coder-3b-instruct`. If your server lists another id at `http://127.0.0.1:8080/v1/models`, or runs elsewhere, set `PI_OFFLINE_TINY_MODEL` and `PI_OFFLINE_TINY_ENDPOINT` in the shell you start Claude Code from: `export NAME=value` in bash, `$env:NAME = "value"` in PowerShell. Start Claude Code from the root of your repository and ask Claude to run the `offline_doctor` tool once. If it answers, the plugin's MCP server is running, and it tells you when the model id does not match. The tools have the same names as in Pi, and the plugin gives Claude a short guide on when to delegate. Approval comes as a question from the MCP server inside Claude Code; `claude -p` and other runs with nobody to answer do not write, unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is set. Update or remove the plugin with Claude Code's `/plugin` command. Other MCP clients must support MCP elicitation, the way an MCP server asks you a question; with a client that cannot ask, delegated writes are refused. Setup for other clients and the exact behaviour: [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md).
 
 ## Going offline
 
-Everything runs locally once a few things are downloaded. Do them while you still have a network:
+Once a few things are downloaded, a fully local setup needs no network. Do them while you still have one:
 
 ```mermaid
 flowchart TB

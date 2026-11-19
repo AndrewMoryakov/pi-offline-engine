@@ -134,15 +134,15 @@ export function formatExecutionResult(outcome) {
       };
 
     case "attempts_exhausted":
-      // `attempts` is the attempt count in the JSON body and the per-attempt
-      // records in details; both shapes are part of the current contract.
+      // `attempts` is the list of per-attempt records in the JSON body and in
+      // details, as in every other outcome.
       return {
         content: json({
           status: "needs_main_model",
           reason: "tiny_implementation_attempts_exhausted",
           workspace_modified: outcome.workspaceModified,
           changed_files: [...outcome.changedFiles],
-          attempts: outcome.maxAttempts,
+          attempts: outcome.attempts,
           verification: outcome.verification
         }),
         details: {

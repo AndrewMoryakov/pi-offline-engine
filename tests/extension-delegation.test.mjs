@@ -368,7 +368,7 @@ test("execute: exhausted red verifications return cumulative state", async () =>
     factoryEnv: { PI_OFFLINE_TRAINING_CAPTURE: "1" }
   });
   assert.equal(run.tiny.requests.length, 3);
-  assert.equal(JSON.parse(run.rawResult.content[0].text).attempts, 3);
+  assert.equal(JSON.parse(run.rawResult.content[0].text).attempts.length, 3);
 });
 
 // --- edge paths that must survive extraction ---------------------------------

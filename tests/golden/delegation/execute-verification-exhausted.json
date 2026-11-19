@@ -10,7 +10,53 @@
           "changed_files": [
             "src/A.cs"
           ],
-          "attempts": 3,
+          "attempts": [
+            {
+              "attempt": 1,
+              "usage": {
+                "inputTokens": 101,
+                "outputTokens": 11,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0,
+                "totalTokens": 112
+              },
+              "latencyMs": "<MS>",
+              "changedFiles": [
+                "src/A.cs"
+              ],
+              "verificationPassed": false
+            },
+            {
+              "attempt": 2,
+              "usage": {
+                "inputTokens": 102,
+                "outputTokens": 12,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0,
+                "totalTokens": 114
+              },
+              "latencyMs": "<MS>",
+              "changedFiles": [
+                "src/A.cs"
+              ],
+              "verificationPassed": false
+            },
+            {
+              "attempt": 3,
+              "usage": {
+                "inputTokens": 103,
+                "outputTokens": 13,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0,
+                "totalTokens": 116
+              },
+              "latencyMs": "<MS>",
+              "changedFiles": [
+                "src/A.cs"
+              ],
+              "verificationPassed": false
+            }
+          ],
           "verification": {
             "passed": false,
             "checks": [

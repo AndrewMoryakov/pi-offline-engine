@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/pi-offline-engine-hero.png" alt="pi-offline-engine: a big local model writes a spec, you approve it once, a tiny coder patches inside a bounded loop of build and tests, a red result goes back for repair, and still-red work returns to the big model" width="100%">
+  <img src="assets/pi-offline-engine-hero.png" alt="pi-offline-engine: a big local model writes a spec, you approve it once, a tiny coder patches inside a bounded loop of build and tests, a red result goes back for repair, and still-red work returns to the big model" width="100%">
 </p>
 
 <h1 align="center">pi-offline-engine</h1>
@@ -10,10 +10,10 @@
   <a href="https://nodejs.org/"><img alt="Node.js 22.19+" src="https://img.shields.io/badge/Node.js-22.19%2B-339933.svg?logo=nodedotjs&logoColor=white"></a>
   <a href="#install"><img alt="Pi 1.5.0 verified" src="https://img.shields.io/badge/Pi-1.5.0%20verified-6E56CF.svg"></a>
   <a href="#current-vertical-slice"><img alt="Verification: dotnet build and test" src="https://img.shields.io/badge/verification-dotnet%20build%20%2B%20test-512BD4.svg?logo=dotnet&logoColor=white"></a>
-  <a href="package.json"><img alt="Version 0.1.1" src="https://img.shields.io/badge/version-0.1.1-blue.svg"></a>
+  <a href="../package.json"><img alt="Version 0.1.1" src="https://img.shields.io/badge/version-0.1.1-blue.svg"></a>
 </p>
 
-<p align="center"><b>English</b> | <a href="README.ru.md">Русский</a></p>
+<p align="center"><b>English</b> | <a href="REFERENCE.ru.md">Русский</a></p>
 
 ```bash
 pi install git:github.com/AndrewMoryakov/pi-offline-engine
@@ -110,7 +110,7 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 
 ### Not built yet
 
-Post-edit Tree-sitter/LSP validation before build, code embeddings and reranking, 0.5B/1.5B implementer tiers and speculative decoding are **planned**; see [Next layers](#next-layers). The MCP server and Claude Code plugin are implemented; see [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md) and the [code map](docs/ARCHITECTURE.md).
+Post-edit Tree-sitter/LSP validation before build, code embeddings and reranking, 0.5B/1.5B implementer tiers and speculative decoding are **planned**; see [Next layers](#next-layers). The MCP server and Claude Code plugin are implemented; see [docs/CLAUDE_CODE.md](CLAUDE_CODE.md) and the [code map](ARCHITECTURE.md).
 
 ## What gets installed and which models run
 
@@ -140,7 +140,7 @@ The engine itself is plain Node.js and runs no model of its own. Four model role
 | `pi-code-tool` 0.6.1 | `josephkern/pi-code-tool` | `code` | A sandboxed Python interpreter (`@pydantic/monty`) with prebuilt binaries; no system Python is needed. No model |
 | `pi-lean-edit` 0.3.6 | `sergiobonfiglio/pi-lean-edit` | `read`, `edit`, `write` (`line_edit` in `hybrid` mode) | Verifies in the harness that the model has read the text it edits, instead of replaying old text in the prompt. No model |
 
-These are other people's packages, pinned to exact versions and loaded with your permissions. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for why each was chosen.
+These are other people's packages, pinned to exact versions and loaded with your permissions. See [docs/OFFLINE_PROFILE.md](OFFLINE_PROFILE.md) for why each was chosen.
 
 ### What is fetched from the network, and when
 
@@ -153,7 +153,7 @@ These are other people's packages, pinned to exact versions and loaded with your
 The engine is one Pi extension (`extensions/index.ts`) over a Pi-independent core in `src/`. It adds two tools, eight slash commands and a few event hooks, and it loads four companion extensions next to it.
 
 <p align="center">
-  <img src="docs/assets/pi-offline-engine-how-it-works.png" alt="pi-offline-engine: a planner owl with a blueprint hands one step to a tiny coder, who lays bricks that only the tests check; a failed test means redo; the cloud is locked out and everything runs on the laptop" width="100%">
+  <img src="assets/pi-offline-engine-how-it-works.png" alt="pi-offline-engine: a planner owl with a blueprint hands one step to a tiny coder, who lays bricks that only the tests check; a failed test means redo; the cloud is locked out and everything runs on the laptop" width="100%">
 </p>
 
 ### The delegation loop
@@ -217,9 +217,9 @@ On Pi 1.5.0, `execute_delegated_implementation` uses `model-only` exposure and
 sequential execution: call it directly from the main model, rather than from
 codemode or another tool. Candidate-only `delegate_implementation` remains
 callable by other tools. Native codemode is optional; the bundled Python
-`code` tool remains the default. See the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md). A later [Pi 1.5.0 check](docs/PI_COMPATIBILITY_2026-11-19.md) covers the engine itself; bundled companions and the install gate on 1.5.0 are not yet verified.
+`code` tool remains the default. See the [upgrade assessment](PI_COMPATIBILITY_2026-10-21.md). A later [Pi 1.5.0 check](PI_COMPATIBILITY_2026-11-19.md) covers the engine itself; bundled companions and the install gate on 1.5.0 are not yet verified.
 
-pi clones the repository and runs `npm install`, which brings in the four bundled companion extensions — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool`, `pi-lean-edit` — at exact pinned versions, all loaded through this package's manifest. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for what each one does and which optional packages stay opt-in. Do not `pi install` the bundled four separately; that would register duplicate tools.
+pi clones the repository and runs `npm install`, which brings in the four bundled companion extensions — `pi-knowledge`, `pi-lsp-extension`, `pi-code-tool`, `pi-lean-edit` — at exact pinned versions, all loaded through this package's manifest. See [docs/OFFLINE_PROFILE.md](OFFLINE_PROFILE.md) for what each one does and which optional packages stay opt-in. Do not `pi install` the bundled four separately; that would register duplicate tools.
 
 ### Another package that overrides `edit`
 
@@ -234,7 +234,7 @@ pi-lean-edit registers `read`, `edit` and `write`. Pi refuses to start when two 
 
 #### Hybrid: which edit the model sees
 
-The task statement, with where each rule came from, is [docs/HYBRID_EDIT_V0.md](docs/HYBRID_EDIT_V0.md).
+The task statement, with where each rule came from, is [docs/HYBRID_EDIT_V0.md](HYBRID_EDIT_V0.md).
 
 `scriptEditPolicy` (config) or `PI_OFFLINE_SCRIPT_EDIT_POLICY` (env) decides when the other `edit` is offered next to `line_edit`:
 
@@ -244,7 +244,7 @@ The task statement, with where each rule came from, is [docs/HYBRID_EDIT_V0.md](
 
 Hiding `edit` does not steer a model to `line_edit`. In a live run with the script edit hidden, a 27B model did an 11-file rename with `sed -i` through `bash`, which has neither `line_edit`'s stale-text check nor the script edit's diff and rollback. That is why the default is `always`; see `HE-10` in the task statement.
 
-The policy only removes and restores `edit` itself; it never re-enables an `edit` you turned off, and `/offline-tools minimal` keeps it hidden. Tools that call Pi's built-ins directly, such as `pi-code-tool`'s bridge, are not governed by it (see [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md)).
+The policy only removes and restores `edit` itself; it never re-enables an `edit` you turned off, and `/offline-tools minimal` keeps it hidden. Tools that call Pi's built-ins directly, such as `pi-code-tool`'s bridge, are not governed by it (see [docs/OFFLINE_PROFILE.md](OFFLINE_PROFILE.md)).
 
 pi-lean-edit's edit schema is a union with no top-level `properties`, and ik_llama.cpp's tool-call parser returns such a tool's arguments empty. The engine therefore gives the model a flattened schema in both `lean` and `hybrid` modes; pi-lean-edit still rejects invalid combinations itself. See `HE-11`.
 
@@ -308,7 +308,7 @@ The main model does not participate in the cheap repair loop. The tools carry pr
 - **Known boundary.** If verification is still red after the last attempt, the last candidate stays in the workspace and control returns to the main model. There is no automatic Git rollback or crash-safe transactional recovery.
 - **Headless.** Mutating delegated execution needs interactive confirmation; without a UI it is refused unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is set, which is meant only for a separately sandboxed workflow.
 
-The runtime contract is in [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md).
+The runtime contract is in [docs/BOUND_DELEGATION_V0.md](BOUND_DELEGATION_V0.md).
 
 ### Verification
 
@@ -468,7 +468,7 @@ Restore the previous tool set with:
 /offline-tools restore
 ```
 
-`/offline-tools status` lists what the model can call right now. The full before-you-travel checklist is in [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md).
+`/offline-tools status` lists what the model can call right now. The full before-you-travel checklist is in [docs/OFFLINE_PROFILE.md](OFFLINE_PROFILE.md).
 
 ## Tool-result compaction
 
@@ -516,7 +516,7 @@ Set `PI_OFFLINE_REPO_CAPSULE=0` to disable it at startup.
 
 ## Recommended offline .NET companion stack
 
-The bundled four are pinned in `package.json` and described in full in [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md):
+The bundled four are pinned in `package.json` and described in full in [docs/OFFLINE_PROFILE.md](OFFLINE_PROFILE.md):
 
 What each one installs and which models run is in [What gets installed and which models run](#what-gets-installed-and-which-models-run).
 
@@ -554,7 +554,7 @@ Capture is **off by default**:
 
 `/offline-training export` (or `npm run training:export`) writes `sft.jsonl`, `unpaired-preference.jsonl`, `paired-preference.jsonl` (only when the corpus holds both a verified and a failed candidate for the exact same prompt), `eval.jsonl` and a manifest under `.pi/offline-engine/training/export/`. Paths that look secret-bearing (`.env*`, credential/secret files, private keys) are skipped, strings are best-effort redacted and exact duplicates are dropped; the export is a safety filter, not a guarantee.
 
-See [docs/TRAINING_DATA.md](docs/TRAINING_DATA.md) before enabling it: raw traces may contain private source code.
+See [docs/TRAINING_DATA.md](TRAINING_DATA.md) before enabling it: raw traces may contain private source code.
 
 ## Canonical local gate
 
@@ -579,7 +579,7 @@ It is designed to run without external network access. Then run:
 npm run gate:pi
 ```
 
-to load the extension through the actually installed Pi runtime without making an LLM request. It drives `pi --mode rpc` and requires the engine's commands to be registered, so an extension that throws while loading fails the gate. See [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md).
+to load the extension through the actually installed Pi runtime without making an LLM request. It drives `pi --mode rpc` and requires the engine's commands to be registered, so an extension that throws while loading fails the gate. See [docs/LOCAL_VALIDATION.md](LOCAL_VALIDATION.md).
 
 `gate:pi` loads the engine alone, so it cannot see a clash with another package. For that, run:
 
@@ -607,7 +607,7 @@ Prepare it while online:
 npm run acceptance:prepare -- --restore
 ```
 
-Then follow [docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md). The fixture has one localized bug and is meant to exercise the whole delegation pipeline, not to benchmark coding intelligence.
+Then follow [docs/ACCEPTANCE_V0.md](ACCEPTANCE_V0.md). The fixture has one localized bug and is meant to exercise the whole delegation pipeline, not to benchmark coding intelligence.
 
 ## Reference
 
@@ -692,13 +692,13 @@ The engine writes `.pi/offline-engine/.gitignore` (containing `*`) itself, so a 
 
 Experimental. `pi-offline-engine` is at version 0.1.1 and is a Git-distributed Pi package (`private: true`, not published to npm).
 
-- **Measured vs not.** The contract and helpers are covered by unit tests, extension-level tests with a fake Pi and fake TinyCoder, and the gates above. The real-model acceptance run ([docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md)) has no recorded result, and `docs/HYBRID_EDIT_V0.md` states that a real local llama-server has not been run for the hybrid evidence. Success rates of real TinyCoder implementations are therefore unknown.
-- **No CI.** The project does not use GitHub Actions. `gate:local`, the production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` are run by hand before a merge; the Pi 1.3.0 evidence is recorded in the [upgrade assessment](docs/PI_COMPATIBILITY_2026-10-21.md) and the Pi 1.5.0 evidence in the [1.5.0 compatibility check](docs/PI_COMPATIBILITY_2026-11-19.md).
+- **Measured vs not.** The contract and helpers are covered by unit tests, extension-level tests with a fake Pi and fake TinyCoder, and the gates above. The real-model acceptance run ([docs/ACCEPTANCE_V0.md](ACCEPTANCE_V0.md)) has no recorded result, and `docs/HYBRID_EDIT_V0.md` states that a real local llama-server has not been run for the hybrid evidence. Success rates of real TinyCoder implementations are therefore unknown.
+- **No CI.** The project does not use GitHub Actions. `gate:local`, the production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` are run by hand before a merge; the Pi 1.3.0 evidence is recorded in the [upgrade assessment](PI_COMPATIBILITY_2026-10-21.md) and the Pi 1.5.0 evidence in the [1.5.0 compatibility check](PI_COMPATIBILITY_2026-11-19.md).
 - **Verification is .NET-only.** Other toolchains would need new engine-built runners.
 - **Delegation limits.** At most two files, `replace_text`/`create_file` only, no symbol-level operations, no rollback after a red final attempt. Allowed files are attached automatically up to 16 KiB each; add other relevant source excerpts to `context`.
 - **Verification is not semantic completion.** Inspect the diff.
 - **Bundled packages** are third-party, pinned and loaded with your permissions; `pi-lean-edit` metrics key on the tool name `edit` and were not checked for `line_edit`; the `pi-tree-sitter` pre-write guard is not qualified with pi-lean-edit.
-- **Still proposed.** Pluggable verification runners and a frontier-model benchmark. Host-independent workflows, MCP/Claude Code adapters and automatic allowed-file context attachment are implemented; see the [code map](docs/ARCHITECTURE.md).
+- **Still proposed.** Pluggable verification runners and a frontier-model benchmark. Host-independent workflows, MCP/Claude Code adapters and automatic allowed-file context attachment are implemented; see the [code map](ARCHITECTURE.md).
 
 ## Next layers
 
@@ -715,17 +715,17 @@ Still planned, after the delegation contract is measured on real tasks:
 
 | Document | What it covers |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime flow, code map, trust boundaries and test routing (Russian) |
-| [docs/PI_COMPATIBILITY_2026-10-21.md](docs/PI_COMPATIBILITY_2026-10-21.md) | Pi 0.86.1 → 1.3.0 assessment, adaptations and validation evidence (Russian) |
-| [docs/PI_COMPATIBILITY_2026-11-19.md](docs/PI_COMPATIBILITY_2026-11-19.md) | Pi 1.3.0 → 1.5.0 compatibility check, evidence and what a pin bump touches (Russian) |
-| [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md) | The delegation runtime contract |
-| [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) | Companion stack, bootstrap, environment, offline checklist, C# language server, MTP note |
-| [docs/HYBRID_EDIT_V0.md](docs/HYBRID_EDIT_V0.md) | The `hybrid` edit provider: task statement, constraints, evidence |
-| [docs/TRAINING_DATA.md](docs/TRAINING_DATA.md) | Training capture, record contents, export formats, hygiene |
-| [docs/LOCAL_VALIDATION.md](docs/LOCAL_VALIDATION.md) | What each gate establishes and does not establish |
-| [docs/ACCEPTANCE_V0.md](docs/ACCEPTANCE_V0.md) | The first real machine-level acceptance run |
-| [docs/PROJECT_REVIEW_2026-10-01.md](docs/PROJECT_REVIEW_2026-10-01.md) | Dated state review, open items and proposals |
-| [docs/CODE_REVIEW_2026-09-21.md](docs/CODE_REVIEW_2026-09-21.md), [docs/CODE_REVIEW_RESOLUTION_2026-09-21.md](docs/CODE_REVIEW_RESOLUTION_2026-09-21.md) | An earlier code review and how its findings were resolved |
+| [docs/ARCHITECTURE.md](ARCHITECTURE.md) | Runtime flow, code map, trust boundaries and test routing (Russian) |
+| [docs/PI_COMPATIBILITY_2026-10-21.md](PI_COMPATIBILITY_2026-10-21.md) | Pi 0.86.1 → 1.3.0 assessment, adaptations and validation evidence (Russian) |
+| [docs/PI_COMPATIBILITY_2026-11-19.md](PI_COMPATIBILITY_2026-11-19.md) | Pi 1.3.0 → 1.5.0 compatibility check, evidence and what a pin bump touches (Russian) |
+| [docs/BOUND_DELEGATION_V0.md](BOUND_DELEGATION_V0.md) | The delegation runtime contract |
+| [docs/OFFLINE_PROFILE.md](OFFLINE_PROFILE.md) | Companion stack, bootstrap, environment, offline checklist, C# language server, MTP note |
+| [docs/HYBRID_EDIT_V0.md](HYBRID_EDIT_V0.md) | The `hybrid` edit provider: task statement, constraints, evidence |
+| [docs/TRAINING_DATA.md](TRAINING_DATA.md) | Training capture, record contents, export formats, hygiene |
+| [docs/LOCAL_VALIDATION.md](LOCAL_VALIDATION.md) | What each gate establishes and does not establish |
+| [docs/ACCEPTANCE_V0.md](ACCEPTANCE_V0.md) | The first real machine-level acceptance run |
+| [docs/PROJECT_REVIEW_2026-10-01.md](PROJECT_REVIEW_2026-10-01.md) | Dated state review, open items and proposals |
+| [docs/CODE_REVIEW_2026-09-21.md](CODE_REVIEW_2026-09-21.md), [docs/CODE_REVIEW_RESOLUTION_2026-09-21.md](CODE_REVIEW_RESOLUTION_2026-09-21.md) | An earlier code review and how its findings were resolved |
 
 ## Development
 
@@ -736,4 +736,4 @@ npm run check
 
 The tests import `extensions/*.ts` directly, so they need a Node.js with built-in TypeScript type stripping: the official builds from 22.18 on. A distribution package such as Ubuntu's `nodejs` 22.22.1 can lack it (`process.features.typescript` is `false`), and then seven test files fail to load with `ERR_UNKNOWN_FILE_EXTENSION` for `.ts`.
 
-See [docs/BOUND_DELEGATION_V0.md](docs/BOUND_DELEGATION_V0.md) for the runtime contract and [Canonical local gate](#canonical-local-gate) for the full pre-release checks.
+See [docs/BOUND_DELEGATION_V0.md](BOUND_DELEGATION_V0.md) for the runtime contract and [Canonical local gate](#canonical-local-gate) for the full pre-release checks.

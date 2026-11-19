@@ -25,7 +25,7 @@ pi                                                      # then run /offline-doct
 
 It is experimental (version 0.1.1, a Git-distributed Pi package, not on npm) and verification is **.NET-only** today. The [status and known limits](#status-and-known-limits) say exactly what has and has not been measured.
 
-**Contents:** [In plain words](#in-plain-words) · [What's inside](#whats-inside) · [How it works](#how-it-works) · [Quick start](#quick-start) · [Install](#install) · [Delegation in depth](#current-vertical-slice) · [Configuration](#tiny-implementer) · [Safety](#safety) · [Offline operations](#offline-operations) · [Reference](#reference) · [Troubleshooting](#troubleshooting) · [Status](#status-and-known-limits) · [Docs map](#documentation-map)
+**Contents:** [In plain words](#in-plain-words) · [What's inside](#whats-inside) · [Components and models](#what-gets-installed-and-which-models-run) · [How it works](#how-it-works) · [Quick start](#quick-start) · [Install](#install) · [Delegation in depth](#current-vertical-slice) · [Configuration](#tiny-implementer) · [Safety](#safety) · [Offline operations](#offline-operations) · [Reference](#reference) · [Troubleshooting](#troubleshooting) · [Status](#status-and-known-limits) · [Docs map](#documentation-map)
 
 ## In plain words
 
@@ -111,6 +111,42 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 ### Not built yet
 
 Post-edit Tree-sitter/LSP validation before build, code embeddings and reranking, 0.5B/1.5B implementer tiers and speculative decoding are **planned**; see [Next layers](#next-layers). The MCP server and Claude Code plugin are implemented; see [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md) and the [code map](docs/ARCHITECTURE.md).
+
+## What gets installed and which models run
+
+The engine itself is plain Node.js and runs no model of its own. Four model roles exist around it. Two are yours to provide; the other two belong to `pi-knowledge`, one of the four third-party extensions that install with the engine, and are downloaded the first time they are needed.
+
+### Models
+
+| Role | What it is for | Default | Where it runs | Your own server |
+|---|---|---|---|---|
+| Main model | Plans the change, writes the `ImplementationSpec`, inspects the diff | Whatever you select in Pi | Your local server or a hosted API | It is Pi's model, chosen in Pi |
+| Tiny implementer | Proposes the exact patch for the declared files and repairs it after a red build or test | `qwen2.5-coder-3b-instruct` on `http://127.0.0.1:8080` | Any OpenAI-compatible server (`/v1/chat/completions`, structured output) | Yes, this is how it is configured: `/offline-setup`, `PI_OFFLINE_TINY_*` |
+| Embedding model | Turns files and search queries into vectors for `knowledge_search` | `Xenova/multilingual-e5-small`, full precision | On your CPU, in an isolated Node worker, through Transformers.js and ONNX Runtime | Yes: `PI_KNOWLEDGE_EMBEDDING=openai:<model>` and `PI_KNOWLEDGE_EMBEDDING_BASE_URL`, then `knowledge_update` |
+| Reranker | Re-orders search hits; used by `deep` search mode only | `Xenova/ms-marco-MiniLM-L-4-v2` | The same worker | Yes: `PI_KNOWLEDGE_RERANKER=api:<model>` and an endpoint (Cohere, Jina, TEI or custom JSON format) |
+
+- **Download size and timing.** The embedding model is `onnx/model.onnx`, about 470 MB: `pi-knowledge` asks for full precision (`dtype: "fp32"`). It is fetched from Hugging Face the first time you index a repository. The reranker is about 77 MB (no dtype is set, and the library default is full precision), fetched the first time a `deep` search runs. Sizes are from the Hugging Face file listing on 2026-11-19. Both are cached under `<knowledge dir>/models` (`~/.pi/knowledge/models` in pi-knowledge's own offline notes); `PI_KNOWLEDGE_MODEL_CACHE_DIR` moves it.
+- **Offline.** Set `PI_KNOWLEDGE_OFFLINE=1` only after the models you use are cached. `/offline-doctor` checks that the `knowledge_search` tool is loaded, not that the models are cached.
+- **Using your own server for embeddings** skips the embedding download and the CPU work. Vectors from a different model are not comparable, so run `knowledge_update` after changing the provider. A server such as `llama-server` needs an embedding model and its embeddings endpoint enabled; this repository has not been run against one.
+- **Hosted instead of local.** The tiny implementer may be a hosted router such as OpenRouter. That is not an offline configuration; see [Hosted OpenAI-compatible routers](#hosted-openai-compatible-routers-openrouter).
+- **Not installed by default.** `pi-sub-agent` (optional tier) adds scout and reviewer roles, each with a statically assigned model of its own.
+
+### The four bundled extensions
+
+| Package | Author and repository | Tools it adds | What it installs or starts |
+|---|---|---|---|
+| `pi-knowledge` 0.10.2 | `nczz/pi-knowledge` | 13 `knowledge_*` tools, among them `knowledge_search`, `knowledge_add`, `knowledge_update`, `knowledge_doctor` | A SQLite index (`better-sqlite3`), native Tree-sitter grammars for code structure, `mammoth` and `unpdf` for Word and PDF text, and the two models above through `@huggingface/transformers`, which brings `onnxruntime-node` |
+| `pi-lsp-extension` 1.3.0 | `samfoy/pi-lsp-extension` | `lsp_diagnostics`, `lsp_symbols`, `lsp_definition`, `lsp_references`, `lsp_hover`, `lsp_rename`, `lsp_completions`, `lsp_code_actions`, `code_overview`, `code_rewrite` | Talks to language servers you install yourself (for C#, `csharp-ls`, which needs a .NET 10 SDK); `web-tree-sitter` with `tree-sitter-wasms` as a structural fallback. No model |
+| `pi-code-tool` 0.6.1 | `josephkern/pi-code-tool` | `code` | A sandboxed Python interpreter (`@pydantic/monty`) with prebuilt binaries; no system Python is needed. No model |
+| `pi-lean-edit` 0.3.6 | `sergiobonfiglio/pi-lean-edit` | `read`, `edit`, `write` (`line_edit` in `hybrid` mode) | Verifies in the harness that the model has read the text it edits, instead of replaying old text in the prompt. No model |
+
+These are other people's packages, pinned to exact versions and loaded with your permissions. See [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md) for why each was chosen.
+
+### What is fetched from the network, and when
+
+- **At `pi install` or `npm install`:** npm packages. On Linux x64 the `onnxruntime-node` postinstall would also download a CUDA build from a GitHub release page; that asset no longer exists, and `.npmrc` turns the download off. Embeddings run on the CPU provider, so nothing is lost.
+- **At first use:** the embedding model when you index a repository, and the reranker when a `deep` search first runs, both from Hugging Face. Pointing them at your own server (`openai:` and `api:` above) skips these downloads. It does **not** skip the npm install of `@huggingface/transformers` and `onnxruntime-node`, because `pi-knowledge` declares them as ordinary dependencies.
+- **The engine itself downloads no model.** The tiny implementer is whatever your server has loaded.
 
 ## How it works
 
@@ -481,6 +517,8 @@ Set `PI_OFFLINE_REPO_CAPSULE=0` to disable it at startup.
 ## Recommended offline .NET companion stack
 
 The bundled four are pinned in `package.json` and described in full in [docs/OFFLINE_PROFILE.md](docs/OFFLINE_PROFILE.md):
+
+What each one installs and which models run is in [What gets installed and which models run](#what-gets-installed-and-which-models-run).
 
 | Package | Role | Tier |
 |---|---|---|

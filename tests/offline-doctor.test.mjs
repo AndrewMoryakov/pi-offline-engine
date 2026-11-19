@@ -248,6 +248,21 @@ test("treats loopback and private endpoints as local", () => {
   }
 });
 
+test("a public hostname that merely starts like a private range is remote", () => {
+  const disguised = [
+    "http://192.168.evil.com/v1",
+    "http://127.0.0.1.evil.com/v1",
+    "http://10.evil.com/v1",
+    "http://172.16.attacker.net/v1",
+    "http://169.254.evil.com/v1"
+  ];
+  for (const endpoint of disguised) {
+    const check = checkEndpointLocality(endpoint);
+    assert.equal(check.ok, false, endpoint);
+    assert.match(check.message, /leave your network/, endpoint);
+  }
+});
+
 test("truncates a large hosted catalog when the configured model is missing", async () => {
   const data = Array.from({ length: 446 }, (_, i) => ({ id: `vendor/model-${i}` }));
   const fetchFn = async (url) => {

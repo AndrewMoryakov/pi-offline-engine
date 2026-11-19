@@ -93,7 +93,7 @@ export async function callTinyImplementer({ endpoint, model, spec, context = {},
     if (!response.ok) {
       // The body reaches events.jsonl. A remote router answering 401/403 may
       // echo the credential it rejected, so redact before it is persisted.
-      throw new Error(`tiny endpoint HTTP ${response.status}: ${redactString(response.raw).slice(0, 500)}`);
+      throw new Error(`tiny endpoint HTTP ${response.status}: ${redactBody(response.raw, apiKey).slice(0, 500)}`);
     }
 
     let envelope;
@@ -163,6 +163,15 @@ async function postCompletion(endpoint, body, signal, apiKey) {
 // token; a local llama.cpp needs none. This is the only transport difference,
 // so there is no provider switch anywhere -- an absent key simply means the
 // header is not sent.
+// The body reaches events.jsonl, and a router that rejects a credential often
+// quotes it back. Pattern redaction only knows well-known key shapes, so remove
+// the configured key by value first: a gateway token of any shape is still ours.
+export function redactBody(raw, apiKey) {
+  const key = typeof apiKey === "string" ? apiKey.trim() : "";
+  const text = key.length >= 8 ? String(raw).replaceAll(key, "[REDACTED_API_KEY]") : String(raw);
+  return redactString(text);
+}
+
 export function buildAuthHeaders(apiKey, headers = {}) {
   const key = typeof apiKey === "string" ? apiKey.trim() : "";
   if (!key) return { ...headers };

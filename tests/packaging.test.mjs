@@ -71,13 +71,13 @@ test("pins compatibility and security-sensitive transitive dependencies", () => 
 
   // pi-knowledge -> @huggingface/transformers@3.8.1 asks for ^0.34.1,
   // whose latest release is affected by published libvips/libheif advisories.
-  // sharp 0.35.4 contains the fixes and retains the API used by transformers.
-  assert.equal(manifest.overrides?.sharp, "0.35.4");
+  // 0.35.5 also fixes the librsvg advisory GHSA-wq5f-xc86-pv6w affecting 0.35.4.
+  assert.equal(manifest.overrides?.sharp, "0.35.5");
 });
 
 test("declares the minimum runtime and pins the Pi used by integration gates", () => {
   assert.equal(manifest.engines?.node, ">=22.19.0");
-  assert.equal(manifest.devDependencies?.["@earendil-works/pi-coding-agent"], "0.86.1");
+  assert.equal(manifest.devDependencies?.["@earendil-works/pi-coding-agent"], "1.3.0");
   assert.equal(manifest.peerDependencies?.["@earendil-works/pi-coding-agent"], "*");
 });
 
@@ -88,8 +88,8 @@ test("ships the resolved tree that was actually verified", () => {
   const lock = JSON.parse(fs.readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
   assert.ok(lock.lockfileVersion >= 3);
   assert.equal(lock.packages["node_modules/vscode-languageserver-protocol"].version, "3.17.5");
-  assert.equal(lock.packages["node_modules/sharp"].version, "0.35.4");
-  assert.equal(lock.packages["node_modules/@earendil-works/pi-coding-agent"].version, "0.86.1");
+  assert.equal(lock.packages["node_modules/sharp"].version, "0.35.5");
+  assert.equal(lock.packages["node_modules/@earendil-works/pi-coding-agent"].version, "1.3.0");
   for (const [name, version] of Object.entries(manifest.dependencies)) {
     assert.equal(lock.packages[`node_modules/${name}`]?.version, version, `${name} missing or mismatched in lockfile`);
   }

@@ -33,6 +33,14 @@ const steps = [
     name: "transport smoke",
     command: node,
     args: [script("smoke-tiny-transport.mjs")]
+  },
+  {
+    // Nothing above loads the extension into Pi: the unit tests drive it
+    // through a fake API and the syntax walker only parses it. Without this
+    // step the gate passes on an extension present in no real session.
+    name: "pi extension load",
+    command: node,
+    args: [script("pi-load-gate.mjs")]
   }
 ];
 

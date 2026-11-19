@@ -11,7 +11,18 @@ import { fileURLToPath } from "node:url";
 import { commandNames, extensionErrors, runPiRpc, runPiSync } from "./lib/pi-rpc.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const REQUIRED_COMMANDS = ["offline-setup", "offline-doctor", "offline-status"];
+// Every command the package promises. One that silently stops being
+// registered is a capability the user loses with no error anywhere.
+const REQUIRED_COMMANDS = [
+  "offline-setup",
+  "offline-doctor",
+  "offline-status",
+  "offline-context",
+  "offline-compact",
+  "offline-tools",
+  "offline-training",
+  "offline-stats"
+];
 
 const version = runPiSync(["--version"], { cwd: repoRoot });
 if (version.error || version.status !== 0) {

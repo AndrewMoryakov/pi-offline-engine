@@ -58,6 +58,14 @@ test("model locality comes from baseUrl, and is unknown without one", () => {
   assert.equal(isLocalModel({ baseUrl: "" }), null);
 });
 
+// HE-5: a cloud-only policy must not be bypassed by a hostname that only
+// looks private, since routing decides this from the same locality rule.
+test("a public host named like a private range is not a local model", () => {
+  for (const baseUrl of ["http://192.168.evil.com/v1", "https://127.0.0.1.evil.com/v1", "http://10.evil.com/v1"]) {
+    assert.equal(isLocalModel({ baseUrl }), false, baseUrl);
+  }
+});
+
 // HE-5, HE-6
 test("cloud-only hides the script edit for a local model and brings it back for a remote one", () => {
   const hidden = plan({ model: LOCAL });

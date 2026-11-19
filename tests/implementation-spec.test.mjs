@@ -79,3 +79,38 @@ test("requires explicit scope policy booleans", () => {
   delete bad.scope.allow_new_files;
   assert.equal(validateImplementationSpec(bad).ok, false);
 });
+
+test("rejects allowed files that are two spellings of one file", () => {
+  const aliased = structuredClone(spec);
+  aliased.scope.allowed_files = ["src/RetryPolicy.cs", "./src/RetryPolicy.cs"];
+  const result = validateImplementationSpec(aliased);
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.errors.some((error) => error.includes("name the same file")),
+    `expected an aliasing error, got: ${result.errors.join("; ")}`
+  );
+});
+
+test("rejects a backslash spelling of an already allowed file", () => {
+  const aliased = structuredClone(spec);
+  aliased.scope.allowed_files = ["src/RetryPolicy.cs", "src\\RetryPolicy.cs"];
+  const result = validateImplementationSpec(aliased);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("name the same file")));
+});
+
+test("still rejects an exact duplicate with the duplicate message", () => {
+  const duplicated = structuredClone(spec);
+  duplicated.scope.allowed_files = ["src/RetryPolicy.cs", "src/RetryPolicy.cs"];
+  const result = validateImplementationSpec(duplicated);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("duplicate allowed file")));
+});
+
+test("treats case variants as one file where the filesystem does", { skip: process.platform !== "win32" && "case-insensitive paths are a Windows/macOS behaviour" }, () => {
+  const aliased = structuredClone(spec);
+  aliased.scope.allowed_files = ["src/RetryPolicy.cs", "SRC/RETRYPOLICY.CS"];
+  const result = validateImplementationSpec(aliased);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("name the same file")));
+});

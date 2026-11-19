@@ -124,3 +124,23 @@ test("discovers a real OpenAI-compatible server over HTTP", async () => {
     server.close();
   }
 });
+
+test("never picks an embedding or reranking model as the implementer", () => {
+  const nonChat = [
+    "bge-m3",
+    "BAAI/bge-large-en",
+    "gte-large",
+    "multilingual-e5-small",
+    "nomic-embed-text",
+    "mxbai-embed-large",
+    "all-MiniLM-L6-v2",
+    "jina-reranker-v2"
+  ];
+  for (const id of nonChat) {
+    assert.equal(pickChatModel([id, "llama3"]), "llama3", id);
+    assert.equal(pickChatModel([id]), null, id);
+  }
+
+  // Chat models keep winning, and a coder model still wins over a plain one.
+  assert.equal(pickChatModel(["llama3", "qwen2.5-coder-3b-instruct"]), "qwen2.5-coder-3b-instruct");
+});

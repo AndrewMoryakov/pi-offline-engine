@@ -50,6 +50,10 @@ export function registerDelegationTools(pi: ExtensionAPI, runtime: ExtensionRunt
 
   pi.registerTool({
     name: "execute_delegated_implementation",
+    // Pi 0.99+ makes direct tools callable from codemode/ctx.executeTool.
+    // This interactive orchestrator must remain a top-level model call.
+    exposure: "model-only",
+    executionMode: "sequential",
     label: "Execute delegated implementation",
     description: "Run a bounded local TinyCoder implementation loop: candidate, guarded apply, dotnet verification, and up to two cheap repair attempts before returning control.",
     promptSnippet: "Execute a strict ImplementationSpec through the local tiny coding model and deterministic verification",

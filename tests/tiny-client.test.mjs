@@ -508,3 +508,40 @@ test("current files reach the model only when the engine attaches them", async (
     await once(server, "close");
   }
 });
+
+test("redacts a gateway token that matches no known key shape", async () => {
+  // Pattern redaction only knows well-known shapes (sk-..., ghp_..., AKIA...).
+  // A self-hosted gateway or LiteLLM token looks like none of them, so the
+  // engine has to remove its own configured key by value.
+  const key = "gw_tok_leakcanary_0123456789abcdef";
+  const server = http.createServer(async (req, res) => {
+    for await (const chunk of req) void chunk;
+    res.statusCode = 401;
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ error: { message: `No auth credentials found: ${key}` } }));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const endpoint = `http://127.0.0.1:${server.address().port}`;
+
+  try {
+    let thrown = null;
+    await assert.rejects(
+      callTinyImplementer({
+        endpoint,
+        model: "m",
+        spec: { version: 1, spec_id: "s", operation: "modify_symbol" },
+        apiKey: key,
+        timeoutMs: 5000
+      }),
+      (error) => { thrown = error; return true; }
+    );
+
+    assert.equal(thrown.message.includes(key), false, "gateway token leaked into the error");
+    assert.equal(thrown.message.includes("leakcanary"), false);
+    assert.match(thrown.message, /REDACTED/);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});

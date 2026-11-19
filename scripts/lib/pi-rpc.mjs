@@ -1,14 +1,18 @@
 import { spawn, spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 const isWindows = process.platform === "win32";
 
-// `pi.cmd` is a batch shim; since the CVE-2024-27980 fix Node refuses to spawn
-// .cmd/.bat directly (EINVAL). Invoke cmd.exe explicitly rather than using
-// `shell: true`: this avoids Node's unsafe implicit argument concatenation and
-// keeps the command construction in one reviewed helper.
-export function piCommand() {
-  return isWindows ? "pi.cmd" : "pi";
+// Resolve the host under test from this repository, even when a gate is run
+// directly or from an isolated staging cwd. PATH may contain a different Pi.
+// Use its declared bin through Node: no Windows .cmd shim or shell is needed.
+function piInvocation(args) {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))), "..");
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  return { command: process.execPath, args: [path.resolve(root, manifest.bin.pi), ...args] };
 }
 
 export function shellArg(value) {
@@ -26,7 +30,7 @@ export function commandInvocation(command, args = []) {
 }
 
 export function runPiSync(args, options = {}) {
-  const invocation = commandInvocation(piCommand(), args);
+  const invocation = piInvocation(args);
   return spawnSync(invocation.command, invocation.args, {
     encoding: "utf8",
     ...options
@@ -40,7 +44,7 @@ export function runPiSync(args, options = {}) {
 export function runPiRpc({ args = [], requests = [], until, cwd, env = process.env, timeoutMs = 120_000 }) {
   return new Promise((resolve) => {
     const fullArgs = ["--mode", "rpc", ...args];
-    const invocation = commandInvocation(piCommand(), fullArgs);
+    const invocation = piInvocation(fullArgs);
     const child = spawn(invocation.command, invocation.args, {
       cwd,
       env,
@@ -92,8 +96,8 @@ export function runPiRpc({ args = [], requests = [], until, cwd, env = process.e
   });
 }
 
-// With `shell: true`, child.kill() stops cmd.exe but not the node process
-// running pi underneath; kill the whole tree so gates leave no orphans.
+// Pi may start worker/companion processes; stop the whole tree on Windows so
+// gates do not leave those children behind.
 function killTree(child) {
   if (child.exitCode !== null || child.pid === undefined) return;
   if (isWindows) {

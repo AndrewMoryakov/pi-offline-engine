@@ -17,11 +17,17 @@ export function validateImplementationSpec(spec) {
   const allowedFiles = spec.scope?.allowed_files;
   if (!Array.isArray(allowedFiles) || allowedFiles.length === 0) errors.push("scope.allowed_files must be a non-empty array");
   else {
-    const seen = new Set();
+    // Two spellings of one file used to pass as two entries. Each was then
+    // snapshotted and edited from the same original content, so the later write
+    // discarded the earlier edit while both were reported as changed.
+    const seen = new Map();
     for (const file of allowedFiles) {
       if (!isSafeRelativePath(file)) errors.push(`unsafe allowed file: ${String(file)}`);
-      if (seen.has(file)) errors.push(`duplicate allowed file: ${String(file)}`);
-      seen.add(file);
+      const key = scopeKey(file);
+      const previous = seen.get(key);
+      if (previous === file) errors.push(`duplicate allowed file: ${String(file)}`);
+      else if (previous !== undefined) errors.push(`allowed files name the same file: ${previous} and ${String(file)}`);
+      else seen.set(key, file);
     }
     if (isSafeRelativePath(spec.target?.file) && !allowedFiles.includes(spec.target.file)) {
       errors.push("target.file must be included in scope.allowed_files");
@@ -78,6 +84,13 @@ export function validateCandidate(candidate, spec) {
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+// Identity of a scope entry as the filesystem sees it: separators unified, `./`
+// collapsed, and case folded where the filesystem ignores it.
+function scopeKey(value) {
+  const normalized = path.posix.normalize(String(value).replaceAll("\\", "/"));
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 
 export function isSafeRelativePath(value) {

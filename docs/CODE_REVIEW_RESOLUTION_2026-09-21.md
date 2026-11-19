@@ -3,6 +3,13 @@
 This document records the disposition of findings in `CODE_REVIEW_2026-09-21.md`.
 The original review is intentionally left unchanged.
 
+> **Corrections, 2026-09-23.** Two statements below did not survive review and are
+> left in place as the record of what was claimed at the time: row 1 ("fixed
+> invalid test syntax") was asserted while the same change shipped a test file
+> that could not run, and the retry policy in row 7 and the notes below describe
+> a "no workspace mutation" guard the code does not implement.
+> See `CODE_REVIEW_2026-09-23.md`, findings 3 and 4.
+
 ## Summary
 
 The review findings were treated as real unless explicitly qualified below.

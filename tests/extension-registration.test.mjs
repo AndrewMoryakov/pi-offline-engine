@@ -72,7 +72,7 @@ test("registration order: tools, then lifecycle hooks, then commands", async () 
   ]);
 });
 
-test("tool metadata and parameter schemas are unchanged", async () => {
+test("tool metadata and parameter schemas match the public contract", async () => {
   const fake = await load();
   const tools = Object.values(fake.tools).map((tool) => ({
     name: tool.name,
@@ -80,6 +80,8 @@ test("tool metadata and parameter schemas are unchanged", async () => {
     description: tool.description,
     promptSnippet: tool.promptSnippet,
     promptGuidelines: tool.promptGuidelines,
+    exposure: tool.exposure,
+    executionMode: tool.executionMode,
     parameters: JSON.parse(JSON.stringify(tool.parameters)),
     otherKeys: Object.keys(tool).sort()
   }));

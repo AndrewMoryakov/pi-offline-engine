@@ -16,6 +16,9 @@ export function buildRepairPacket({ spec, attempt, candidate, verification }) {
       checks: verification.checks.map((check) => ({
         kind: check.kind,
         passed: check.passed,
+        // Without these the model only sees the merged, truncated list above,
+        // so a repair prompt could describe a failure it cannot read.
+        diagnostics: check.diagnostics,
         code: check.code,
         killed: check.killed,
         artifact: check.artifact,

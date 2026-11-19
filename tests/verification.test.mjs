@@ -343,3 +343,62 @@ test("project-qualified runner detection gets a build-sized timeout and reports 
   // A real MTP project needed 18-23 s here; the limit must cover a build.
   assert.ok(timeouts[0] >= 60_000, `runner detection timeout ${timeouts[0]} ms`);
 });
+
+test("a noisy log cannot swallow the reason the check failed", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  // Enough matching lines to fill the diagnostic budget on their own.
+  const noise = Array.from({ length: 45 }, (_, i) => `warn : NU1603 package ${i} failed, retrying`).join("\n");
+  const exec = async (_command, args) => {
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    if (args[0] === "test") {
+      await writeTrxFromArgs(args, { total: 0, executed: 0, passed: 0 });
+      return { code: 0, killed: false, stdout: noise, stderr: "" };
+    }
+    return { code: 0, killed: false, stdout: "ok", stderr: "" };
+  };
+
+  const spec = { spec_id: "verify-noise", verification: { tests: { project: "tests/App.Tests.csproj", names: ["RetryTests.Cancellation"] } } };
+  const result = await runVerification({ cwd, spec, exec, attempt: 1 });
+
+  assert.equal(result.passed, false);
+  const verdict = /zero tests executed/;
+  assert.ok(
+    result.checks.some((check) => check.diagnostics.some((line) => verdict.test(line))),
+    "the check must still state why it failed"
+  );
+  assert.ok(
+    result.diagnostics.some((line) => verdict.test(line)),
+    "the merged list the model sees must state why it failed"
+  );
+});
+
+test("a failing check is reported before a noisy passing one", async () => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "pi-verify-"));
+  await createProjects(cwd);
+  const buildNoise = Array.from({ length: 45 }, (_, i) => `warn : CS0168 unused variable ${i} failed check`).join("\n");
+  const exec = async (_command, args) => {
+    if (args[0] === "build") return { code: 0, killed: false, stdout: buildNoise, stderr: "" };
+    if (args[0] === "test" && args[1] === "--help") return vstestHelp();
+    if (args[0] === "test") {
+      await writeTrxFromArgs(args, { total: 1, executed: 1, passed: 0, failed: 1 });
+      return { code: 1, killed: false, stdout: "Assert.Equal() Failure: expected 3 but was 0", stderr: "" };
+    }
+    return { code: 0, killed: false, stdout: "", stderr: "" };
+  };
+
+  const spec = {
+    spec_id: "verify-order",
+    verification: {
+      build: { project: "src/App.csproj" },
+      tests: { project: "tests/App.Tests.csproj", names: ["RetryTests.Cancellation"] }
+    }
+  };
+  const result = await runVerification({ cwd, spec, exec, attempt: 1 });
+
+  assert.equal(result.passed, false);
+  assert.ok(
+    result.diagnostics.some((line) => line.includes("expected 3 but was 0")),
+    `the test failure must survive the build noise; got: ${result.diagnostics.slice(0, 3).join(" | ")}`
+  );
+});

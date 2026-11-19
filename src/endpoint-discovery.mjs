@@ -10,7 +10,10 @@ export const DEFAULT_CANDIDATES = Object.freeze([
 ]);
 
 const DEFAULT_TIMEOUT_MS = 1500;
-const NON_CHAT_MODEL = /embed|rerank/i;
+// Beyond the literal words, the common embedding and reranking families: a
+// server that serves one alongside a chat model would otherwise hand us a
+// model that cannot answer with a candidate at all.
+const NON_CHAT_MODEL = /embed|rerank|^bge-|[/_-]bge-|^gte-|[/_-]gte-|^e5-|[/_-]e5-|multilingual-e5|minilm|nomic-embed|mxbai|^jina-/i;
 
 export function pickChatModel(ids) {
   const chat = (ids ?? []).filter((id) => typeof id === "string" && id && !NON_CHAT_MODEL.test(id));

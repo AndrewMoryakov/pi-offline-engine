@@ -124,7 +124,8 @@ test("terminal status after a failed verification hands the main model that veri
   const last = outcome.outcome.last_verification;
   assert.equal(last.attempt, 1);
   assert.equal(last.passed, false);
-  assert.ok(last.diagnostics.some((line) => line.includes("CS1002")), last.diagnostics.join("\n"));
+  assert.equal(last.diagnostics, undefined);
+  assert.ok(last.checks[0].diagnostics.some((line) => line.includes("CS1002")), last.checks[0].diagnostics.join("\n"));
   assert.equal(last.checks[0].kind, "build");
   assert.equal(last.checks[0].passed, false);
   assert.ok(last.checks[0].artifact);
@@ -143,7 +144,7 @@ test("unusable output after a failed verification hands the main model that veri
   });
   assert.equal(outcome.kind, "model_output_escalation");
   assert.equal(outcome.outcome.workspace_modified, true);
-  assert.ok(outcome.outcome.last_verification.diagnostics.some((line) => line.includes("CS1002")));
+  assert.ok(outcome.outcome.last_verification.checks[0].diagnostics.some((line) => line.includes("CS1002")));
 });
 
 test("terminal status before any mutation carries no verification", async () => {

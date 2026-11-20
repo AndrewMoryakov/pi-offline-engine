@@ -15,7 +15,7 @@ export function summarizeVerification(verification, attempt = null) {
   return {
     ...(attempt === null ? {} : { attempt }),
     passed: verification.passed,
-    diagnostics: verification.diagnostics ?? [],
+    // Per check only: the merged list of the verification repeats them.
     checks: (verification.checks ?? []).map((check) => ({
       kind: check.kind,
       passed: check.passed,

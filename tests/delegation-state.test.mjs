@@ -94,7 +94,7 @@ test("terminal status after mutation includes the last verification when it is g
     usage: null,
     workspaceModified: true,
     changedFiles: ["src/A.cs"],
-    lastVerification: { attempt: 1, passed: false, diagnostics: ["d"], checks: [] }
+    lastVerification: { attempt: 1, passed: false, checks: [] }
   });
-  assert.deepEqual(outcome.last_verification, { attempt: 1, passed: false, diagnostics: ["d"], checks: [] });
+  assert.deepEqual(outcome.last_verification, { attempt: 1, passed: false, checks: [] });
 });

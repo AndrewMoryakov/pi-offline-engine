@@ -104,6 +104,9 @@ that prompt. `delegate_implementation` writes nothing and needs no approval.
   its turn.
 - **Progress.** When the client sends a progress token, each implementer
   attempt is reported as an MCP progress notification.
+- **Long calls.** One execute call can take minutes: up to three implementer
+  calls plus dotnet build/test. If your client limits tool-call time, raise
+  the limit for this server.
 - **Failed builds through Bash are not shortened.** Claude Code sends a Bash
   command that exits non-zero to `PostToolUseFailure`, not `PostToolUse`, and
   a hook on that event cannot change what the model reads (checked with
@@ -111,9 +114,6 @@ that prompt. `delegate_implementation` writes nothing and needs no approval.
   therefore reaches the model in full. `dotnet_build` and `dotnet_test` run
   the command in the engine and return the short result for any exit code;
   the plugin's skill and the server's instructions ask the model to use them.
-- **Long calls.** One execute call can take minutes: up to three implementer
-  calls plus dotnet build/test. If your client limits tool-call time, raise
-  the limit for this server.
 
 ## Frontier main model, cheap implementer
 

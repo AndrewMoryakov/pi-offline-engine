@@ -104,3 +104,15 @@ test("a project that links outside the workspace is refused", async () => {
   const exec = async () => { throw new Error("dotnet must not run"); };
   await assert.rejects(runDotnetCommand({ cwd, command: "build", project: "Linked.csproj", exec }), /outside the workspace/);
 });
+
+test("output past a screenful is summarised even below the shell hook's 8000 characters", async () => {
+  const cwd = await workspace();
+  const stdout = (await fs.readFile(new URL("./fixtures/dotnet-output/test-nunit-failures.txt", import.meta.url), "utf8"));
+  assert.ok(stdout.length > 2000 && stdout.length < 8000, String(stdout.length));
+  const { exec } = recorder({ code: 1, killed: false, stdout, stderr: "" });
+  const outcome = await runDotnetCommand({ cwd, command: "test", exec });
+  assert.ok(outcome.compacted);
+  assert.match(outcome.text, /^ {4}Expected: 1\n {4}But was: {2}2$/m);
+  assert.ok(outcome.text.length < stdout.length / 3, String(outcome.text.length));
+});
+

@@ -15,6 +15,11 @@ import { compactDotnetText } from "./tool-result-compactor.mjs";
 import { formatDotnetReport, parseDotnetOutput } from "./dotnet-output.mjs";
 
 export const DOTNET_RUN_TIMEOUT_MS = 15 * 60_000;
+// The shell hook leaves output under 8000 characters alone, because there
+// the model asked for the raw command. A caller of these tools asked for the
+// short result, so anything past a screenful is summarised: 20 failed NUnit
+// tests print about 7100 characters and summarise to about 1300.
+export const DOTNET_RUN_MIN_COMPACT_CHARS = 2000;
 const CONFIGURATION = /^[A-Za-z0-9_.-]{1,40}$/;
 const MAX_FILTER_CHARS = 500;
 
@@ -56,7 +61,13 @@ export async function runDotnetCommand({
     ? `killed after ${Math.round(timeoutMs / 1000)} s`
     : `exit code ${String(result.code)}`;
 
-  const compacted = await compactDotnetText({ cwd, toolCallId: toolCallId ?? `dotnet-${command}-${Date.now()}`, command: display, text });
+  const compacted = await compactDotnetText({
+    cwd,
+    toolCallId: toolCallId ?? `dotnet-${command}-${Date.now()}`,
+    command: display,
+    text,
+    minChars: DOTNET_RUN_MIN_COMPACT_CHARS
+  });
   if (compacted) {
     return {
       text: [`${display}: ${exit}`, compacted.text].join("\n"),
@@ -66,8 +77,8 @@ export async function runDotnetCommand({
     };
   }
 
-  // Short output is shown whole, under the same verdict line the compacted
-  // form starts with.
+  // Output under DOTNET_RUN_MIN_COMPACT_CHARS is shown whole, under the same
+  // verdict line the compacted form starts with.
   const [verdict] = formatDotnetReport(parseDotnetOutput(text, { cwd }));
   return {
     text: [`${display}: ${exit}`, verdict, "", text || "(no output)"].join("\n"),

@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   buildRuntimeFailureOutcome,
   buildTinyTerminalOutcome,
-  failureReasonForStage
+  failureReasonForStage,
+  summarizeVerification
 } from "../src/delegation-state.mjs";
 
 test("classifies execution stages without conflating invalid output with transport", () => {
@@ -71,4 +72,29 @@ test("terminal TinyCoder status remains terminal before any mutation", () => {
   assert.equal(outcome.status, "cannot_safely_implement");
   assert.equal(outcome.workspace_modified, false);
   assert.deepEqual(outcome.changed_files, []);
+});
+
+test("summarizeVerification keeps the verdict, the failures and the log paths, not the executed test list", () => {
+  const summary = summarizeVerification({
+    passed: false,
+    diagnostics: ["Result: Tests FAILED, 1 failed, 2 passed, 0 skipped of 3"],
+    checks: [{ kind: "tests", passed: false, code: 2, killed: false, diagnostics: ["x"], artifact: "a.log", resultArtifact: "r.trx", executedTestIdentities: ["A.B", "A.C"], runner: "mtp" }]
+  }, 2);
+  assert.equal(summary.attempt, 2);
+  assert.equal(summary.passed, false);
+  assert.deepEqual(summary.checks[0], { kind: "tests", passed: false, code: 2, killed: false, diagnostics: ["x"], artifact: "a.log", resultArtifact: "r.trx" });
+  assert.equal(summarizeVerification(null), null);
+});
+
+test("terminal status after mutation includes the last verification when it is given", () => {
+  const outcome = buildTinyTerminalOutcome({
+    terminalStatus: "cannot_safely_implement",
+    reason: "outside scope",
+    attempt: 2,
+    usage: null,
+    workspaceModified: true,
+    changedFiles: ["src/A.cs"],
+    lastVerification: { attempt: 1, passed: false, checks: [] }
+  });
+  assert.deepEqual(outcome.last_verification, { attempt: 1, passed: false, checks: [] });
 });

@@ -32,7 +32,8 @@ export function buildModelOutputEscalation({
   workspaceModified,
   changedFiles = [],
   attempts = [],
-  error = null
+  error = null,
+  lastVerification = null
 }) {
   return {
     status: "needs_main_model",
@@ -42,6 +43,7 @@ export function buildModelOutputEscalation({
     workspace_modified: Boolean(workspaceModified),
     changed_files: [...new Set(changedFiles)].sort(),
     error: error ? String(error) : null,
-    attempts
+    attempts,
+    ...(lastVerification ? { last_verification: lastVerification } : {})
   };
 }

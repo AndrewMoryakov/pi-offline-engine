@@ -42,7 +42,25 @@
               "candidateValid": false,
               "verificationPassed": false
             }
-          ]
+          ],
+          "last_verification": {
+            "attempt": 1,
+            "passed": false,
+            "checks": [
+              {
+                "kind": "build",
+                "passed": false,
+                "code": 1,
+                "killed": false,
+                "diagnostics": [
+                  "Result: Build FAILED, 1 error, 0 warnings",
+                  "Errors (1 unique):",
+                  "  src/A.cs(1,20): error CS1002: ; expected"
+                ],
+                "artifact": ".pi/offline-engine/artifacts/be42db445ab1aaac4d41.log"
+              }
+            ]
+          }
         }
       }
     ],

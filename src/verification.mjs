@@ -271,7 +271,9 @@ export const TRX_UNAVAILABLE_MESSAGE =
   "Microsoft.Testing.Platform is active but TRX reporting is unavailable. " +
   "Add/enable Microsoft.Testing.Extensions.TrxReport (or an SDK profile that includes it) before offline verification. " +
   "The same report appears when the test host cannot start, because `dotnet test --help` launches it to list the project's options: " +
-  "check that the runtime the test project targets is installed (`dotnet --list-runtimes`).";
+  "check that the runtime the test project targets is installed (`dotnet --list-runtimes`). " +
+  "xunit.v3 projects do not include TRX reporting: add the package at the version of Microsoft.Testing.Platform the project restores " +
+  "(`dotnet list <test project> package --include-transitive` shows it).";
 
 export async function inspectDotnetTestRunner({ cwd, project = null, exec, signal, timeoutMs = RUNNER_DETECTION_TIMEOUT_MS }) {
   // MTP extensions (including TRX reporting) are contributed by the test

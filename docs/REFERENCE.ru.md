@@ -631,6 +631,7 @@ npm run acceptance:prepare -- --restore
 | `PI_OFFLINE_SCRIPT_EDIT_POLICY` | Только гибрид: `always`, `cloud-only` или `never` | `always` |
 | `PI_OFFLINE_COMPACT_TOOL_RESULTS` | `0` выключает сжатие при запуске | включено |
 | `PI_OFFLINE_REPO_CAPSULE` | `0` выключает капсулу при запуске | включена |
+| `PI_OFFLINE_STATE_KEEP` | Сколько записей хранить в каждой из папок `tool-results/`, `artifacts/`, `test-results/` и `candidates/` (от 1 до 10000); предел размера папки: 10 МБ или 512 КБ на запись, что больше | 20 |
 | `PI_OFFLINE_TRAINING_CAPTURE` | `1` включает сбор при запуске | выключен |
 | `PI_OFFLINE_ALLOW_HEADLESS_APPLY` | `1` разрешает изменения без UI; только в отдельно изолированном рабочем процессе | выключено |
 | `PI_CODING_AGENT_DIR` | Каталог агента Pi, где лежит сохранённая конфигурация движка | `~/.pi/agent` |
@@ -651,6 +652,8 @@ npm run acceptance:prepare -- --restore
 | `.pi/offline-engine/tool-results/` | Полный вывод сжатых команд `dotnet` |
 | `.pi/offline-engine/training/raw.jsonl` | Сырые обучающие трассы (только когда сбор включён; могут содержать исходный код) |
 | `.pi/offline-engine/training/export/` | Экспортированные наборы данных и манифест |
+
+После каждой записи в `tool-results/`, `artifacts/`, `test-results/` или `candidates/` движок удаляет из этой папки самые старые записи сверх `PI_OFFLINE_STATE_KEEP` (по умолчанию 20) и сверх предела размера, сохраняя самую новую и только что записанную. `events.jsonl` и `training/` не удаляются никогда: статистика читает весь журнал, а обучающие данные принадлежат вам.
 
 Движок сам пишет `.pi/offline-engine/.gitignore` (с содержимым `*`), поэтому целевому репозиторию отдельная запись не нужна; `.gitignore` самого этого репозитория тоже игнорирует `.pi/`.
 

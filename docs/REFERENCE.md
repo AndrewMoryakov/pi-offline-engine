@@ -640,6 +640,7 @@ Pi tools: `delegate_implementation`, `execute_delegated_implementation`.
 | `PI_OFFLINE_SCRIPT_EDIT_POLICY` | Hybrid only: `always`, `cloud-only` or `never` | `always` |
 | `PI_OFFLINE_COMPACT_TOOL_RESULTS` | `0` disables compaction at startup | on |
 | `PI_OFFLINE_REPO_CAPSULE` | `0` disables the capsule at startup | on |
+| `PI_OFFLINE_STATE_KEEP` | Entries kept in each of `tool-results/`, `artifacts/`, `test-results/` and `candidates/` (1 to 10000); the size limit per folder is 10 MB or 512 KB per entry, whichever is larger | 20 |
 | `PI_OFFLINE_TRAINING_CAPTURE` | `1` enables capture at startup | off |
 | `PI_OFFLINE_ALLOW_HEADLESS_APPLY` | `1` allows mutation without a UI; only in a separately sandboxed workflow | off |
 | `PI_CODING_AGENT_DIR` | Pi agent directory that holds the saved engine config | `~/.pi/agent` |
@@ -660,6 +661,8 @@ Pi tools: `delegate_implementation`, `execute_delegated_implementation`.
 | `.pi/offline-engine/tool-results/` | Full output of compacted `dotnet` commands |
 | `.pi/offline-engine/training/raw.jsonl` | Raw training traces (only when capture is on; may contain source) |
 | `.pi/offline-engine/training/export/` | Exported datasets and manifest |
+
+After each write to `tool-results/`, `artifacts/`, `test-results/` or `candidates/` the engine removes the oldest entries of that folder beyond `PI_OFFLINE_STATE_KEEP` (20 by default) and beyond its size limit, keeping the newest entry and the one just written. `events.jsonl` and `training/` are never removed: statistics read the whole ledger, and training data is yours.
 
 The engine writes `.pi/offline-engine/.gitignore` (containing `*`) itself, so a target repository needs no entry for it; this repository's own `.gitignore` also ignores `.pi/`.
 

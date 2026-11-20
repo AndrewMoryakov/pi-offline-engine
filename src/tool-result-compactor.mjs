@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { ensureStateSubdir } from "./state-dir.mjs";
+import { pruneStateSubdir } from "./state-retention.mjs";
 import { formatDotnetReport, hasFailureDetail, isRecognised, keywordLines, parseDotnetOutput, reportsFailure } from "./dotnet-output.mjs";
 
 const DEFAULT_MIN_CHARS = 8000;
@@ -140,6 +141,7 @@ async function writeToolArtifact(cwd, toolCallId, command, text) {
   const file = path.join(dir, `${safeId || "tool"}.log`);
   const body = [`command=${command}`, "", text].join("\n");
   await fs.writeFile(file, body, "utf8");
+  await pruneStateSubdir(cwd, "tool-results", [path.basename(file)]);
   return path.relative(cwd, file).replaceAll("\\", "/");
 }
 

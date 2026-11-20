@@ -108,5 +108,5 @@ async function usesTestingPlatformMode(cwd) {
 }
 
 function quoteForDisplay(arg) {
-  return /^[\w./:=@+-]+$/.test(arg) ? arg : JSON.stringify(arg);
+  return /^[\w./:=@+~-]+$/.test(arg) ? arg : JSON.stringify(arg);
 }

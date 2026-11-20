@@ -144,3 +144,52 @@ test("a persisted large result is compacted from the full file and loses its per
   assert.match(updated.stdout, /error CS1513/);
   assert.equal(updated.interrupted, false);
 });
+
+// --- 2026-11-20: the hooks write the events offline_stats counts ----------
+
+function readEvents(cwd) {
+  const file = path.join(cwd, ".pi", "offline-engine", "events.jsonl");
+  if (!fs.existsSync(file)) return [];
+  return fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
+}
+
+function gitRepo(prefix) {
+  const dir = tempDir(prefix);
+  const git = (...args) => execFileSync("git", args, { cwd: dir, stdio: "ignore" });
+  git("init", "-q");
+  fs.writeFileSync(path.join(dir, "App.csproj"), "<Project />\n");
+  git("add", "-A");
+  git("-c", "user.name=t", "-c", "user.email=t@l", "commit", "-qm", "init");
+  return dir;
+}
+
+test("compaction hook records tool_result_compacted for offline_stats", () => {
+  const cwd = tempDir("pi-hook-events-");
+  const result = runHook("compact-dotnet-output.mjs", bashPayload(cwd, "dotnet build", bigBuildLog));
+  assert.equal(result.status, 0);
+  const shown = JSON.parse(result.stdout).hookSpecificOutput.updatedToolOutput.stdout;
+  const events = readEvents(cwd).filter((event) => event.type === "tool_result_compacted");
+  assert.equal(events.length, 1);
+  assert.equal(events[0].originalChars, bigBuildLog.length);
+  assert.equal(events[0].compactedChars, shown.length);
+  assert.equal(events[0].toolCallId, "toolu_test_1");
+  assert.match(events[0].artifact, /^\.pi\/offline-engine\/tool-results\//);
+});
+
+test("snapshot hook counts the snapshot only where the engine's state directory exists", () => {
+  const repo = gitRepo("pi-hook-capsule-");
+  const payload = { hook_event_name: "SessionStart", source: "startup", cwd: repo };
+
+  const first = runHook("repo-capsule.mjs", payload);
+  assert.equal(first.status, 0);
+  assert.match(JSON.parse(first.stdout).hookSpecificOutput.additionalContext, /repository snapshot/);
+  assert.equal(fs.existsSync(path.join(repo, ".pi")), false, "a session start must not create .pi/");
+
+  fs.mkdirSync(path.join(repo, ".pi", "offline-engine"), { recursive: true });
+  const second = runHook("repo-capsule.mjs", payload);
+  assert.equal(second.status, 0);
+  const events = readEvents(repo).filter((event) => event.type === "repo_capsule_injected");
+  assert.equal(events.length, 1);
+  assert.equal(events[0].projectFiles, 1);
+  assert.equal(typeof events[0].fingerprint, "string");
+});

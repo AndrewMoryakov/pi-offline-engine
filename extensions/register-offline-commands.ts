@@ -3,7 +3,7 @@
 // runtime config facade.
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ExtensionRuntime } from "./extension-runtime.ts";
-import { runOfflineDoctor, formatDoctorReport, describeImplementerLocality } from "../src/offline-doctor.mjs";
+import { runOfflineDoctor, formatDoctorReport, describeImplementerAuth, describeImplementerLocality } from "../src/offline-doctor.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
 import { trainingCaptureStatus } from "../src/training-recorder.mjs";
@@ -293,9 +293,6 @@ function argumentChoices(choices: Array<[value: string, description: string]>) {
   };
 }
 
-function implementerAuth(settings: { apiKey: string | null; openRouterKeyWithheld?: boolean }) {
-  if (settings.apiKey) return "bearer key configured";
-  return settings.openRouterKeyWithheld
-    ? "none (OPENROUTER_API_KEY is set but sent only to openrouter.ai)"
-    : "none (local endpoint)";
+function implementerAuth(settings: { provider?: string; apiKey: string | null; openRouterKeyWithheld?: boolean }) {
+  return describeImplementerAuth(settings, "none (local endpoint)");
 }

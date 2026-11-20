@@ -130,7 +130,7 @@ test("terminal status after a failed verification hands the main model that veri
   assert.ok(last.checks[0].artifact);
   assert.equal(last.checks[0].executedTestIdentities, undefined);
   // The result the main model reads carries it; the ledger event does not.
-  assert.ok(JSON.parse(formatExecutionResult(outcome).content).last_verification);
+  assert.ok(JSON.parse(formatExecutionResult(outcome).content[0].text).last_verification);
   assert.equal(events.at(-1).type, "delegated_implementation_escalated");
   assert.equal(events.at(-1).last_verification, undefined);
 });

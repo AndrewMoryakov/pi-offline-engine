@@ -31,7 +31,7 @@
 import { validateImplementationSpec } from "./implementation-spec.mjs";
 import { preflightVerificationInfrastructure } from "./verification.mjs";
 import { buildRepairPacket } from "./repair-packet.mjs";
-import { buildRuntimeFailureOutcome, buildTinyTerminalOutcome } from "./delegation-state.mjs";
+import { buildRuntimeFailureOutcome, buildTinyTerminalOutcome, summarizeVerification } from "./delegation-state.mjs";
 import { buildModelOutputEscalation, buildModelOutputRepairPacket, canRetryModelOutput } from "./delegation-retry.mjs";
 import { addPiUsage, toPiUsage } from "./pi-usage.mjs";
 import { createTrainingRunId, hasSensitiveTrainingPath, makeInfrastructureFailureRecord } from "./training-recorder.mjs";
@@ -66,6 +66,7 @@ export async function runDelegatedExecution(options) {
     stage: "verification_preflight",
     repairPacket: null,
     lastVerification: null,
+    lastVerificationAttempt: null,
     workspaceModified: false,
     cumulativeChangedFiles: new Set(),
     attempts: [],
@@ -117,6 +118,11 @@ export async function runDelegatedExecution(options) {
     return { kind: "runtime_failure", outcome, attempts: state.attempts, nestedUsage: state.nestedUsage };
   };
 
+  // Only after a write: before one, the main model has nothing to read in the
+  // workspace and no verification result is relevant.
+  const lastVerificationSummary = () =>
+    state.workspaceModified ? summarizeVerification(state.lastVerification, state.lastVerificationAttempt) : null;
+
   const modelOutputEscalation = async ({ reason, stage, attempt, error }) => {
     const outcome = buildModelOutputEscalation({
       reason,
@@ -125,9 +131,12 @@ export async function runDelegatedExecution(options) {
       workspaceModified: state.workspaceModified,
       changedFiles: changedFiles(),
       attempts: state.attempts,
-      error
+      error,
+      lastVerification: lastVerificationSummary()
     });
-    await appendEvent(cwd, { type: "delegated_implementation_escalated", specId, ...outcome });
+    // The ledger records that the run was escalated, not the failure text.
+    const { last_verification: _omitted, ...eventFields } = outcome;
+    await appendEvent(cwd, { type: "delegated_implementation_escalated", specId, ...eventFields });
     return { kind: "model_output_escalation", outcome, attempts: state.attempts, nestedUsage: state.nestedUsage };
   };
 
@@ -146,7 +155,10 @@ export async function runDelegatedExecution(options) {
       state.workspaceModified = true;
       for (const file of result.applied.changedFiles) state.cumulativeChangedFiles.add(file);
     }
-    if (result.verification) state.lastVerification = result.verification;
+    if (result.verification) {
+      state.lastVerification = result.verification;
+      state.lastVerificationAttempt = attempt;
+    }
 
     if (result.kind === "runtime_failure") return runtimeFailure(attempt, result.error);
 
@@ -198,13 +210,15 @@ export async function runDelegatedExecution(options) {
           attempt,
           usage,
           workspaceModified: state.workspaceModified,
-          changedFiles: changedFiles()
+          changedFiles: changedFiles(),
+          lastVerification: lastVerificationSummary()
         });
+        const { last_verification: _omitted, ...eventFields } = outcome;
         await appendEvent(cwd, {
           type: state.workspaceModified ? "delegated_implementation_escalated" : "tiny_terminal_status",
           specId,
           attempt,
-          ...outcome
+          ...eventFields
         });
         return {
           kind: "terminal_model_status",

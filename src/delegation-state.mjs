@@ -7,6 +7,27 @@ export function failureReasonForStage(stage) {
   return "delegated_runtime_failure";
 }
 
+// What the main model needs from the last verification when the run is handed
+// back to it: the verdict, the failures with their values and lines, and where
+// the full logs are. The list of executed test names stays out of it.
+export function summarizeVerification(verification, attempt = null) {
+  if (!verification) return null;
+  return {
+    ...(attempt === null ? {} : { attempt }),
+    passed: verification.passed,
+    diagnostics: verification.diagnostics ?? [],
+    checks: (verification.checks ?? []).map((check) => ({
+      kind: check.kind,
+      passed: check.passed,
+      code: check.code,
+      killed: check.killed,
+      diagnostics: check.diagnostics,
+      artifact: check.artifact,
+      resultArtifact: check.resultArtifact
+    }))
+  };
+}
+
 export function buildRuntimeFailureOutcome({
   stage,
   workspaceModified,
@@ -36,7 +57,8 @@ export function buildTinyTerminalOutcome({
   attempt,
   usage,
   workspaceModified,
-  changedFiles = []
+  changedFiles = [],
+  lastVerification = null
 }) {
   const files = [...new Set(changedFiles)].sort();
 
@@ -49,7 +71,8 @@ export function buildTinyTerminalOutcome({
       attempt,
       workspace_modified: true,
       changed_files: files,
-      usage
+      usage,
+      ...(lastVerification ? { last_verification: lastVerification } : {})
     };
   }
 

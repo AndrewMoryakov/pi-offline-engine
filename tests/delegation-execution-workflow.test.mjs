@@ -116,6 +116,41 @@ test("terminal TinyCoder status before mutation is not an escalation", async () 
   assert.equal(events.at(-1).type, "tiny_terminal_status");
 });
 
+test("terminal status after a failed verification hands the main model that verification", async () => {
+  const { outcome, events } = await run({
+    replies: [change("=> 1;", "=> 2;"), { status: "cannot_safely_implement", reason: "needs a file outside the scope" }],
+    dotnet: { build: [RED] }
+  });
+  const last = outcome.outcome.last_verification;
+  assert.equal(last.attempt, 1);
+  assert.equal(last.passed, false);
+  assert.ok(last.diagnostics.some((line) => line.includes("CS1002")), last.diagnostics.join("\n"));
+  assert.equal(last.checks[0].kind, "build");
+  assert.equal(last.checks[0].passed, false);
+  assert.ok(last.checks[0].artifact);
+  assert.equal(last.checks[0].executedTestIdentities, undefined);
+  // The result the main model reads carries it; the ledger event does not.
+  assert.ok(JSON.parse(formatExecutionResult(outcome).content).last_verification);
+  assert.equal(events.at(-1).type, "delegated_implementation_escalated");
+  assert.equal(events.at(-1).last_verification, undefined);
+});
+
+test("unusable output after a failed verification hands the main model that verification", async () => {
+  const { outcome } = await run({
+    replies: [change("=> 1;", "=> 2;"), "malformed", "malformed"],
+    dotnet: { build: [RED] },
+    maxAttempts: 3
+  });
+  assert.equal(outcome.kind, "model_output_escalation");
+  assert.equal(outcome.outcome.workspace_modified, true);
+  assert.ok(outcome.outcome.last_verification.diagnostics.some((line) => line.includes("CS1002")));
+});
+
+test("terminal status before any mutation carries no verification", async () => {
+  const { outcome } = await run({ replies: [{ status: "insufficient_spec", reason: "why" }] });
+  assert.equal(outcome.outcome.last_verification, undefined);
+});
+
 test("terminal TinyCoder status after mutation escalates with cumulative files", async () => {
   const { outcome, events } = await run({
     replies: [change("=> 1;", "=> 2;"), { status: "cannot_safely_implement" }],

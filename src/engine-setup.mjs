@@ -13,7 +13,8 @@ const CANDIDATE_PORTS = DEFAULT_CANDIDATES.map((x) => new URL(x.endpoint).port).
 // default: anything the user set (env or an earlier setup) is left alone and
 // costs no network probe.
 export async function autoConfigureIfNeeded({ settings, discover, save, now = () => new Date().toISOString() }) {
-  if (settings.sources.endpoint !== "default") {
+  // The claude-code provider needs no server, so there is nothing to discover.
+  if (settings.provider === "claude-code" || settings.sources.endpoint !== "default") {
     return { action: "skipped", message: null };
   }
 
@@ -96,9 +97,14 @@ export function recordFor(selected, { backend, configuredBy, now }) {
 }
 
 export function formatEngineStatus({ settings, configFile, configError, companionEnv = [] }) {
+  const claudeCode = settings.provider === "claude-code";
   const lines = [
-    `Tiny implementer: ${settings.model} @ ${settings.endpoint}`,
-    `  endpoint: ${SOURCE_LABELS[settings.sources.endpoint]}`,
+    claudeCode
+      ? `Tiny implementer: ${settings.model} via Claude Code (${settings.claudeBin ?? "claude"} -p)`
+      : `Tiny implementer: ${settings.model} @ ${settings.endpoint}`,
+    ...(claudeCode
+      ? [`  provider: claude-code (${SOURCE_LABELS[settings.sources.provider] ?? settings.sources.provider})`]
+      : [`  endpoint: ${SOURCE_LABELS[settings.sources.endpoint]}`]),
     `  model: ${SOURCE_LABELS[settings.sources.model]}`,
     `  attempts: ${settings.maxAttempts} (${SOURCE_LABELS[settings.sources.maxAttempts]})`,
     ...(settings.timeoutMs ? [`  request timeout: ${Math.round(settings.timeoutMs / 1000)} s (${SOURCE_LABELS[settings.sources.timeoutMs]})`] : []),

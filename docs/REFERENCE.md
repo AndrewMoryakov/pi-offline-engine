@@ -633,6 +633,8 @@ Pi tools: `delegate_implementation`, `execute_delegated_implementation`.
 | `PI_OFFLINE_TINY_ENDPOINT` | TinyCoder endpoint; overrides the saved config | saved config, else `http://127.0.0.1:8080` |
 | `PI_OFFLINE_TINY_MODEL` | TinyCoder model id; overrides the saved config | saved config, else `qwen2.5-coder-3b-instruct` |
 | `PI_OFFLINE_TINY_MAX_ATTEMPTS` | Total TinyCoder attempts (first try plus repairs), capped at 3 | 3 |
+| `PI_OFFLINE_TINY_PROVIDER` | `openai-compatible` posts to the endpoint; `claude-code` runs `claude -p` once per request (no server; the model defaults to `claude-haiku-5-5`; source goes to Anthropic) | `openai-compatible` |
+| `PI_OFFLINE_CLAUDE_BIN` | The Claude Code CLI for the `claude-code` provider | `claude` on `PATH` |
 | `PI_OFFLINE_TINY_API_KEY` (or `OPENROUTER_API_KEY`) | Bearer key for a hosted router; never written to disk by the engine | none |
 | `PI_OFFLINE_EDIT_PROVIDER` | `lean`, `none` or `hybrid` | `lean` |
 | `PI_OFFLINE_SCRIPT_EDIT_POLICY` | Hybrid only: `always`, `cloud-only` or `never` | `always` |

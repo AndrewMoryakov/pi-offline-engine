@@ -41,7 +41,7 @@ The main model never sits in the edit, compile, fix loop. That loop is the cheap
 **It fits if your code is .NET and you want one of these:**
 
 - to run a coding agent on local models, keep your code on your machine, or keep working without a network;
-- to spend fewer tokens of a paid cloud model: it plans and reviews, and a local model does the typing and the compile and fix rounds.
+- to spend fewer tokens of a paid cloud model: it plans and reviews, and a small model does the typing and the compile and fix rounds: a local one, or a cheaper Claude model such as Haiku through Claude Code.
 
 **Languages.** Verification works with .NET today (`dotnet build` and `dotnet test`), so delegation is available for .NET projects only. Rust and Python are next.
 
@@ -132,7 +132,7 @@ Four models take part. You provide the first two. The other two belong to `pi-kn
 | Model | What it does | Default | On your own server |
 |---|---|---|---|
 | **Main model** | Plans, writes the task, reviews the result | Whatever you pick in Pi or Claude Code | Yes, you choose it in Pi or Claude Code |
-| **Small model** | Writes and repairs the exact edit | `qwen2.5-coder-3b-instruct` on `127.0.0.1:8080` | Yes, any OpenAI-compatible server |
+| **Small model** | Writes and repairs the exact edit | `qwen2.5-coder-3b-instruct` on `127.0.0.1:8080` | Yes, any OpenAI-compatible server, or a Claude model through the Claude Code CLI |
 | **Embedding model** (Pi only) | Turns code and search queries into vectors | `multilingual-e5-small`, about 470 MB | Yes, an OpenAI-compatible embeddings endpoint |
 | **Reranker** (Pi only) | Re-orders hits in `deep` search, the search mode with an extra reranking step; the agent picks the mode for each search | `ms-marco-MiniLM-L-4-v2`, about 77 MB | Yes, a rerank API |
 
@@ -141,7 +141,7 @@ Four models take part. You provide the first two. The other two belong to `pi-kn
 - **Install:** the engine from GitHub and its npm packages.
 - **First search:** the two search models download from Hugging Face the first time they are needed, unless you point them at your own server.
 - **Your own setup, once:** the small model file, llama.cpp, the .NET SDK and its NuGet packages (`dotnet restore`), and optionally `csharp-ls`.
-- **Your choice only:** a cloud main model, or a hosted small model (see below). Then your prompts and code go to that provider; `/offline-doctor` warns you when the small model is not on your network.
+- **Your choice only:** a cloud main model, a hosted small model, or a Claude small model through Claude Code (see below). Then your prompts and code go to that provider; `/offline-doctor` warns you when the small model is not on your network.
 
 The engine itself sends requests only to the model servers you configure. The bundled extensions document no network use beyond the search models. What Pi itself sends depends on Pi's own settings. Settings for your own search servers, and the sizes: [What gets installed and which models run](docs/REFERENCE.md#what-gets-installed-and-which-models-run).
 
@@ -198,7 +198,9 @@ You need Node.js 22.19 or newer, the .NET SDK and a running small model server, 
 /plugin install pi-offline-engine@pi-offline-engine
 ```
 
-There is no automatic discovery outside Pi; the defaults are `http://127.0.0.1:8080` and the model id `qwen2.5-coder-3b-instruct`. If your server lists another id at `http://127.0.0.1:8080/v1/models`, or runs elsewhere, set `PI_OFFLINE_TINY_MODEL` and `PI_OFFLINE_TINY_ENDPOINT` in the shell you start Claude Code from: `export NAME=value` in bash, `$env:NAME = "value"` in PowerShell. Start Claude Code from the root of your repository and ask Claude to run the `offline_doctor` tool once. If it answers, the plugin's MCP server is running, and it tells you when the model id does not match. The tools have the same names as in Pi, and the plugin gives Claude a short guide on when to delegate. Approval comes as a question from the MCP server inside Claude Code; `claude -p` and other runs with nobody to answer do not write, unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is set. Update or remove the plugin with Claude Code's `/plugin` command. Other MCP clients must support MCP elicitation, the way an MCP server asks you a question; with a client that cannot ask, delegated writes are refused. Setup for other clients and the exact behaviour: [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md).
+There is no automatic discovery outside Pi; the defaults are `http://127.0.0.1:8080` and the model id `qwen2.5-coder-3b-instruct`. If your server lists another id at `http://127.0.0.1:8080/v1/models`, or runs elsewhere, set `PI_OFFLINE_TINY_MODEL` and `PI_OFFLINE_TINY_ENDPOINT` in the shell you start Claude Code from: `export NAME=value` in bash, `$env:NAME = "value"` in PowerShell. Start Claude Code from the root of your repository and ask Claude to run the `offline_doctor` tool once. If it answers, the plugin's MCP server is running, and it tells you when the model id does not match. The tools have the same names as in Pi, and the plugin gives Claude a short guide on when to delegate. Approval comes as a question from the MCP server inside Claude Code; `claude -p` and other runs with nobody to answer do not write, unless `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` is set. **No local model server? Use Haiku through Claude Code itself.** Set `PI_OFFLINE_TINY_PROVIDER=claude-code`. The engine then runs `claude -p` once per request on the same machine, with no tools, no MCP servers and no user settings, and asks it for the edit as strict JSON. The model is `claude-haiku-5-5` unless `PI_OFFLINE_TINY_MODEL` names another. Nothing has to be served, the Claude Code login you already have is used, and the source goes to Anthropic like the rest of the session; `offline_doctor` says so. A main model such as Sonnet then plans and reviews while Haiku types. The same setting works in Pi if the `claude` CLI is installed and logged in.
+
+Update or remove the plugin with Claude Code's `/plugin` command. Other MCP clients must support MCP elicitation, the way an MCP server asks you a question; with a client that cannot ask, delegated writes are refused. Setup for other clients and the exact behaviour: [docs/CLAUDE_CODE.md](docs/CLAUDE_CODE.md).
 
 ## Going offline
 

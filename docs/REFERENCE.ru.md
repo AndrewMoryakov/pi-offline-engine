@@ -624,6 +624,8 @@ npm run acceptance:prepare -- --restore
 | `PI_OFFLINE_TINY_ENDPOINT` | Endpoint TinyCoder; перекрывает сохранённую конфигурацию | сохранённая конфигурация, иначе `http://127.0.0.1:8080` |
 | `PI_OFFLINE_TINY_MODEL` | Id модели TinyCoder; перекрывает сохранённую конфигурацию | сохранённая конфигурация, иначе `qwen2.5-coder-3b-instruct` |
 | `PI_OFFLINE_TINY_MAX_ATTEMPTS` | Всего попыток TinyCoder (первая плюс починки), максимум 3 | 3 |
+| `PI_OFFLINE_TINY_PROVIDER` | `openai-compatible` отправляет запросы на адрес; `claude-code` запускает `claude -p` на каждый запрос (без сервера; модель по умолчанию `claude-haiku-5-5`; исходный код уходит в Anthropic) | `openai-compatible` |
+| `PI_OFFLINE_CLAUDE_BIN` | CLI Claude Code для провайдера `claude-code` | `claude` из `PATH` |
 | `PI_OFFLINE_TINY_API_KEY` (или `OPENROUTER_API_KEY`) | Bearer-ключ для хостового роутера; движок никогда не пишет его на диск | нет |
 | `PI_OFFLINE_EDIT_PROVIDER` | `lean`, `none` или `hybrid` | `lean` |
 | `PI_OFFLINE_SCRIPT_EDIT_POLICY` | Только гибрид: `always`, `cloud-only` или `never` | `always` |

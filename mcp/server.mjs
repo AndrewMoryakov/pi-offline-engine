@@ -27,7 +27,7 @@ import { createTinyTransport, prepareDelegatedExecution, runDelegatedExecution }
 import { formatCancelledResult, formatCandidateResult, formatExecutionResult } from "../src/delegation-results.mjs";
 import { engineConfigPath, readEngineConfig, resolveEngineSettings } from "../src/engine-config.mjs";
 import { formatEngineStatus } from "../src/engine-setup.mjs";
-import { checkEndpointLocality, formatDoctorReport, runOfflineDoctor } from "../src/offline-doctor.mjs";
+import { describeImplementer, describeImplementerLocality, formatDoctorReport, runOfflineDoctor } from "../src/offline-doctor.mjs";
 import { formatOfflineStats, readOfflineEvents, summarizeOfflineEvents } from "../src/stats.mjs";
 import { resolveAgentDir } from "../src/agent-dir.mjs";
 import { nodeExec } from "../src/node-exec.mjs";
@@ -41,7 +41,10 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
     const { config, error } = readEngineConfig(configFile);
     return { ...resolveEngineSettings({ env, config }), configError: error };
   };
-  const callTiny = createTinyTransport(() => settings().apiKey);
+  const callTiny = createTinyTransport(() => settings().apiKey, () => {
+    const current = settings();
+    return { provider: current.provider, claudeBin: current.claudeBin };
+  });
 
   async function workspace(ctx) {
     return resolveWorkspace({ env, listRoots: ctx.listRoots, serverRoot });
@@ -76,14 +79,15 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
       const { trainingRunId, trainingSkippedSensitivePath } = await prepareDelegatedExecution({
         spec: args.spec, trainingCaptureEnabled: env.PI_OFFLINE_TRAINING_CAPTURE === "1"
       });
-      const { endpoint, model, maxAttempts, attachCurrentFiles, timeoutMs } = settings();
+      const current = settings();
+      const { endpoint, model, maxAttempts, attachCurrentFiles, timeoutMs } = current;
 
       const headless = env.PI_OFFLINE_ALLOW_HEADLESS_APPLY === "1";
       const approval = headless ? true : await ctx.confirm([
         "Bounded delegated implementation",
         `Workspace: ${cwd}`,
         `Spec: ${args.spec.spec_id}`,
-        `Implementer: ${model} @ ${endpoint} (${checkEndpointLocality(endpoint).message})`,
+        `Implementer: ${describeImplementer(current)} (${describeImplementerLocality(current)})`,
         `Files: ${args.spec.scope.allowed_files.join(", ")}`,
         `Attempts: up to ${maxAttempts}`,
         "Writes stay inside these files; the declared dotnet checks run with --no-restore."
@@ -130,7 +134,8 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
       const cwd = await workspace(ctx);
       const current = settings();
       const report = await runOfflineDoctor({
-        cwd, endpoint: current.endpoint, model: current.model, apiKey: current.apiKey, tools: null, exec
+        cwd, provider: current.provider, claudeBin: current.claudeBin,
+        endpoint: current.endpoint, model: current.model, apiKey: current.apiKey, tools: null, exec
       });
       return text(`${formatDoctorReport(report)}\nWorkspace: ${cwd}`);
     }
@@ -148,7 +153,7 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
       return text([
         formatEngineStatus({ settings: current, configFile, configError: current.configError }),
         `Client: elicitation ${client.elicitation ? "supported" : "not offered"}, roots ${client.roots ? "offered" : "not offered"}`,
-        `Endpoint locality: ${checkEndpointLocality(current.endpoint).message}`,
+        `Endpoint locality: ${describeImplementerLocality(current)}`,
         `Implementer auth: ${current.apiKey ? "bearer key configured" : current.openRouterKeyWithheld ? "none (OPENROUTER_API_KEY is set but sent only to openrouter.ai)" : "none"}`,
         `Apply approval: ${env.PI_OFFLINE_ALLOW_HEADLESS_APPLY === "1" ? "not asked (PI_OFFLINE_ALLOW_HEADLESS_APPLY=1)" : "asked through elicitation; refused without it"}`
       ].join("\n"));

@@ -3,7 +3,7 @@
 // runtime config facade.
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ExtensionRuntime } from "./extension-runtime.ts";
-import { runOfflineDoctor, formatDoctorReport, checkEndpointLocality } from "../src/offline-doctor.mjs";
+import { runOfflineDoctor, formatDoctorReport, describeImplementerLocality } from "../src/offline-doctor.mjs";
 import { buildMinimalToolSet } from "../src/tool-profile.mjs";
 import { readOfflineEvents, summarizeOfflineEvents, formatOfflineStats } from "../src/stats.mjs";
 import { trainingCaptureStatus } from "../src/training-recorder.mjs";
@@ -67,6 +67,8 @@ export function registerOfflineCommands(pi: ExtensionAPI, runtime: ExtensionRunt
     const activeTools = selectActiveToolObjects(allTools, pi.getActiveTools());
     const report = await runOfflineDoctor({
       cwd: ctx.cwd,
+      provider: runtime.config.settings().provider,
+      claudeBin: runtime.config.settings().claudeBin,
       endpoint: runtime.config.settings().endpoint,
       model: runtime.config.settings().model,
       apiKey: runtime.config.settings().apiKey,
@@ -96,6 +98,18 @@ export function registerOfflineCommands(pi: ExtensionAPI, runtime: ExtensionRunt
         : null,
     handler: async (args, ctx) => {
       const request = parseSetupArgs(args);
+
+      // Server discovery and saving apply to the HTTP provider only. Reset is
+      // still allowed: it clears a saved endpoint and model.
+      const current = runtime.config.settings();
+      if (current.provider === "claude-code" && request.mode !== "reset") {
+        ctx.ui.notify(
+          `The implementer runs through Claude Code (${current.model}; provider claude-code from ${current.sources.provider}). ` +
+          "/offline-setup finds and saves OpenAI-compatible servers; set PI_OFFLINE_TINY_PROVIDER=openai-compatible to use one.",
+          "info"
+        );
+        return;
+      }
 
       if (request.mode === "invalid") {
         ctx.ui.notify(request.message, "warning");
@@ -256,7 +270,7 @@ export function registerOfflineCommands(pi: ExtensionAPI, runtime: ExtensionRunt
             configError: runtime.config.error(),
             companionEnv: runtime.companionEnv
           }),
-          `Endpoint locality: ${checkEndpointLocality(runtime.config.settings().endpoint).message}`,
+          `Endpoint locality: ${describeImplementerLocality(runtime.config.settings())}`,
           `Implementer auth: ${implementerAuth(runtime.config.settings())}`,
           `Bounded execute attempts: ${runtime.config.settings().maxAttempts}`,
           "Candidate apply: exact replace_text/create_file with stale preimage protection",

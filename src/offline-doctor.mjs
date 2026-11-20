@@ -1,13 +1,15 @@
 import { endpointHost, isLocalHost } from "./endpoint-locality.mjs";
 import { LINE_EDIT_TOOL, SCRIPT_EDIT_TOOL, isLocalModel } from "./edit-routing.mjs";
 import { resolveEndpointUrl } from "./endpoint-url.mjs";
-import { buildAuthHeaders } from "./tiny-client.mjs";
+import { buildAuthHeaders, checkClaudeCli } from "./tiny-client.mjs";
 
 const DEFAULT_TIMEOUT_MS = 5000;
 const MAX_CATALOG_SAMPLE = 8;
 
 export async function runOfflineDoctor({
   cwd,
+  provider = "openai-compatible",
+  claudeBin = "claude",
   endpoint,
   model,
   tools,
@@ -22,8 +24,13 @@ export async function runOfflineDoctor({
 }) {
   const checks = [];
 
-  checks.push(await checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs, apiKey));
-  checks.push(checkEndpointLocality(endpoint));
+  if (provider === "claude-code") {
+    checks.push(await checkClaudeCodeImplementer({ claudeBin, model, exec, cwd, timeoutMs }));
+    checks.push(claudeCodeLocality());
+  } else {
+    checks.push(await checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs, apiKey));
+    checks.push(checkEndpointLocality(endpoint));
+  }
 
   checks.push(await checkCommand({
     name: "dotnet",
@@ -171,6 +178,44 @@ export function checkEndpointLocality(endpoint) {
       ? `implementer endpoint is local (${host}); source stays on your network`
       : `implementer endpoint is remote (${host}); prompts and source excerpts leave your network`
   };
+}
+
+// Provider "claude-code": the implementer is a Claude model reached through the
+// Claude Code CLI. The doctor can see whether the CLI runs; whether the account
+// may use the model is known only on the first call, and the report says so
+// instead of spending a request on it.
+async function checkClaudeCodeImplementer({ claudeBin, model, exec, cwd, timeoutMs }) {
+  const cli = await checkClaudeCli({ claudeBin, exec, cwd, timeoutMs });
+  return {
+    id: "tiny_endpoint",
+    required: true,
+    ok: cli.ok,
+    status: cli.ok ? "ok" : "error",
+    message: cli.ok
+      ? `claude CLI ${cli.version}; model ${model} is checked on the first call`
+      : `claude CLI not usable (${claudeBin}): ${cli.error}`
+  };
+}
+
+function claudeCodeLocality() {
+  return {
+    id: "endpoint_locality",
+    required: false,
+    ok: false,
+    status: "warn",
+    message: "implementer runs through Claude Code; prompts and source excerpts go to Anthropic"
+  };
+}
+
+// One line for prompts and status output, for either provider.
+export function describeImplementer(settings) {
+  return settings.provider === "claude-code"
+    ? `${settings.model} via Claude Code (${settings.claudeBin ?? "claude"} -p)`
+    : `${settings.model} @ ${settings.endpoint}`;
+}
+
+export function describeImplementerLocality(settings) {
+  return settings.provider === "claude-code" ? claudeCodeLocality().message : checkEndpointLocality(settings.endpoint).message;
 }
 
 async function checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs, apiKey) {

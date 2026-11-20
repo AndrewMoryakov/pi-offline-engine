@@ -117,3 +117,35 @@ the output tokens of mechanical edits and their compile-fix loops. Your code
 stays local when the implementer is local. With a hosted implementer,
 `offline_doctor` reports an `endpoint_locality` warning naming the host that
 receives your source excerpts.
+
+## Claude as the implementer, with no server
+
+`PI_OFFLINE_TINY_PROVIDER=claude-code` (or `"provider": "claude-code"` in the
+engine config) makes the implementer a Claude model reached through the Claude
+Code CLI. Each implementer request is one run of
+
+```text
+claude -p --model claude-haiku-5-5 --tools "" --strict-mcp-config --setting-sources "" \
+  --no-session-persistence --output-format json --system-prompt <engine prompt> --json-schema <candidate schema>
+```
+
+spawned without a shell, with the request on stdin, in an empty temporary
+directory and without `CLAUDE_CODE_PLUGIN_DIRS`. So the run has no tools, no
+MCP servers, no user, project or local settings, no CLAUDE.md and no session
+file. `--bare` would also skip plugins synced to the account, but it reads
+only `ANTHROPIC_API_KEY` and not a Claude subscription, so it is not used.
+
+`PI_OFFLINE_TINY_MODEL` chooses another model; `PI_OFFLINE_CLAUDE_BIN` names the
+CLI if it is not `claude` on `PATH`. `offline_doctor` checks `claude --version`,
+says the model is checked on the first call, and warns that prompts and source
+excerpts go to Anthropic. A CLI that cannot start, an error answer such as an
+unknown model, unparseable output and a timeout end the attempt as a transport
+failure; a reply without a JSON candidate counts as model output and is retried.
+
+Observed on Linux with Claude Code 2.1.328 and a subscription login: Sonnet 5.5
+as the main model in `claude -p --plugin-dir` delegated the acceptance fixture
+task; Haiku 5.5 returned the candidate in about 10 s, and the declared build and
+four tests passed on the first attempt. The child run started no second copy of
+this plugin. Not checked: Windows, where an npm-installed `claude.cmd` cannot be
+spawned without a shell. The sampling temperature cannot be set this way.
+

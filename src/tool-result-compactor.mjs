@@ -36,11 +36,13 @@ export async function compactToolResult({
 // The compaction step without the shell-command checks, for a caller that ran
 // dotnet itself (src/dotnet-run.mjs). Below `minChars` it returns null and the
 // caller shows the output whole.
-export async function compactDotnetText({ cwd, toolCallId, command, text, minChars = DEFAULT_MIN_CHARS }) {
+// `failed` is the exit status when the caller knows it: a non-zero exit with no
+// recognised error still gets the keyword lines.
+export async function compactDotnetText({ cwd, toolCallId, command, text, minChars = DEFAULT_MIN_CHARS, failed = false }) {
   if (text.length < minChars) return null;
   const artifact = await writeToolArtifact(cwd, toolCallId, command, text);
   return {
-    text: summarizeDotnetOutput(text, { command, artifact, cwd }),
+    text: summarizeDotnetOutput(text, { command, artifact, cwd, failed }),
     artifact,
     originalChars: text.length,
     originalLines: countLines(text)
@@ -53,12 +55,12 @@ export async function compactDotnetText({ cwd, toolCallId, command, text, minCha
 // not recognise keeps the keyword selection used before, and a failure the
 // reader cannot explain adds those keyword lines, so nothing is shown with
 // less than before.
-export function summarizeDotnetOutput(text, { command = "", artifact = "", cwd = null } = {}) {
+export function summarizeDotnetOutput(text, { command = "", artifact = "", cwd = null, failed = false } = {}) {
   const parsed = parseDotnetOutput(text, { cwd });
   if (!isRecognised(parsed)) return summarizeByKeywords(text, { command, artifact });
 
   const [verdict, ...report] = formatDotnetReport(parsed, { budget: REPORT_BUDGET_CHARS });
-  const unexplained = reportsFailure(parsed) && !hasFailureDetail(parsed)
+  const unexplained = (failed || reportsFailure(parsed)) && !hasFailureDetail(parsed)
     ? keywordLines(text, { max: 30 })
     : [];
 

@@ -375,12 +375,15 @@ async function readTrxEvidence(filePath) {
 
     // A failed result keeps its assertion message and stack trace here even
     // when the console printed them in a shape the reader does not know.
+    // A passed result is often a self-closing tag; matching only the long form
+    // would run on into the next result and drop it.
     const failures = [];
-    for (const match of text.matchAll(/<UnitTestResult\b([^>]*?)>([\s\S]*?)<\/UnitTestResult>/gi)) {
+    for (const match of text.matchAll(/<UnitTestResult\b([^>]*?)(?:\/>|>([\s\S]*?)<\/UnitTestResult>)/gi)) {
       const attrs = parseXmlAttributes(match[1]);
       if (String(attrs.outcome ?? "").toLowerCase() !== "failed") continue;
-      const message = match[2].match(/<Message>([\s\S]*?)<\/Message>/i)?.[1] ?? "";
-      const stackTrace = match[2].match(/<StackTrace>([\s\S]*?)<\/StackTrace>/i)?.[1] ?? "";
+      const body = match[2] ?? "";
+      const message = body.match(/<Message>([\s\S]*?)<\/Message>/i)?.[1] ?? "";
+      const stackTrace = body.match(/<StackTrace>([\s\S]*?)<\/StackTrace>/i)?.[1] ?? "";
       failures.push({ name: decodeXml(attrs.testName ?? ""), message: decodeXml(message), stackTrace: decodeXml(stackTrace) });
     }
 
@@ -394,6 +397,11 @@ async function readTrxEvidence(filePath) {
     if (error?.code === "ENOENT") return null;
     throw error;
   }
+}
+
+// For tests: the failed results a TRX file records.
+export async function readTrxFailures(filePath) {
+  return (await readTrxEvidence(filePath))?.failures ?? null;
 }
 
 function parseXmlAttributes(fragment) {

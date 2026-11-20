@@ -66,7 +66,8 @@ export async function runDotnetCommand({
     toolCallId: toolCallId ?? `dotnet-${command}-${Date.now()}`,
     command: display,
     text,
-    minChars: DOTNET_RUN_MIN_COMPACT_CHARS
+    minChars: DOTNET_RUN_MIN_COMPACT_CHARS,
+    failed: result.code !== 0 || result.killed === true
   });
   if (compacted) {
     return {

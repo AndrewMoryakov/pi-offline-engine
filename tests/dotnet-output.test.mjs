@@ -6,7 +6,8 @@ import os from "node:os";
 import path from "node:path";
 import { parseDiagnosticLine, parseDotnetOutput, formatDotnetReport, failureFromTrx } from "../src/dotnet-output.mjs";
 import { summarizeDotnetOutput } from "../src/tool-result-compactor.mjs";
-import { extractDiagnostics, runVerification } from "../src/verification.mjs";
+import { extractDiagnostics, readTrxFailures, runVerification } from "../src/verification.mjs";
+import { fileURLToPath } from "node:url";
 
 const FIXTURES = new URL("./fixtures/dotnet-output/", import.meta.url);
 const fixture = (name) => readFileSync(new URL(name, FIXTURES), "utf8");
@@ -137,3 +138,21 @@ test("verification takes failed tests from the TRX file into the repair diagnost
   assert.match(text, /^ {4}at XTests\.\w+\.\w+\(\) in XTests\/(?:ManyTests|UnitTest1)\.cs:line \d+$/m);
   assert.doesNotMatch(text, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "paths are relative to the workspace");
 });
+
+test("every failed result in a TRX file is read, next to self-closing passed results", async () => {
+  const xunit = await readTrxFailures(fileURLToPath(new URL("test-xunit-failures.trx", FIXTURES)));
+  assert.equal(xunit.length, 22);
+  assert.equal(new Set(xunit.map((failure) => failure.name)).size, 22);
+  const case7 = xunit.find((failure) => failure.name === "XTests.ManyTests.Case7");
+  assert.equal(case7.message, "Assert.Equal() Failure: Values differ\nExpected: 7\nActual:   8");
+  const mtp = await readTrxFailures(fileURLToPath(new URL("test-mtp-failure.trx", FIXTURES)));
+  assert.deepEqual(mtp.map((failure) => failure.name), ["ExactlyThresholdIsNotDiscounted"]);
+});
+
+test("a non-zero exit without a recognised error adds the keyword lines", () => {
+  const text = ["Build succeeded.", "    0 Warning(s)", "    0 Error(s)", "Tool crashed: unexpected exception in post-build step"].join("\n");
+  assert.doesNotMatch(summarizeDotnetOutput(text, { cwd: "/w" }), /shape not recognised/);
+  const summary = summarizeDotnetOutput(text, { cwd: "/w", failed: true });
+  assert.match(summary, /^Lines that mention a failure \(shape not recognised\):\nTool crashed: unexpected exception in post-build step$/m);
+});
+

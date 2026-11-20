@@ -67,15 +67,17 @@
                 "code": 1,
                 "killed": false,
                 "diagnostics": [
-                  "src/A.cs(1,20): error CS1002: ; expected",
-                  "Build FAILED."
+                  "Result: Build FAILED, 1 error, 0 warnings",
+                  "Errors (1 unique):",
+                  "  src/A.cs(1,20): error CS1002: ; expected"
                 ],
                 "artifact": ".pi/offline-engine/artifacts/1720b0f6b6c9313414cb.log"
               }
             ],
             "diagnostics": [
-              "src/A.cs(1,20): error CS1002: ; expected",
-              "Build FAILED."
+              "Result: Build FAILED, 1 error, 0 warnings",
+              "Errors (1 unique):",
+              "  src/A.cs(1,20): error CS1002: ; expected"
             ]
           }
         }
@@ -145,15 +147,17 @@
             "code": 1,
             "killed": false,
             "diagnostics": [
-              "src/A.cs(1,20): error CS1002: ; expected",
-              "Build FAILED."
+              "Result: Build FAILED, 1 error, 0 warnings",
+              "Errors (1 unique):",
+              "  src/A.cs(1,20): error CS1002: ; expected"
             ],
             "artifact": ".pi/offline-engine/artifacts/1720b0f6b6c9313414cb.log"
           }
         ],
         "diagnostics": [
-          "src/A.cs(1,20): error CS1002: ; expected",
-          "Build FAILED."
+          "Result: Build FAILED, 1 error, 0 warnings",
+          "Errors (1 unique):",
+          "  src/A.cs(1,20): error CS1002: ; expected"
         ]
       }
     },
@@ -233,7 +237,7 @@
       "type": "repair_packet_created",
       "specId": "characterize-build",
       "attempt": 1,
-      "diagnostics": 2
+      "diagnostics": 3
     },
     {
       "ts": "<TS>",
@@ -294,7 +298,7 @@
       "type": "repair_packet_created",
       "specId": "characterize-build",
       "attempt": 2,
-      "diagnostics": 2
+      "diagnostics": 3
     },
     {
       "ts": "<TS>",
@@ -355,7 +359,7 @@
       "type": "repair_packet_created",
       "specId": "characterize-build",
       "attempt": 3,
-      "diagnostics": 2
+      "diagnostics": 3
     },
     {
       "ts": "<TS>",
@@ -430,8 +434,9 @@
         "outcome": "verification_failed",
         "verification_passed": false,
         "diagnostics": [
-          "src/A.cs(1,20): error CS1002: ; expected",
-          "Build FAILED."
+          "Result: Build FAILED, 1 error, 0 warnings",
+          "Errors (1 unique):",
+          "  src/A.cs(1,20): error CS1002: ; expected"
         ],
         "checks": [
           {
@@ -511,16 +516,18 @@
           "verification": {
             "passed": false,
             "diagnostics": [
-              "src/A.cs(1,20): error CS1002: ; expected",
-              "Build FAILED."
+              "Result: Build FAILED, 1 error, 0 warnings",
+              "Errors (1 unique):",
+              "  src/A.cs(1,20): error CS1002: ; expected"
             ],
             "checks": [
               {
                 "kind": "build",
                 "passed": false,
                 "diagnostics": [
-                  "src/A.cs(1,20): error CS1002: ; expected",
-                  "Build FAILED."
+                  "Result: Build FAILED, 1 error, 0 warnings",
+                  "Errors (1 unique):",
+                  "  src/A.cs(1,20): error CS1002: ; expected"
                 ],
                 "code": 1,
                 "killed": false,
@@ -554,8 +561,9 @@
         "outcome": "verification_failed",
         "verification_passed": false,
         "diagnostics": [
-          "src/A.cs(1,20): error CS1002: ; expected",
-          "Build FAILED."
+          "Result: Build FAILED, 1 error, 0 warnings",
+          "Errors (1 unique):",
+          "  src/A.cs(1,20): error CS1002: ; expected"
         ],
         "checks": [
           {
@@ -635,16 +643,18 @@
           "verification": {
             "passed": false,
             "diagnostics": [
-              "src/A.cs(1,20): error CS1002: ; expected",
-              "Build FAILED."
+              "Result: Build FAILED, 1 error, 0 warnings",
+              "Errors (1 unique):",
+              "  src/A.cs(1,20): error CS1002: ; expected"
             ],
             "checks": [
               {
                 "kind": "build",
                 "passed": false,
                 "diagnostics": [
-                  "src/A.cs(1,20): error CS1002: ; expected",
-                  "Build FAILED."
+                  "Result: Build FAILED, 1 error, 0 warnings",
+                  "Errors (1 unique):",
+                  "  src/A.cs(1,20): error CS1002: ; expected"
                 ],
                 "code": 1,
                 "killed": false,
@@ -678,8 +688,9 @@
         "outcome": "verification_failed",
         "verification_passed": false,
         "diagnostics": [
-          "src/A.cs(1,20): error CS1002: ; expected",
-          "Build FAILED."
+          "Result: Build FAILED, 1 error, 0 warnings",
+          "Errors (1 unique):",
+          "  src/A.cs(1,20): error CS1002: ; expected"
         ],
         "checks": [
           {
@@ -993,16 +1004,18 @@
           "verification": {
             "passed": false,
             "diagnostics": [
-              "src/A.cs(1,20): error CS1002: ; expected",
-              "Build FAILED."
+              "Result: Build FAILED, 1 error, 0 warnings",
+              "Errors (1 unique):",
+              "  src/A.cs(1,20): error CS1002: ; expected"
             ],
             "checks": [
               {
                 "kind": "build",
                 "passed": false,
                 "diagnostics": [
-                  "src/A.cs(1,20): error CS1002: ; expected",
-                  "Build FAILED."
+                  "Result: Build FAILED, 1 error, 0 warnings",
+                  "Errors (1 unique):",
+                  "  src/A.cs(1,20): error CS1002: ; expected"
                 ],
                 "code": 1,
                 "killed": false,
@@ -1072,16 +1085,18 @@
           "verification": {
             "passed": false,
             "diagnostics": [
-              "src/A.cs(1,20): error CS1002: ; expected",
-              "Build FAILED."
+              "Result: Build FAILED, 1 error, 0 warnings",
+              "Errors (1 unique):",
+              "  src/A.cs(1,20): error CS1002: ; expected"
             ],
             "checks": [
               {
                 "kind": "build",
                 "passed": false,
                 "diagnostics": [
-                  "src/A.cs(1,20): error CS1002: ; expected",
-                  "Build FAILED."
+                  "Result: Build FAILED, 1 error, 0 warnings",
+                  "Errors (1 unique):",
+                  "  src/A.cs(1,20): error CS1002: ; expected"
                 ],
                 "code": 1,
                 "killed": false,

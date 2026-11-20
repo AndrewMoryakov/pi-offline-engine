@@ -35,6 +35,12 @@ refactors, or anything needing repository exploration.
   whether `.pi/` is ignored. Run it first in a new environment.
 - `offline_status` shows the effective settings, `offline_stats` the call
   counts and tokens.
+- `dotnet_build` and `dotnet_test` run the build or the tests in the
+  workspace and return a short result for any exit code: the verdict,
+  compiler errors with file and line, and failed tests with their expected
+  and actual values and source line. Use them instead of `dotnet build` or
+  `dotnet test` through Bash: the plugin's hook shortens only commands that
+  succeed, so a failed run through Bash arrives in full.
 
 ## ImplementationSpec v1
 

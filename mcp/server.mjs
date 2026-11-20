@@ -32,6 +32,7 @@ import { formatOfflineStats, readOfflineEvents, summarizeOfflineEvents } from ".
 import { resolveAgentDir } from "../src/agent-dir.mjs";
 import { nodeExec } from "../src/node-exec.mjs";
 import { ensureSelfIgnoringStateDir } from "../src/state-dir.mjs";
+import { runDotnetCommand } from "../src/dotnet-run.mjs";
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -173,7 +174,59 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
     }
   };
 
-  return [delegate, execute, doctor, status, stats];
+  // Bash output of a failed `dotnet build`/`dotnet test` reaches Claude Code's
+  // model uncompacted (the plugin hook sees only successful commands), so the
+  // two commands are offered as tools that always return the short result.
+  const dotnetTool = (command) => ({
+    name: `dotnet_${command}`,
+    title: command === "build" ? "Build with dotnet, short result" : "Run dotnet tests, short result",
+    description: command === "build"
+      ? "Run `dotnet build` in the workspace and return a short result: the verdict, unique compiler errors with file and line, and warnings grouped by code. Use this instead of running dotnet build through the shell; long output is kept in a local file whose path is returned."
+      : "Run `dotnet test` in the workspace and return a short result: the verdict and counts, compile errors, and each failed test with its message (expected and actual values) and source line. Use this instead of running dotnet test through the shell; long output is kept in a local file whose path is returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project: { type: "string", description: "Project, solution or directory, relative to the workspace. Omit to let dotnet pick the one in the workspace root." },
+        ...(command === "test" ? { filter: { type: "string", description: "dotnet test --filter expression, for example FullyQualifiedName~OrderTests." } } : {}),
+        configuration: { type: "string", description: "Build configuration, for example Debug or Release." },
+        noRestore: { type: "boolean", description: "Pass --no-restore." }
+      },
+      additionalProperties: false
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    async call(args = {}, ctx) {
+      const cwd = await workspace(ctx);
+      await ensureSelfIgnoringStateDir(cwd);
+      const outcome = await runDotnetCommand({
+        cwd,
+        command,
+        project: args.project ?? null,
+        filter: args.filter ?? null,
+        configuration: args.configuration ?? null,
+        noRestore: args.noRestore === true,
+        exec,
+        signal: ctx?.signal,
+        toolCallId: `mcp-dotnet-${command}-${Date.now()}`
+      });
+      if (outcome.compacted) {
+        try {
+          await appendEvent(cwd, {
+            type: "tool_result_compacted",
+            toolName: `dotnet_${command}`,
+            artifact: outcome.compacted.artifact,
+            originalChars: outcome.compacted.originalChars,
+            originalLines: outcome.compacted.originalLines,
+            compactedChars: outcome.text.length
+          });
+        } catch {
+          // Telemetry only.
+        }
+      }
+      return text(outcome.text);
+    }
+  });
+
+  return [delegate, execute, doctor, status, stats, dotnetTool("build"), dotnetTool("test")];
 }
 
 export async function resolveWorkspace({ env, listRoots, serverRoot }) {
@@ -217,7 +270,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   serveStdio({
     name: "pi-offline-engine",
     version: pkg.version,
-    instructions: "Bounded delegation of fully decided 1-2 file .NET changes to a cheap implementer model, with guarded writes and deterministic dotnet verification. Run offline_doctor first in a new environment.",
+    instructions: "Bounded delegation of fully decided 1-2 file .NET changes to a cheap implementer model, with guarded writes and deterministic dotnet verification. Run offline_doctor first in a new environment. Use dotnet_build and dotnet_test instead of running dotnet build or dotnet test through the shell: they return a short result even when the build or the tests fail.",
     tools: createEngineTools()
   });
 }

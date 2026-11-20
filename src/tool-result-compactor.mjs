@@ -22,13 +22,25 @@ export async function compactToolResult({
   if (!isDotnetBuildOrTest(command)) return null;
 
   const text = extractTextContent(content);
-  if (text.length < minChars) return null;
-
-  const artifact = await writeToolArtifact(cwd, toolCallId, command, text);
-  const summary = summarizeDotnetOutput(text, { command, artifact, cwd });
+  const compacted = await compactDotnetText({ cwd, toolCallId, command, text, minChars });
+  if (!compacted) return null;
 
   return {
-    content: [{ type: "text", text: summary }],
+    content: [{ type: "text", text: compacted.text }],
+    artifact: compacted.artifact,
+    originalChars: compacted.originalChars,
+    originalLines: compacted.originalLines
+  };
+}
+
+// The compaction step without the shell-command checks, for a caller that ran
+// dotnet itself (src/dotnet-run.mjs). Below `minChars` it returns null and the
+// caller shows the output whole.
+export async function compactDotnetText({ cwd, toolCallId, command, text, minChars = DEFAULT_MIN_CHARS }) {
+  if (text.length < minChars) return null;
+  const artifact = await writeToolArtifact(cwd, toolCallId, command, text);
+  return {
+    text: summarizeDotnetOutput(text, { command, artifact, cwd }),
     artifact,
     originalChars: text.length,
     originalLines: countLines(text)

@@ -104,6 +104,11 @@ that prompt. `delegate_implementation` writes nothing and needs no approval.
   its turn.
 - **Progress.** When the client sends a progress token, each implementer
   attempt is reported as an MCP progress notification.
+- **Statistics.** The compaction hook writes the same `tool_result_compacted`
+  event as Pi, so `offline_stats` counts compacted results and the characters
+  kept out of context. The snapshot hook counts a snapshot only in a repository
+  where `.pi/offline-engine/` already exists: with the plugin installed for the
+  user, a session start must not create that folder in every repository.
 - **Long calls.** One execute call can take minutes: up to three implementer
   calls plus dotnet build/test. If your client limits tool-call time, raise
   the limit for this server.

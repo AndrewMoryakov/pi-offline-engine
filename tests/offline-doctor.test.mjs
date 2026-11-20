@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { runOfflineDoctor, formatDoctorReport, checkEndpointLocality } from "../src/offline-doctor.mjs";
+import { runOfflineDoctor, formatDoctorReport, checkEndpointLocality, describeImplementerAuth } from "../src/offline-doctor.mjs";
 
 test("doctor reports ready with endpoint, dotnet and core tool", async () => {
   const fetchFn = async (url) => {
@@ -57,7 +57,7 @@ test("defers MTP TRX reporting checks to the declared project preflight", async 
   };
 
   const exec = async (command, args) => {
-    if (command === "dotnet" && args[0] === "--info") {
+    if (command === "dotnet" && args[0] === "--version") {
       return { code: 0, killed: false, stdout: ".NET SDK 10.0", stderr: "" };
     }
     if (command === "dotnet" && args[0] === "test") {
@@ -92,7 +92,7 @@ async function runtimeStateCheck({ checkIgnoreCode, gitFails = false }) {
   };
 
   const exec = async (command, args) => {
-    if (command === "dotnet" && args[0] === "--info") {
+    if (command === "dotnet" && args[0] === "--version") {
       return { code: 0, killed: false, stdout: ".NET SDK", stderr: "" };
     }
     if (command === "dotnet" && args[0] === "test") {
@@ -209,7 +209,7 @@ test("fails readiness when health works but model catalog is unavailable", async
     return { ok: false, async json() { return {}; } };
   };
   const exec = async (command, args) => {
-    if (command === "dotnet" && args[0] === "--info") return { code: 0, killed: false, stdout: ".NET", stderr: "" };
+    if (command === "dotnet" && args[0] === "--version") return { code: 0, killed: false, stdout: ".NET", stderr: "" };
     if (command === "dotnet" && args[0] === "test") return { code: 0, killed: false, stdout: "--logger\n--filter", stderr: "" };
     if (command === "git") return { code: 1, killed: false, stdout: "", stderr: "" };
     throw new Error("missing");
@@ -414,3 +414,62 @@ test("a host without Pi's tool registry skips the tool and edit checks", async (
   const piWithoutTool = await runOfflineDoctor({ ...base, tools: [] });
   assert.equal(piWithoutTool.ready, false);
 });
+
+// --- 2026-11-20: process checks, timeouts and the SDK version -------------
+
+const DOTNET_TEST_HELP = { code: 0, killed: false, stdout: "--logger\n--filter", stderr: "" };
+
+test("doctor shows the .NET SDK version from dotnet --version", async () => {
+  const exec = async (command, args) => {
+    if (command === "dotnet" && args[0] === "--version") return { code: 0, killed: false, stdout: "10.0.109\n", stderr: "" };
+    if (command === "dotnet" && args[0] === "--info") return { code: 0, killed: false, stdout: ".NET SDK:\n Version: 10.0.109", stderr: "" };
+    if (command === "dotnet" && args[0] === "test") return DOTNET_TEST_HELP;
+    throw new Error("missing");
+  };
+  const report = await runOfflineDoctor({ cwd: "/tmp", endpoint: "http://127.0.0.1:8081", model: "tiny", tools: null, exec, fetchFn: async () => { throw new Error("offline"); } });
+  assert.equal(report.checks.find((check) => check.id === "dotnet").message, ".NET SDK 10.0.109");
+});
+
+test("doctor names a killed process as a timeout, not as its exit code", async () => {
+  const exec = async (command, args) => {
+    if (command === "dotnet" && args[0] === "--version") return { code: 0, killed: true, stdout: "", stderr: "" };
+    if (command === "dotnet" && args[0] === "test") return { code: null, killed: true, stdout: "", stderr: "" };
+    throw new Error("missing");
+  };
+  const report = await runOfflineDoctor({ cwd: "/tmp", endpoint: "http://127.0.0.1:8081", model: "tiny", tools: null, exec, fetchFn: async () => { throw new Error("offline"); } });
+  const dotnet = report.checks.find((check) => check.id === "dotnet");
+  assert.equal(dotnet.status, "error");
+  assert.equal(dotnet.message, "timed out after 20 s");
+  assert.match(report.checks.find((check) => check.id === "dotnet_test_runner").message, /timed out after 20 s/);
+});
+
+test("process checks get a longer limit than HTTP probes", async () => {
+  const limits = {};
+  const exec = async (command, args, options) => {
+    limits[`${command} ${args[0]}`] = options.timeout;
+    if (command === "dotnet" && args[0] === "--version") return { code: 0, killed: false, stdout: "10.0.109", stderr: "" };
+    if (command === "dotnet" && args[0] === "test") return DOTNET_TEST_HELP;
+    if (command === "claude") return { code: 0, killed: false, stdout: "2.1.329 (Claude Code)", stderr: "" };
+    throw new Error("missing");
+  };
+  await runOfflineDoctor({ cwd: "/tmp", provider: "claude-code", model: "claude-haiku-5-5", tools: null, exec, fetchFn: async () => { throw new Error("offline"); } });
+  assert.equal(limits["dotnet --version"], 20_000);
+  assert.equal(limits["dotnet test"], 20_000);
+  assert.equal(limits["claude --version"], 20_000);
+});
+
+test("a claude CLI that does not answer in time is reported as a timeout", async () => {
+  const exec = async (command) => command === "claude"
+    ? { code: 0, killed: true, stdout: "", stderr: "" }
+    : command === "dotnet" ? { code: 0, killed: false, stdout: "10.0.109", stderr: "" } : Promise.reject(new Error("missing"));
+  const report = await runOfflineDoctor({ cwd: "/tmp", provider: "claude-code", model: "claude-haiku-5-5", tools: null, exec, fetchFn: async () => { throw new Error("offline"); } });
+  assert.equal(report.checks.find((check) => check.id === "tiny_endpoint").message, "claude CLI not usable (claude): timed out after 20 s");
+});
+
+test("the implementer auth line names the Claude Code login for that provider", () => {
+  assert.equal(describeImplementerAuth({ provider: "claude-code", apiKey: null }, "none (local endpoint)"), "Claude Code login (claude CLI)");
+  assert.equal(describeImplementerAuth({ provider: "openai-compatible", apiKey: "k" }), "bearer key configured");
+  assert.equal(describeImplementerAuth({ provider: "openai-compatible", apiKey: null, openRouterKeyWithheld: true }), "none (OPENROUTER_API_KEY is set but sent only to openrouter.ai)");
+  assert.equal(describeImplementerAuth({ provider: "openai-compatible", apiKey: null }, "none (local endpoint)"), "none (local endpoint)");
+});
+

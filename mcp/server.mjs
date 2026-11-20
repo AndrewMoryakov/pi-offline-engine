@@ -27,7 +27,7 @@ import { createTinyTransport, prepareDelegatedExecution, runDelegatedExecution }
 import { formatCancelledResult, formatCandidateResult, formatExecutionResult } from "../src/delegation-results.mjs";
 import { engineConfigPath, readEngineConfig, resolveEngineSettings } from "../src/engine-config.mjs";
 import { formatEngineStatus } from "../src/engine-setup.mjs";
-import { describeImplementer, describeImplementerLocality, formatDoctorReport, runOfflineDoctor } from "../src/offline-doctor.mjs";
+import { describeImplementer, describeImplementerAuth, describeImplementerLocality, formatDoctorReport, runOfflineDoctor } from "../src/offline-doctor.mjs";
 import { formatOfflineStats, readOfflineEvents, summarizeOfflineEvents } from "../src/stats.mjs";
 import { resolveAgentDir } from "../src/agent-dir.mjs";
 import { nodeExec } from "../src/node-exec.mjs";
@@ -154,7 +154,7 @@ export function createEngineTools({ env = process.env, exec = nodeExec, serverRo
         formatEngineStatus({ settings: current, configFile, configError: current.configError }),
         `Client: elicitation ${client.elicitation ? "supported" : "not offered"}, roots ${client.roots ? "offered" : "not offered"}`,
         `Endpoint locality: ${describeImplementerLocality(current)}`,
-        `Implementer auth: ${current.apiKey ? "bearer key configured" : current.openRouterKeyWithheld ? "none (OPENROUTER_API_KEY is set but sent only to openrouter.ai)" : "none"}`,
+        `Implementer auth: ${describeImplementerAuth(current, "none")}`,
         `Apply approval: ${env.PI_OFFLINE_ALLOW_HEADLESS_APPLY === "1" ? "not asked (PI_OFFLINE_ALLOW_HEADLESS_APPLY=1)" : "asked through elicitation; refused without it"}`
       ].join("\n"));
     }

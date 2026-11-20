@@ -16,6 +16,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { compactToolResult } from "../../src/tool-result-compactor.mjs";
 import { ensureSelfIgnoringStateDir } from "../../src/state-dir.mjs";
+import { appendEvent } from "../../src/event-log.mjs";
 
 export async function compactHookPayload(payload, { env = process.env } = {}) {
   if (env.PI_OFFLINE_COMPACT_TOOL_RESULTS === "0") return null;
@@ -37,11 +38,28 @@ export async function compactHookPayload(payload, { env = process.env } = {}) {
   if (!compacted) return null;
   await ensureSelfIgnoringStateDir(cwd);
 
+  // The same event the Pi extension writes, so offline_stats counts it. The
+  // state directory exists at this point (the artifact was written into it).
+  const compactedText = compacted.content[0].text;
+  try {
+    await appendEvent(cwd, {
+      type: "tool_result_compacted",
+      toolCallId: payload.tool_use_id,
+      toolName,
+      artifact: compacted.artifact,
+      originalChars: compacted.originalChars,
+      originalLines: compacted.originalLines,
+      compactedChars: compactedText.length
+    });
+  } catch {
+    // Telemetry only: the compacted result is still returned.
+  }
+
   const { persistedOutputPath: _path, persistedOutputSize: _size, ...rest } = response;
   return {
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
-      updatedToolOutput: { ...rest, stdout: compacted.content[0].text, stderr: "" }
+      updatedToolOutput: { ...rest, stdout: compactedText, stderr: "" }
     }
   };
 }

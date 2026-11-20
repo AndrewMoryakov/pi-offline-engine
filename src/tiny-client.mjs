@@ -401,6 +401,7 @@ export async function checkClaudeCli({ claudeBin = "claude", exec, cwd, timeoutM
     const result = await exec(claudeBin, ["--version"], { cwd, timeout: timeoutMs });
     const line = String(result.stdout ?? "").trim().split("\n")[0];
     if (result.code === 0 && result.killed !== true && line) return { ok: true, version: line };
+    if (result.killed === true) return { ok: false, error: `timed out after ${Math.round(timeoutMs / 1000)} s` };
     return { ok: false, error: `exit ${String(result.code)}${result.stderr ? `: ${String(result.stderr).trim().slice(0, 200)}` : ""}` };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };

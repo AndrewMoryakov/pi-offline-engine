@@ -4,6 +4,11 @@ import { resolveEndpointUrl } from "./endpoint-url.mjs";
 import { buildAuthHeaders, checkClaudeCli } from "./tiny-client.mjs";
 
 const DEFAULT_TIMEOUT_MS = 5000;
+// Starting dotnet, git, csharp-ls or the claude CLI is slower than an HTTP
+// probe, and on a small or busy machine the first `dotnet` run of the day can
+// pass 5 s. A process check that times out is a false red line, so processes
+// get their own, longer limit.
+const DEFAULT_COMMAND_TIMEOUT_MS = 20_000;
 const MAX_CATALOG_SAMPLE = 8;
 
 export async function runOfflineDoctor({
@@ -20,37 +25,41 @@ export async function runOfflineDoctor({
   sessionModel = undefined,
   apiKey = null,
   fetchFn = fetch,
-  timeoutMs = DEFAULT_TIMEOUT_MS
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  commandTimeoutMs = DEFAULT_COMMAND_TIMEOUT_MS
 }) {
   const checks = [];
 
   if (provider === "claude-code") {
-    checks.push(await checkClaudeCodeImplementer({ claudeBin, model, exec, cwd, timeoutMs }));
+    checks.push(await checkClaudeCodeImplementer({ claudeBin, model, exec, cwd, timeoutMs: commandTimeoutMs }));
     checks.push(claudeCodeLocality());
   } else {
     checks.push(await checkTinyEndpoint(endpoint, model, fetchFn, timeoutMs, apiKey));
     checks.push(checkEndpointLocality(endpoint));
   }
 
+  // `dotnet --version` prints the SDK version on its first line; the first line
+  // of `dotnet --info` is only the heading ".NET SDK:".
   checks.push(await checkCommand({
     name: "dotnet",
     required: true,
     exec,
-    args: ["--info"],
+    args: ["--version"],
     cwd,
-    timeoutMs
+    timeoutMs: commandTimeoutMs,
+    describe: (line) => (/^\d+\.\d+/.test(line) ? `.NET SDK ${line}` : line)
   }));
 
   checks.push(await checkDotnetTestCapabilities({
     exec,
     cwd,
-    timeoutMs
+    timeoutMs: commandTimeoutMs
   }));
 
   checks.push(await checkRuntimeStateIgnore({
     exec,
     cwd,
-    timeoutMs
+    timeoutMs: commandTimeoutMs
   }));
 
   checks.push(await checkCommand({
@@ -59,7 +68,7 @@ export async function runOfflineDoctor({
     exec,
     args: ["--version"],
     cwd,
-    timeoutMs
+    timeoutMs: commandTimeoutMs
   }));
 
   // `tools: null` is a host without Pi's tool registry (the MCP server): the
@@ -214,6 +223,14 @@ export function describeImplementer(settings) {
     : `${settings.model} @ ${settings.endpoint}`;
 }
 
+// The "Implementer auth" status line. `noneText` keeps each host's wording for
+// the HTTP provider without a key.
+export function describeImplementerAuth(settings, noneText = "none") {
+  if (settings.provider === "claude-code") return "Claude Code login (claude CLI)";
+  if (settings.apiKey) return "bearer key configured";
+  return settings.openRouterKeyWithheld ? "none (OPENROUTER_API_KEY is set but sent only to openrouter.ai)" : noneText;
+}
+
 export function describeImplementerLocality(settings) {
   return settings.provider === "claude-code" ? claudeCodeLocality().message : checkEndpointLocality(settings.endpoint).message;
 }
@@ -316,7 +333,7 @@ async function checkDotnetTestCapabilities({ exec, cwd, timeoutMs }) {
         required: false,
         ok: false,
         status: "warn",
-        message: `unable to inspect dotnet test capabilities (exit ${String(result.code)})`
+        message: `unable to inspect dotnet test capabilities (${describeFailure(result, timeoutMs)})`
       };
     }
 
@@ -357,7 +374,15 @@ async function checkDotnetTestCapabilities({ exec, cwd, timeoutMs }) {
   }
 }
 
-async function checkCommand({ name, required, exec, args, cwd, timeoutMs }) {
+// A process the doctor killed at its time limit exits with whatever code the
+// signal left, often 0; reporting that as "exit 0" reads like a contradiction.
+export function describeFailure(result, timeoutMs) {
+  return result?.killed === true
+    ? `timed out after ${Math.round(timeoutMs / 1000)} s`
+    : `exit ${String(result?.code)}`;
+}
+
+async function checkCommand({ name, required, exec, args, cwd, timeoutMs, describe = (line) => line }) {
   try {
     const result = await exec(name, args, { cwd, timeout: timeoutMs });
     const ok = result.code === 0 && result.killed !== true;
@@ -367,7 +392,7 @@ async function checkCommand({ name, required, exec, args, cwd, timeoutMs }) {
       required,
       ok,
       status: ok ? "ok" : required ? "error" : "warn",
-      message: ok ? firstLine ?? "available" : `exit ${String(result.code)}`
+      message: ok ? (firstLine ? describe(firstLine) : "available") : describeFailure(result, timeoutMs)
     };
   } catch (error) {
     return {

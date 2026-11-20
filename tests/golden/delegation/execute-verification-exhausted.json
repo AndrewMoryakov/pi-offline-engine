@@ -57,12 +57,12 @@
               "verificationPassed": false
             }
           ],
-          "verification": {
+          "last_verification": {
+            "attempt": 3,
             "passed": false,
             "checks": [
               {
                 "kind": "build",
-                "project": "src/A.csproj",
                 "passed": false,
                 "code": 1,
                 "killed": false,
@@ -73,11 +73,6 @@
                 ],
                 "artifact": ".pi/offline-engine/artifacts/1720b0f6b6c9313414cb.log"
               }
-            ],
-            "diagnostics": [
-              "Result: Build FAILED, 1 error, 0 warnings",
-              "Errors (1 unique):",
-              "  src/A.cs(1,20): error CS1002: ; expected"
             ]
           }
         }

@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { isSafeRelativePath } from "./implementation-spec.mjs";
 import { ensureStateSubdir } from "./state-dir.mjs";
+import { pruneStateSubdir } from "./state-retention.mjs";
 import { failureFromTrx, formatDotnetReport, hasFailureDetail, isRecognised, parseDotnetOutput, reportsFailure } from "./dotnet-output.mjs";
 import { resolveInside, sha256 } from "./workspace-snapshot.mjs";
 
@@ -340,6 +341,7 @@ async function prepareTestRun(cwd, specId, attempt, discriminator) {
   const directory = path.join(cwd, ".pi", "offline-engine", "test-results", id);
   await fs.rm(directory, { recursive: true, force: true });
   await ensureStateSubdir(cwd, "test-results", id);
+  await pruneStateSubdir(cwd, "test-results", [id]);
   const fileName = "results.trx";
   return { directory, fileName, filePath: path.join(directory, fileName) };
 }
@@ -492,6 +494,7 @@ async function writeCommandArtifact(cwd, specId, attempt, kind, result) {
     result.stderr ?? ""
   ].join("\n");
   await fs.writeFile(absolute, body, "utf8");
+  await pruneStateSubdir(cwd, "artifacts", [`${id}.log`]);
   return relative.replaceAll("\\", "/");
 }
 

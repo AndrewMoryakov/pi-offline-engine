@@ -225,7 +225,7 @@ To index a repository, ask the agent to add it to its knowledge base; that is `p
 - **It builds the commands itself.** The task names the project and the tests; the engine turns that into the `dotnet` command line, so a model cannot slip in a shell command. The edited code itself does run during the build and tests.
 - **It counts tests as passed only with proof** that tests actually ran: a fresh TRX result file from `dotnet test` with more than zero executed tests, not just a zero exit code.
 - **It asks you before writing.** With no screen to ask on, it refuses. `PI_OFFLINE_ALLOW_HEADLESS_APPLY=1` lifts that, and is meant only for a sandbox.
-- **It keeps its logs inside your repository** in `.pi/offline-engine/`. The folder contains its own `.gitignore` with `*`, so git never shows it.
+- **It keeps its logs inside your repository** in `.pi/offline-engine/`. The folder contains its own `.gitignore` with `*`, so git never shows it. Only the newest 20 logs of each kind are kept (`PI_OFFLINE_STATE_KEEP` changes the number), so the folder stays small and a plain `grep -r` in your repository runs into few of them.
 - **It does not sandbox your machine.** `dotnet build` and `dotnet test` run in your repository with your permissions, including any build steps your projects define.
 
 ## For a slow main model

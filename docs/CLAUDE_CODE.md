@@ -18,7 +18,7 @@ part of this.
 |---|---|
 | `delegate_implementation`, `execute_delegated_implementation` | same tools over MCP, running the same workflows |
 | `/offline-doctor`, `/offline-status`, `/offline-stats` | `offline_doctor`, `offline_status`, `offline_stats` MCP tools |
-| dotnet build/test output compaction (`tool_result`) | `PostToolUse` hook on Bash/PowerShell (plugin only) |
+| dotnet build/test output compaction (`tool_result`) | `PostToolUse` hook on Bash/PowerShell for commands that succeed (plugin only); `dotnet_build` and `dotnet_test` MCP tools for any exit code |
 | repository snapshot before agent runs | `SessionStart` hook (plugin only) |
 | tool guidelines in the system prompt | the `bounded-delegation` skill (plugin only) |
 | `/offline-tools`, edit providers, training capture commands | not ported (Pi-specific); `PI_OFFLINE_TRAINING_CAPTURE=1` still enables capture |
@@ -112,6 +112,13 @@ that prompt. `delegate_implementation` writes nothing and needs no approval.
 - **Long calls.** One execute call can take minutes: up to three implementer
   calls plus dotnet build/test. If your client limits tool-call time, raise
   the limit for this server.
+- **Failed builds through Bash are not shortened.** Claude Code sends a Bash
+  command that exits non-zero to `PostToolUseFailure`, not `PostToolUse`, and
+  a hook on that event cannot change what the model reads (checked with
+  Claude Code 2.1.329). A failed `dotnet build` or `dotnet test` through Bash
+  therefore reaches the model in full. `dotnet_build` and `dotnet_test` run
+  the command in the engine and return the short result for any exit code;
+  the plugin's skill and the server's instructions ask the model to use them.
 
 ## Frontier main model, cheap implementer
 

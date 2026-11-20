@@ -1,0 +1,192 @@
+Build started 11/20/2026 2:12:41 PM.
+     0>Enabled loggers: ConsoleLogger, CentralForwardingLogger, CentralForwardingLogger
+       Terminal Logger was not used because the output is being redirected to a file.
+       Process = "/usr/lib/dotnet/dotnet"
+       MSBuild executable path = "/usr/lib/dotnet/sdk/10.0.404/MSBuild"
+       Command line arguments = "/usr/lib/dotnet/sdk/10.0.404/MSBuild -maxcpucount --verbosity:m -tlp:default=auto --property:NuGetInteractive=false --verbosity:d --nologo -restore:false Lib -consoleloggerparameters:Summary"
+       Current directory = "/work/lab"
+       MSBuild version = "18.9.15+2ab285486"
+       Assembly loaded during Evaluation: System.Runtime.Loader, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: /usr/lib/dotnet/shared/Microsoft.NETCore.App/10.0.15/System.Runtime.Loader.dll, MVID: 49b9a1b4-f0b8-4934-afc2-a7d2b02b879b, AssemblyLoadContext: Default)
+       Assembly loaded during Evaluation: System.Diagnostics.FileVersionInfo, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: /usr/lib/dotnet/shared/Microsoft.NETCore.App/10.0.15/System.Diagnostics.FileVersionInfo.dll, MVID: 2dd3a7b3-11c0-4c01-8c9c-20ece941e341, AssemblyLoadContext: Default)
+       Assembly loaded during Evaluation: System.Reflection.Metadata, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: /usr/lib/dotnet/shared/Microsoft.NETCore.App/10.0.15/System.Reflection.Metadata.dll, MVID: 6833c317-3f4e-49d1-9730-7a8a6c2a2f47, AssemblyLoadContext: Default)
+       Assembly loaded during Evaluation: System.IO.MemoryMappedFiles, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: /usr/lib/dotnet/shared/Microsoft.NETCore.App/10.0.15/System.IO.MemoryMappedFiles.dll, MVID: f1a85523-7636-42fe-8075-5d778438c5f4, AssemblyLoadContext: Default)
+       The SDK "Microsoft.NET.Sdk" was successfully resolved by the "DefaultSdkResolver" resolver to location "/usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/Sdk" and version "".
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props(49,11): message : Property 'MSBuildExtensionsPath' with value '/usr/lib/dotnet/sdk/10.0.404/' expanded from the environment.
+       /usr/lib/dotnet/sdk/10.0.404/Current/Microsoft.Common.props(60,5): message : Property reassignment: $(MSBuildProjectExtensionsPath)="/work/lab/Lib/obj/" (previous value: "obj\") at /usr/lib/dotnet/sdk/10.0.404/Current/Microsoft.Common.props (60,5)
+       Assembly loaded during Evaluation: System.Threading.Tasks.Parallel, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: /usr/lib/dotnet/shared/Microsoft.NETCore.App/10.0.15/System.Threading.Tasks.Parallel.dll, MVID: 5e0f325e-d4a7-47a3-8c52-5072e7a1a4cd, AssemblyLoadContext: Default)
+       /usr/lib/dotnet/sdk/10.0.404/Current/Microsoft.Common.props(84,119): message : Property 'MSBuildUserExtensionsPath' with value '/home/user/.local/share/Microsoft\MSBuild' expanded from the environment.
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props(90,5): message : Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem}" (previous value: "{CandidateAssemblyFiles}") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props (90,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props(91,5): message : Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem}") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props (91,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props(92,5): message : Property reassignment: $(AssemblySearchPaths)="{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName}" (previous value: "{CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.props (92,5)
+       The "DefaultSdkResolver" resolver attempted to resolve the SDK "Microsoft.NET.SDK.WorkloadAutoImportPropsLocator".
+       Warnings: null
+       Errors: MSB4276: The default SDK resolver failed to resolve SDK "Microsoft.NET.SDK.WorkloadAutoImportPropsLocator" because directory "/usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.SDK.WorkloadAutoImportPropsLocator/Sdk" did not exist.
+       Assembly loaded during Evaluation: Microsoft.Build.NuGetSdkResolver, Version=7.9.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: /usr/lib/dotnet/sdk/10.0.404/Microsoft.Build.NuGetSdkResolver.dll, MVID: b1526569-cae8-44ed-b404-026e3e1ddd04, AssemblyLoadContext: MSBuild plugin /usr/lib/dotnet/sdk/10.0.404/Microsoft.Build.NuGetSdkResolver.dll)
+       Assembly loaded during Evaluation: NuGet.Common, Version=7.9.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: /usr/lib/dotnet/sdk/10.0.404/NuGet.Common.dll, MVID: 501968b6-9159-4a53-b7b4-a28eb510e842, AssemblyLoadContext: MSBuild plugin /usr/lib/dotnet/sdk/10.0.404/Microsoft.Build.NuGetSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver, Version=10.0.404.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: /usr/lib/dotnet/sdk/10.0.404/Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll, MVID: fc0d3d01-c51d-4f0e-9926-c5d0b5154987, AssemblyLoadContext: MSBuild plugin /usr/lib/dotnet/sdk/10.0.404/Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.DotNet.Cli.CoreUtils, Version=10.0.404.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 (location: /usr/lib/dotnet/sdk/10.0.404/Microsoft.DotNet.Cli.CoreUtils.dll, MVID: 96fac09b-a690-4420-a74f-bec5d9b2778d, AssemblyLoadContext: MSBuild plugin /usr/lib/dotnet/sdk/10.0.404/Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.NET.Sdk.WorkloadManifestReader, Version=10.0.404.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 (location: /usr/lib/dotnet/sdk/10.0.404/Microsoft.NET.Sdk.WorkloadManifestReader.dll, MVID: d7318aec-d74b-4f41-a1ec-3961cb895813, AssemblyLoadContext: MSBuild plugin /usr/lib/dotnet/sdk/10.0.404/Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       Assembly loaded during Evaluation: Microsoft.Deployment.DotNet.Releases, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: /usr/lib/dotnet/sdk/10.0.404/Microsoft.Deployment.DotNet.Releases.dll, MVID: 80654d21-19e6-4f44-ac7e-72a32be77a5b, AssemblyLoadContext: MSBuild plugin /usr/lib/dotnet/sdk/10.0.404/Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       The SDK "Microsoft.NET.SDK.WorkloadAutoImportPropsLocator" was successfully resolved by the "Microsoft.DotNet.MSBuildWorkloadSdkResolver" resolver to location "null" and version "null".
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets(28,5): message : Property reassignment: $(PublishProfileImported)="false" (previous value: "true") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.ImportPublishProfile.targets (28,5)
+       Assembly loaded during Evaluation: Microsoft.Win32.Registry, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: /usr/lib/dotnet/shared/Microsoft.NETCore.App/10.0.15/Microsoft.Win32.Registry.dll, MVID: 3a0a5ce6-d303-4f70-9940-35e4c117aee2, AssemblyLoadContext: Default)
+       Assembly loaded during Evaluation: NuGet.Frameworks, Version=7.9.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (location: /usr/lib/dotnet/sdk/10.0.404/NuGet.Frameworks.dll, MVID: 1bdf3215-3e96-4674-b048-02045592fde4, AssemblyLoadContext: Default)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets(81,5): message : Property reassignment: $(TargetPlatformVersion)="" (previous value: "0.0") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets (81,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets(127,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**" (previous value: ";bin\Debug//**") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets (127,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets(142,5): message : Property reassignment: $(OutputPath)="bin\Debug/net10.0/" (previous value: "bin\Debug/") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets (142,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets(147,5): message : Property reassignment: $(IntermediateOutputPath)="obj\Debug/net10.0/" (previous value: "obj\Debug/") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.DefaultOutputPaths.targets (147,5)
+       The "DefaultSdkResolver" resolver attempted to resolve the SDK "Microsoft.NET.SDK.WorkloadManifestTargetsLocator".
+       Warnings: null
+       Errors: MSB4276: The default SDK resolver failed to resolve SDK "Microsoft.NET.SDK.WorkloadManifestTargetsLocator" because directory "/usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.SDK.WorkloadManifestTargetsLocator/Sdk" did not exist.
+       The SDK "Microsoft.NET.SDK.WorkloadManifestTargetsLocator" was successfully resolved by the "Microsoft.DotNet.MSBuildWorkloadSdkResolver" resolver to location "/usr/lib/dotnet/sdk-manifests/10.0.100/microsoft.net.sdk.android/36.1.2" and version "null".
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets(379,5): message : Property reassignment: $(RoslynTargetsPath)="/usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/../../../Roslyn" (previous value: "/usr/lib/dotnet/sdk/10.0.404/Roslyn") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.BeforeCommon.targets (379,5)
+       /usr/lib/dotnet/sdk/10.0.404/Roslyn/Microsoft.Managed.Core.targets(6,5): message : Property reassignment: $(_BuildTasksDirectory)="/usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/../../../Roslyn/" (previous value: "/usr/lib/dotnet/sdk/10.0.404/Roslyn/") at /usr/lib/dotnet/sdk/10.0.404/Roslyn/Microsoft.Managed.Core.targets (6,5)
+       /usr/lib/dotnet/sdk/10.0.404/Roslyn/Microsoft.CSharp.Core.targets(213,5): message : Property reassignment: $(CommandLineArgsForDesignTimeEvaluation)="-langversion:14.0 -define:TRACE" (previous value: "-langversion:14.0") at /usr/lib/dotnet/sdk/10.0.404/Roslyn/Microsoft.CSharp.Core.targets (213,5)
+       Assembly loaded during Evaluation: Microsoft.Build.Utilities.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (location: /usr/lib/dotnet/sdk/10.0.404/Microsoft.Build.Utilities.Core.dll, MVID: cb819295-d3d4-4314-8c68-244507119312, AssemblyLoadContext: Default)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(175,5): message : Property reassignment: $(_DebugSymbolsProduced)="true" (previous value: "false") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (175,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(185,5): message : Property reassignment: $(_DocumentationFileProduced)="false" (previous value: "true") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (185,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(393,5): message : Property reassignment: $(MSBuildCopyMarkerName)="Lib.csproj.Up2Date" (previous value: "Lib.csproj") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (393,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(541,5): message : Property reassignment: $(ProcessorArchitecture)="msil" (previous value: "") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (541,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(580,5): message : Property reassignment: $(DelaySign)="" (previous value: "false") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (580,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(2622,5): message : Property 'LocalAppData' with value '/home/user/.local/share' expanded from the environment.
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(3950,5): message : Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Auto" (previous value: "") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (3950,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(3951,5): message : Property reassignment: $(_SGenGenerateSerializationAssembliesConfig)="Off" (previous value: "Auto") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (3951,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(5162,5): message : Property reassignment: $(_TargetsThatPrepareProjectReferences)="
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(5162,5): message :       AssignProjectConfiguration;
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(5162,5): message :       _SplitProjectReferencesByFileExistence
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(5162,5): message :     " (previous value: "_SplitProjectReferencesByFileExistence") at /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets (5162,5)
+       /usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets(7033,5): message : Property 'MSBuildExtensionsPath32' with value '/usr/lib/dotnet/sdk/10.0.404' expanded from the environment.
+       The "NuGetInteractive" property is a global property, and cannot be modified.
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(29,5): message : Property reassignment: $(ProjectAssetsCacheFile)="/work/lab/Lib/obj/Debug/net10.0/Lib.assets.cache" (previous value: "obj\Debug/net10.0/Lib.assets.cache") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets (29,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message : Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       FindInvalidProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       GetFrameworkPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       GetReferenceAssemblyPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       PrepareForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       ExpandSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :     ;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolvePackageDependenciesForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       _HandlePackageFileConflicts;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :     " (previous value: "
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       FindInvalidProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       GetFrameworkPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       GetReferenceAssemblyPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       PrepareForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :       ExpandSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(80,5): message :     ") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets (80,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message : Property reassignment: $(PrepareResourcesDependsOn)="
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       ResolvePackageDependenciesForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       _HandlePackageFileConflicts;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       ;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       PrepareResourceNames;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       ResGen;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       CompileLicxFiles
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :     
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :     " (previous value: "
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       ;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       PrepareResourceNames;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       ResGen;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :       CompileLicxFiles
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets(86,5): message :     ") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.PackageDependencyResolution.targets (86,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(35,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**" (previous value: ";bin\Debug//**;obj\Debug//**") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (35,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(37,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (37,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(42,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (42,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(45,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (45,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(46,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (46,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(47,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj;**/*.sln" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (47,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(48,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj;**/*.sln") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (48,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(49,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (49,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets(50,5): message : Property reassignment: $(DefaultItemExcludes)=";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store" (previous value: ";bin\Debug//**;obj\Debug//**;bin\/**;obj\/**;bin\Debug/net10.0/publish//**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.targets (50,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message : Property reassignment: $(ResolveAssemblyReferencesDependsOn)="
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       FindInvalidProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetFrameworkPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetReferenceAssemblyPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       PrepareForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ExpandSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     ;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolvePackageDependenciesForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       _HandlePackageFileConflicts;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     ;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveTargetingPackAssets;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     " (previous value: "
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       FindInvalidProjectReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetFrameworkPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetReferenceAssemblyPaths;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       PrepareForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ExpandSDKReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     ;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolvePackageDependenciesForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       _HandlePackageFileConflicts;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     ") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets (14,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(44,5): message : Property reassignment: $(_GenerateRuntimeConfigurationPropertyInputsCache)="/work/lab/Lib/obj/Debug/net10.0/Lib.genruntimeconfig.cache" (previous value: "obj\Debug/net10.0/Lib.genruntimeconfig.cache") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets (44,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(46,5): message : Property reassignment: $(_GeneratePublishDependencyFilePropertyInputsCache)="/work/lab/Lib/obj/Debug/net10.0/Lib.genpublishdeps.cache" (previous value: "obj\Debug/net10.0/Lib.genpublishdeps.cache") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets (46,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(48,5): message : Property reassignment: $(_GenerateSingleFileBundlePropertyInputsCache)="/work/lab/Lib/obj/Debug/net10.0/Lib.genbundle.cache" (previous value: "obj\Debug/net10.0/Lib.genbundle.cache") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets (48,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(81,5): message : Property reassignment: $(GenerateRuntimeConfigDevFile)="false" (previous value: "true") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets (81,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(97,5): message : Property 'HOME' with value '/home/user' expanded from the environment.
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(99,5): message : Property reassignment: $(_DefaultUserProfileRuntimeStorePath)="/home/user/.dotnet/store" (previous value: "/home/user") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets (99,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(144,5): message : Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32" (previous value: "Any CPU,x86,x64") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets (144,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(148,5): message : Property reassignment: $(AvailablePlatforms)="Any CPU,x86,x64,ARM32,ARM64" (previous value: "Any CPU,x86,x64,ARM32") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets (148,5)
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message : Property reassignment: $(CoreBuildDependsOn)="
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       _CheckForBuildWithNoBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       BuildOnlySettings;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       PrepareForBuild;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       PreBuildEvent;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       ResolveReferences;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       PrepareResources;
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets(204,5): message :       ResolveKeySource;
+  [... detailed log lines removed from this fixture ...]
+       /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets(45,5): message : Property reassignment: $(WarningsAsErrors)=";NU1605;SYSLIB0011" (previous value: ";NU1605") at /usr/lib/dotnet/sdk/10.0.404/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.CSharp.targets (45,5)
+  [... detailed log lines removed from this fixture ...]
+       Done executing task "FindUnderPath".
+       Task "FindUnderPath"
+         Comparison path is "obj/Debug/net10.0/".
+       Done executing task "FindUnderPath".
+       Using "RemoveDuplicates" task from assembly "Microsoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a".
+       Task "RemoveDuplicates"
+       Done executing task "RemoveDuplicates".
+     1>Done building target "_CleanGetCurrentAndPriorFileWrites" in project "Lib.csproj".
+     1>Target "IncrementalClean" in file "/usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets" from project "/work/lab/Lib/Lib.csproj" (target "CoreBuild" depends on it):
+       Task "FindUnderPath"
+         Comparison path is "bin/Debug/net10.0/".
+       Done executing task "FindUnderPath".
+       Task "FindUnderPath"
+         Comparison path is "obj/Debug/net10.0/".
+       Done executing task "FindUnderPath".
+       Using "Delete" task from assembly "Microsoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a".
+       Task "Delete"
+       Done executing task "Delete".
+       Task "RemoveDuplicates"
+       Done executing task "RemoveDuplicates".
+     1>Done building target "IncrementalClean" in project "Lib.csproj".
+       Target "GenerateBuildDependencyFile" skipped. Previously built successfully.
+     1>Target "CoreBuild" in file "/usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets" from project "/work/lab/Lib/Lib.csproj" (target "Build" depends on it):
+     1>Done building target "CoreBuild" in project "Lib.csproj".
+     1>Target "AfterBuild" in file "/usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets" from project "/work/lab/Lib/Lib.csproj" (target "Build" depends on it):
+     1>Done building target "AfterBuild" in project "Lib.csproj".
+       Target "_CheckForInvalidConfigurationAndPlatform" skipped. Previously built successfully.
+       Target "_CheckForInvalidConfigurationAndPlatform" skipped. Previously built successfully.
+     1>Target "Build" in file "/usr/lib/dotnet/sdk/10.0.404/Microsoft.Common.CurrentVersion.targets" from project "/work/lab/Lib/Lib.csproj" (entry point):
+     1>Done building target "Build" in project "Lib.csproj".
+     1>Target "_CheckContainersPackage" in file "/usr/lib/dotnet/sdk/10.0.404/Containers/build/Microsoft.NET.Build.Containers.targets" from project "/work/lab/Lib/Lib.csproj" (entry point):
+     1>Done building target "_CheckContainersPackage" in project "Lib.csproj".
+     1>Done Building Project "/work/lab/Lib/Lib.csproj" (default targets).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.31

@@ -197,7 +197,8 @@ test("the server speaks MCP over stdio", async () => {
     send({ id: 2, method: "tools/list" });
     const listed = await waitFor(2);
     assert.deepEqual(listed.result.tools.map((t) => t.name), [
-      "delegate_implementation", "execute_delegated_implementation", "offline_doctor", "offline_status", "offline_stats"
+      "delegate_implementation", "execute_delegated_implementation", "offline_doctor", "offline_status", "offline_stats",
+      "dotnet_build", "dotnet_test"
     ]);
     send({ id: 3, method: "tools/call", params: { name: "offline_status", arguments: {} } });
     assert.match((await waitFor(3)).result.content[0].text, /Apply approval: asked through elicitation; refused without it/);
@@ -206,3 +207,40 @@ test("the server speaks MCP over stdio", async () => {
     await new Promise((resolve) => child.on("exit", resolve));
   }
 });
+
+// --- dotnet_build / dotnet_test: the short result for any exit code -------
+
+test("dotnet_test returns the short result of a failed run and counts it for offline_stats", async () => {
+  const cwd = await tempDir("pi-mcp-dotnet-");
+  await fs.mkdir(path.join(cwd, "tests"), { recursive: true });
+  await fs.writeFile(path.join(cwd, "tests", "App.Tests.csproj"), "<Project />", "utf8");
+  const output = await fs.readFile(path.join(repoRoot, "tests", "fixtures", "dotnet-output", "test-xunit-failures.txt"), "utf8");
+  const calls = [];
+  const exec = async (command, args, options) => {
+    calls.push({ command, args, cwd: options.cwd });
+    return { code: 1, killed: false, stdout: output, stderr: "" };
+  };
+  const tool = createEngineTools({ env: { PI_OFFLINE_WORKSPACE: cwd }, exec }).find((t) => t.name === "dotnet_test");
+  const result = await tool.call({ project: "tests/App.Tests.csproj", filter: "FullyQualifiedName~ManyTests", noRestore: true }, ctx().value);
+  const shown = result.content[0].text;
+
+  assert.deepEqual(calls[0].args, ["test", "tests/App.Tests.csproj", "--no-restore", "--filter", "FullyQualifiedName~ManyTests"]);
+  assert.equal(calls[0].cwd, await fs.realpath(cwd));
+  assert.match(shown, /^dotnet test tests\/App\.Tests\.csproj --no-restore --filter FullyQualifiedName~ManyTests: exit code 1$/m);
+  assert.match(shown, /^Result: Tests FAILED, 22 failed, 1 passed, 0 skipped of 23$/m);
+  assert.match(shown, /^ {4}Expected: 0\n {4}Actual: {3}1$/m);
+  assert.ok(shown.length < 2500, String(shown.length));
+
+  const events = (await fs.readFile(path.join(cwd, ".pi", "offline-engine", "events.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line));
+  assert.equal(events.at(-1).type, "tool_result_compacted");
+  assert.equal(events.at(-1).toolName, "dotnet_test");
+  assert.equal(events.at(-1).originalChars, output.length);
+});
+
+test("dotnet_build refuses a project outside the workspace", async () => {
+  const cwd = await tempDir("pi-mcp-dotnet-");
+  const exec = async () => { throw new Error("dotnet must not run"); };
+  const tool = createEngineTools({ env: { PI_OFFLINE_WORKSPACE: cwd }, exec }).find((t) => t.name === "dotnet_build");
+  await assert.rejects(tool.call({ project: "../other/App.csproj" }, ctx().value), /relative path inside the workspace/);
+});
+

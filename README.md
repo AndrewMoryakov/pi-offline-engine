@@ -52,7 +52,7 @@ The main model never sits in the edit, compile, fix loop. That loop is the cheap
 | You work in | What you get |
 |---|---|
 | **Pi**, with a local or cloud main model | Everything: the delegation tools, the `/offline-*` commands, help for a slow main model (shorter build output, a repository snapshot, a trimmed tool list), and four bundled extensions: search over your code by meaning (`pi-knowledge`), language-server navigation (`pi-lsp-extension`), small scripts over tools (`pi-code-tool`) and cheaper edits (`pi-lean-edit`). |
-| **Claude Code, Codex, Cursor or another MCP client** | The same two delegation tools and three MCP tools in place of the commands: `offline_doctor`, `offline_status`, `offline_stats`. The Claude Code plugin also shortens build output and adds the repository snapshot. Your cloud model plans; a local model types. Pi is not needed, and its four bundled extensions are not part of this. |
+| **Claude Code, Codex, Cursor or another MCP client** | The same two delegation tools; three MCP tools in place of the commands: `offline_doctor`, `offline_status`, `offline_stats`; and `dotnet_build` and `dotnet_test`, which run the build or the tests and return the short result. The Claude Code plugin also shortens build output from the shell and adds the repository snapshot. Your cloud model plans; a local model types. Pi is not needed, and its four bundled extensions are not part of this. |
 
 ## One delegation, step by step
 
@@ -232,7 +232,7 @@ To index a repository, ask the agent to add it to its knowledge base; that is `p
 
 Outside of delegation, the engine also takes work off the main model:
 
-- Long `dotnet build` and `dotnet test` output is cut down to the errors before the model reads it; the full log stays on disk (`/offline-compact`).
+- Long `dotnet build` and `dotnet test` output is cut down before the model reads it: the result first, then the compiler errors with file and line, and each failed test with its expected and actual values and its line in the test file. The full log stays on disk (`/offline-compact`). In Claude Code a failed command run through the shell reaches the model in full, so the `dotnet_build` and `dotnet_test` tools do the build and the tests there.
 - A small snapshot of the repository (branch, changed files, solution and project files) is added at the start, so the model does not spend its first turns looking around (`/offline-context`).
 - `/offline-tools minimal` hides tools a slow model does not need, and `/offline-tools restore` brings them back.
 - `/offline-stats` shows what the small model did and how much text was kept out of the main model's context.

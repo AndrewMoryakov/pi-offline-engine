@@ -1,0 +1,25 @@
+Running tests from /work/lab/fx/tests/Acceptance.Tests/bin/Debug/net8.0/Acceptance.Tests.dll (net8.0|x64)
+failed ExactlyThresholdIsNotDiscounted (19ms)
+  from /work/lab/fx/tests/Acceptance.Tests/bin/Debug/net8.0/Acceptance.Tests.dll (net8.0|x64)
+  Assertion failed. Expected values to be equal.
+  
+  expected: 100
+  actual:   90.00
+  
+  Assert.AreEqual(100m, LoyaltyDiscount.Apply(100m, isLoyalCustomer: true))
+    at Acceptance.Tests.LoyaltyDiscountTests.ExactlyThresholdIsNotDiscounted() in /work/lab/fx/tests/Acceptance.Tests/LoyaltyDiscountTests.cs:11
+    at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+/work/lab/fx/tests/Acceptance.Tests/bin/Debug/net8.0/Acceptance.Tests.dll (net8.0|x64) failed with 1 error(s) (207ms)
+Exit code: 2
+
+  In process file artifacts produced:
+    - /work/lab/fx/r/mtp.trx
+
+Test run summary: Failed!
+  total: 4
+  failed: 1
+  succeeded: 3
+  skipped: 0
+  duration: 496ms
+Test run completed with non-success exit code: 2 (see: https://aka.ms/testingplatform/exitcodes)

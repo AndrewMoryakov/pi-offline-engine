@@ -116,7 +116,7 @@
       "type": "repair_packet_created",
       "specId": "characterize-build",
       "attempt": 1,
-      "diagnostics": 2
+      "diagnostics": 3
     },
     {
       "ts": "<TS>",
@@ -332,16 +332,18 @@
           "verification": {
             "passed": false,
             "diagnostics": [
-              "src/A.cs(1,20): error CS1002: ; expected",
-              "Build FAILED."
+              "Result: Build FAILED, 1 error, 0 warnings",
+              "Errors (1 unique):",
+              "  src/A.cs(1,20): error CS1002: ; expected"
             ],
             "checks": [
               {
                 "kind": "build",
                 "passed": false,
                 "diagnostics": [
-                  "src/A.cs(1,20): error CS1002: ; expected",
-                  "Build FAILED."
+                  "Result: Build FAILED, 1 error, 0 warnings",
+                  "Errors (1 unique):",
+                  "  src/A.cs(1,20): error CS1002: ; expected"
                 ],
                 "code": 1,
                 "killed": false,

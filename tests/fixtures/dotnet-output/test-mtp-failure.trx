@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="4f23615a-9412-4280-b256-93b1ff9551cd" name="@lab-host 2026-11-20 11:36:38.7936139" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-11-20T11:36:38.6939983Z" queuing="2026-11-20T11:36:38.6939983Z" start="2026-11-20T11:36:38.6939983Z" finish="2026-11-20T11:36:38.7939438Z" />
+  <TestSettings name="default" id="52f36a4b-7605-4801-b534-829354446ed2">
+    <Deployment runDeploymentRoot="_lab-host_2026-11-20_11_36_38.7936139" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="9e5181c1-d331-4480-a46d-35add207ed28" testId="1a986d57-3a87-84d6-8e2c-9156ab451a52" testName="ExactlyThresholdIsNotDiscounted" computerName="lab-host" duration="00:00:00.0190473" startTime="2026-11-20T11:36:38.7427536+00:00" endTime="2026-11-20T11:36:38.7773311+00:00" testType="13CDC9D9-DDB5-4fa4-A97D-D965CCFC6D4B" outcome="Failed" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" relativeResultsDirectory="9e5181c1-d331-4480-a46d-35add207ed28">
+      <Output>
+        <ErrorInfo>
+          <Message>Assertion failed. Expected values to be equal.
+
+expected: 100
+actual:   90.00
+
+Assert.AreEqual(100m, LoyaltyDiscount.Apply(100m, isLoyalCustomer: true))</Message>
+          <StackTrace>   at Acceptance.Tests.LoyaltyDiscountTests.ExactlyThresholdIsNotDiscounted() in /work/lab/fx/tests/Acceptance.Tests/LoyaltyDiscountTests.cs:line 11
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="df9f0989-38e1-44d7-943b-912a73a90d53" testId="1b8cff45-8d2b-85c0-a5f3-07405ca9195a" testName="AboveThresholdIsDiscounted" computerName="lab-host" duration="00:00:00.0002614" startTime="2026-11-20T11:36:38.7789023+00:00" endTime="2026-11-20T11:36:38.7792182+00:00" testType="13CDC9D9-DDB5-4fa4-A97D-D965CCFC6D4B" outcome="Passed" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" relativeResultsDirectory="df9f0989-38e1-44d7-943b-912a73a90d53" />
+    <UnitTestResult executionId="1fc000cd-959c-498b-893b-811641aa8dc4" testId="13416904-49e1-8d2e-8a73-2e9a362016b5" testName="NonLoyalCustomerIsUnchanged" computerName="lab-host" duration="00:00:00.0000597" startTime="2026-11-20T11:36:38.7792889+00:00" endTime="2026-11-20T11:36:38.7793624+00:00" testType="13CDC9D9-DDB5-4fa4-A97D-D965CCFC6D4B" outcome="Passed" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" relativeResultsDirectory="1fc000cd-959c-498b-893b-811641aa8dc4" />
+    <UnitTestResult executionId="293f623f-86b2-4696-b991-ec26652d982f" testId="16bb1de2-20c1-8fa3-b422-20986c7b38e8" testName="NegativeTotalIsRejected" computerName="lab-host" duration="00:00:00.0006427" startTime="2026-11-20T11:36:38.7793736+00:00" endTime="2026-11-20T11:36:38.7817658+00:00" testType="13CDC9D9-DDB5-4fa4-A97D-D965CCFC6D4B" outcome="Passed" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" relativeResultsDirectory="293f623f-86b2-4696-b991-ec26652d982f" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="ExactlyThresholdIsNotDiscounted" storage="/work/lab/fx/tests/acceptance.tests/bin/debug/net8.0/acceptance.tests.dll" id="1a986d57-3a87-84d6-8e2c-9156ab451a52">
+      <Execution id="9e5181c1-d331-4480-a46d-35add207ed28" />
+      <TestMethod codeBase="/work/lab/fx/tests/Acceptance.Tests/bin/Debug/net8.0/Acceptance.Tests.dll" adapterTypeName="executor://MSTest.Sdk/4.4.1" className="Acceptance.Tests.LoyaltyDiscountTests" name="ExactlyThresholdIsNotDiscounted" />
+    </UnitTest>
+    <UnitTest name="AboveThresholdIsDiscounted" storage="/work/lab/fx/tests/acceptance.tests/bin/debug/net8.0/acceptance.tests.dll" id="1b8cff45-8d2b-85c0-a5f3-07405ca9195a">
+      <Execution id="df9f0989-38e1-44d7-943b-912a73a90d53" />
+      <TestMethod codeBase="/work/lab/fx/tests/Acceptance.Tests/bin/Debug/net8.0/Acceptance.Tests.dll" adapterTypeName="executor://MSTest.Sdk/4.4.1" className="Acceptance.Tests.LoyaltyDiscountTests" name="AboveThresholdIsDiscounted" />
+    </UnitTest>
+    <UnitTest name="NonLoyalCustomerIsUnchanged" storage="/work/lab/fx/tests/acceptance.tests/bin/debug/net8.0/acceptance.tests.dll" id="13416904-49e1-8d2e-8a73-2e9a362016b5">
+      <Execution id="1fc000cd-959c-498b-893b-811641aa8dc4" />
+      <TestMethod codeBase="/work/lab/fx/tests/Acceptance.Tests/bin/Debug/net8.0/Acceptance.Tests.dll" adapterTypeName="executor://MSTest.Sdk/4.4.1" className="Acceptance.Tests.LoyaltyDiscountTests" name="NonLoyalCustomerIsUnchanged" />
+    </UnitTest>
+    <UnitTest name="NegativeTotalIsRejected" storage="/work/lab/fx/tests/acceptance.tests/bin/debug/net8.0/acceptance.tests.dll" id="16bb1de2-20c1-8fa3-b422-20986c7b38e8">
+      <Execution id="293f623f-86b2-4696-b991-ec26652d982f" />
+      <TestMethod codeBase="/work/lab/fx/tests/Acceptance.Tests/bin/Debug/net8.0/Acceptance.Tests.dll" adapterTypeName="executor://MSTest.Sdk/4.4.1" className="Acceptance.Tests.LoyaltyDiscountTests" name="NegativeTotalIsRejected" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="1a986d57-3a87-84d6-8e2c-9156ab451a52" executionId="9e5181c1-d331-4480-a46d-35add207ed28" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" />
+    <TestEntry testId="1b8cff45-8d2b-85c0-a5f3-07405ca9195a" executionId="df9f0989-38e1-44d7-943b-912a73a90d53" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" />
+    <TestEntry testId="13416904-49e1-8d2e-8a73-2e9a362016b5" executionId="1fc000cd-959c-498b-893b-811641aa8dc4" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" />
+    <TestEntry testId="16bb1de2-20c1-8fa3-b422-20986c7b38e8" executionId="293f623f-86b2-4696-b991-ec26652d982f" testListId="8C84FA94-04C1-424b-9868-57A2D4851A1D" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8C84FA94-04C1-424b-9868-57A2D4851A1D" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="4" executed="4" passed="3" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <RunInfos>
+      <RunInfo computerName="lab-host" outcome="Error" timestamp="2026-11-20T11:36:38.7985856">
+        <Text>Exit code indicates failure: '2'. Please refer to https://aka.ms/testingplatform/exitcodes for more information.</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

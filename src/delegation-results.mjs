@@ -3,6 +3,7 @@
 // adapter only, never by the domain workflows, so the JSON `content` and the
 // `details` object for each outcome are built side by side and cannot drift.
 
+import { summarizeVerification } from "./delegation-state.mjs";
 import { toPiUsage } from "./pi-usage.mjs";
 
 function text(value) {
@@ -143,7 +144,9 @@ export function formatExecutionResult(outcome) {
           workspace_modified: outcome.workspaceModified,
           changed_files: [...outcome.changedFiles],
           attempts: outcome.attempts,
-          verification: outcome.verification
+          // The same summary every needs_main_model result carries, not the
+          // whole verification object with the list of executed tests.
+          last_verification: summarizeVerification(outcome.verification, outcome.verificationAttempt ?? null)
         }),
         details: {
           success: false,

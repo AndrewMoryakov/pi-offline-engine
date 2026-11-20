@@ -268,6 +268,7 @@ export async function runDelegatedExecution(options) {
     changedFiles: changedFiles().sort(),
     attempts: state.attempts,
     verification: state.lastVerification,
+    verificationAttempt: state.lastVerificationAttempt,
     nestedUsage: state.nestedUsage
   };
 }

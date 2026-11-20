@@ -27,12 +27,12 @@
               "verificationPassed": false
             }
           ],
-          "verification": {
+          "last_verification": {
+            "attempt": 1,
             "passed": false,
             "checks": [
               {
                 "kind": "build",
-                "project": "src/A.csproj",
                 "passed": true,
                 "code": 0,
                 "killed": false,
@@ -41,7 +41,6 @@
               },
               {
                 "kind": "tests",
-                "project": "tests/ATests.csproj",
                 "passed": false,
                 "code": 0,
                 "killed": false,
@@ -49,16 +48,8 @@
                   "Test verification failed: no readable TRX execution count was produced."
                 ],
                 "artifact": ".pi/offline-engine/artifacts/17e488642842870feb83.log",
-                "runner": "vstest",
-                "testCount": null,
-                "executedTestCount": null,
-                "executedTestIdentities": [],
-                "expectedTestPatterns": [],
                 "resultArtifact": "<WS>/.pi/offline-engine/test-results/ed962bcd0ca4159c6124/results.trx"
               }
-            ],
-            "diagnostics": [
-              "Test verification failed: no readable TRX execution count was produced."
             ]
           }
         }

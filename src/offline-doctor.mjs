@@ -1,7 +1,7 @@
 import { endpointHost, isLocalHost } from "./endpoint-locality.mjs";
 import { LINE_EDIT_TOOL, SCRIPT_EDIT_TOOL, isLocalModel } from "./edit-routing.mjs";
 import { resolveEndpointUrl } from "./endpoint-url.mjs";
-import { buildAuthHeaders, checkClaudeCli } from "./tiny-client.mjs";
+import { buildAuthHeaders, checkClaudeCli, formatTimeLimit } from "./tiny-client.mjs";
 
 const DEFAULT_TIMEOUT_MS = 5000;
 // Starting dotnet, git, csharp-ls or the claude CLI is slower than an HTTP
@@ -378,7 +378,7 @@ async function checkDotnetTestCapabilities({ exec, cwd, timeoutMs }) {
 // signal left, often 0; reporting that as "exit 0" reads like a contradiction.
 export function describeFailure(result, timeoutMs) {
   return result?.killed === true
-    ? `timed out after ${Math.round(timeoutMs / 1000)} s`
+    ? `timed out after ${formatTimeLimit(timeoutMs)}`
     : `exit ${String(result?.code)}`;
 }
 

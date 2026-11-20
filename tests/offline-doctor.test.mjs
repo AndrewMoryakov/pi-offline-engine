@@ -473,3 +473,14 @@ test("the implementer auth line names the Claude Code login for that provider", 
   assert.equal(describeImplementerAuth({ provider: "openai-compatible", apiKey: null }, "none (local endpoint)"), "none (local endpoint)");
 });
 
+
+test("a limit under a second is shown in milliseconds", async () => {
+  const { formatTimeLimit } = await import("../src/tiny-client.mjs");
+  assert.equal(formatTimeLimit(20_000), "20 s");
+  assert.equal(formatTimeLimit(250), "250 ms");
+  const exec = async (command, args) => (command === "dotnet" && args[0] === "--version")
+    ? { code: 0, killed: true, stdout: "", stderr: "" }
+    : Promise.reject(new Error("missing"));
+  const report = await runOfflineDoctor({ cwd: "/tmp", endpoint: "http://127.0.0.1:8081", model: "tiny", tools: null, exec, commandTimeoutMs: 250, fetchFn: async () => { throw new Error("offline"); } });
+  assert.equal(report.checks.find((check) => check.id === "dotnet").message, "timed out after 250 ms");
+});

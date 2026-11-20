@@ -1,0 +1,246 @@
+  Lib -> /work/lab/Lib/bin/Debug/net10.0/Lib.dll
+  NTests -> /work/lab/NTests/bin/Debug/net10.0/NTests.dll
+Test run for /work/lab/NTests/bin/Debug/net10.0/NTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed Case1 [16 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(1, 0), Is.EqualTo(1))
+  Expected: 1
+  But was:  2
+
+  Stack Trace:
+     at NTests.ManyTests.Case1() in /work/lab/NTests/ManyTests.cs:line 3
+
+1)    at NTests.ManyTests.Case1() in /work/lab/NTests/ManyTests.cs:line 3
+
+
+  Failed Case10 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(10, 0), Is.EqualTo(10))
+  Expected: 10
+  But was:  11
+
+  Stack Trace:
+     at NTests.ManyTests.Case10() in /work/lab/NTests/ManyTests.cs:line 12
+
+1)    at NTests.ManyTests.Case10() in /work/lab/NTests/ManyTests.cs:line 12
+
+
+  Failed Case11 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(11, 0), Is.EqualTo(11))
+  Expected: 11
+  But was:  12
+
+  Stack Trace:
+     at NTests.ManyTests.Case11() in /work/lab/NTests/ManyTests.cs:line 13
+
+1)    at NTests.ManyTests.Case11() in /work/lab/NTests/ManyTests.cs:line 13
+
+
+  Failed Case12 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(12, 0), Is.EqualTo(12))
+  Expected: 12
+  But was:  13
+
+  Stack Trace:
+     at NTests.ManyTests.Case12() in /work/lab/NTests/ManyTests.cs:line 14
+
+1)    at NTests.ManyTests.Case12() in /work/lab/NTests/ManyTests.cs:line 14
+
+
+  Failed Case13 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(13, 0), Is.EqualTo(13))
+  Expected: 13
+  But was:  14
+
+  Stack Trace:
+     at NTests.ManyTests.Case13() in /work/lab/NTests/ManyTests.cs:line 15
+
+1)    at NTests.ManyTests.Case13() in /work/lab/NTests/ManyTests.cs:line 15
+
+
+  Failed Case14 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(14, 0), Is.EqualTo(14))
+  Expected: 14
+  But was:  15
+
+  Stack Trace:
+     at NTests.ManyTests.Case14() in /work/lab/NTests/ManyTests.cs:line 16
+
+1)    at NTests.ManyTests.Case14() in /work/lab/NTests/ManyTests.cs:line 16
+
+
+  Failed Case15 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(15, 0), Is.EqualTo(15))
+  Expected: 15
+  But was:  16
+
+  Stack Trace:
+     at NTests.ManyTests.Case15() in /work/lab/NTests/ManyTests.cs:line 17
+
+1)    at NTests.ManyTests.Case15() in /work/lab/NTests/ManyTests.cs:line 17
+
+
+  Failed Case16 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(16, 0), Is.EqualTo(16))
+  Expected: 16
+  But was:  17
+
+  Stack Trace:
+     at NTests.ManyTests.Case16() in /work/lab/NTests/ManyTests.cs:line 18
+
+1)    at NTests.ManyTests.Case16() in /work/lab/NTests/ManyTests.cs:line 18
+
+
+  Failed Case17 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(17, 0), Is.EqualTo(17))
+  Expected: 17
+  But was:  18
+
+  Stack Trace:
+     at NTests.ManyTests.Case17() in /work/lab/NTests/ManyTests.cs:line 19
+
+1)    at NTests.ManyTests.Case17() in /work/lab/NTests/ManyTests.cs:line 19
+
+
+  Failed Case18 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(18, 0), Is.EqualTo(18))
+  Expected: 18
+  But was:  19
+
+  Stack Trace:
+     at NTests.ManyTests.Case18() in /work/lab/NTests/ManyTests.cs:line 20
+
+1)    at NTests.ManyTests.Case18() in /work/lab/NTests/ManyTests.cs:line 20
+
+
+  Failed Case19 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(19, 0), Is.EqualTo(19))
+  Expected: 19
+  But was:  20
+
+  Stack Trace:
+     at NTests.ManyTests.Case19() in /work/lab/NTests/ManyTests.cs:line 21
+
+1)    at NTests.ManyTests.Case19() in /work/lab/NTests/ManyTests.cs:line 21
+
+
+  Failed Case2 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(2, 0), Is.EqualTo(2))
+  Expected: 2
+  But was:  3
+
+  Stack Trace:
+     at NTests.ManyTests.Case2() in /work/lab/NTests/ManyTests.cs:line 4
+
+1)    at NTests.ManyTests.Case2() in /work/lab/NTests/ManyTests.cs:line 4
+
+
+  Failed Case20 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(20, 0), Is.EqualTo(20))
+  Expected: 20
+  But was:  21
+
+  Stack Trace:
+     at NTests.ManyTests.Case20() in /work/lab/NTests/ManyTests.cs:line 22
+
+1)    at NTests.ManyTests.Case20() in /work/lab/NTests/ManyTests.cs:line 22
+
+
+  Failed Case3 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(3, 0), Is.EqualTo(3))
+  Expected: 3
+  But was:  4
+
+  Stack Trace:
+     at NTests.ManyTests.Case3() in /work/lab/NTests/ManyTests.cs:line 5
+
+1)    at NTests.ManyTests.Case3() in /work/lab/NTests/ManyTests.cs:line 5
+
+
+  Failed Case4 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(4, 0), Is.EqualTo(4))
+  Expected: 4
+  But was:  5
+
+  Stack Trace:
+     at NTests.ManyTests.Case4() in /work/lab/NTests/ManyTests.cs:line 6
+
+1)    at NTests.ManyTests.Case4() in /work/lab/NTests/ManyTests.cs:line 6
+
+
+  Failed Case5 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(5, 0), Is.EqualTo(5))
+  Expected: 5
+  But was:  6
+
+  Stack Trace:
+     at NTests.ManyTests.Case5() in /work/lab/NTests/ManyTests.cs:line 7
+
+1)    at NTests.ManyTests.Case5() in /work/lab/NTests/ManyTests.cs:line 7
+
+
+  Failed Case6 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(6, 0), Is.EqualTo(6))
+  Expected: 6
+  But was:  7
+
+  Stack Trace:
+     at NTests.ManyTests.Case6() in /work/lab/NTests/ManyTests.cs:line 8
+
+1)    at NTests.ManyTests.Case6() in /work/lab/NTests/ManyTests.cs:line 8
+
+
+  Failed Case7 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(7, 0), Is.EqualTo(7))
+  Expected: 7
+  But was:  8
+
+  Stack Trace:
+     at NTests.ManyTests.Case7() in /work/lab/NTests/ManyTests.cs:line 9
+
+1)    at NTests.ManyTests.Case7() in /work/lab/NTests/ManyTests.cs:line 9
+
+
+  Failed Case8 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(8, 0), Is.EqualTo(8))
+  Expected: 8
+  But was:  9
+
+  Stack Trace:
+     at NTests.ManyTests.Case8() in /work/lab/NTests/ManyTests.cs:line 10
+
+1)    at NTests.ManyTests.Case8() in /work/lab/NTests/ManyTests.cs:line 10
+
+
+  Failed Case9 [< 1 ms]
+  Error Message:
+     Assert.That(Lib.Calc.Add(9, 0), Is.EqualTo(9))
+  Expected: 9
+  But was:  10
+
+  Stack Trace:
+     at NTests.ManyTests.Case9() in /work/lab/NTests/ManyTests.cs:line 11
+
+1)    at NTests.ManyTests.Case9() in /work/lab/NTests/ManyTests.cs:line 11
+
+
+
+Failed!  - Failed:    20, Passed:     1, Skipped:     0, Total:    21, Duration: 22 ms - NTests.dll (net10.0)

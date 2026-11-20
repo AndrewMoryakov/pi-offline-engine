@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { isSafeRelativePath } from "./implementation-spec.mjs";
 import { ensureStateSubdir } from "./state-dir.mjs";
+import { failureFromTrx, formatDotnetReport, hasFailureDetail, isRecognised, parseDotnetOutput, reportsFailure } from "./dotnet-output.mjs";
 import { resolveInside, sha256 } from "./workspace-snapshot.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -11,6 +12,7 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 // workstation, where the earlier 10 s limit failed every preflight.
 const RUNNER_DETECTION_TIMEOUT_MS = DEFAULT_TIMEOUT_MS;
 const MAX_DIAGNOSTICS = 40;
+const DIAGNOSTIC_BUDGET_CHARS = 4000;
 
 // The verdict line is why the check failed, so it must survive truncation: a
 // capped list used to swallow it whenever the command was noisy enough.
@@ -42,7 +44,7 @@ export async function runVerification({
       args: ["build", project, "--no-restore", "--nologo", "--verbosity:minimal"],
       specId: spec.spec_id,
       attempt
-    });
+    }).then(({ check }) => check);
     results.push(build);
     if (!build.passed) return summarize(results);
   }
@@ -130,7 +132,7 @@ async function runVstestPattern({
 
   if (pattern) args.push("--filter", `FullyQualifiedName~${escapeFilterValue(pattern)}`);
 
-  const tests = await runDotnetCheck({
+  const { check: tests, evidence } = await runDotnetCheck({
     cwd,
     exec,
     signal,
@@ -139,10 +141,11 @@ async function runVstestPattern({
     project: projectLabel,
     args,
     specId,
-    attempt
+    attempt,
+    trxPath: testRun.filePath
   });
 
-  return attachTrxEvidence(tests, testRun.filePath, {
+  return attachTrxEvidence(tests, evidence, testRun.filePath, {
     runner: "vstest",
     expectedPatterns: pattern ? [pattern] : []
   });
@@ -172,7 +175,7 @@ async function runMtpTests({
     testRun.fileName
   ];
 
-  const tests = await runDotnetCheck({
+  const { check: tests, evidence } = await runDotnetCheck({
     cwd,
     exec,
     signal,
@@ -181,17 +184,17 @@ async function runMtpTests({
     project: projectLabel,
     args,
     specId,
-    attempt
+    attempt,
+    trxPath: testRun.filePath
   });
 
-  return attachTrxEvidence(tests, testRun.filePath, {
+  return attachTrxEvidence(tests, evidence, testRun.filePath, {
     runner: "mtp",
     expectedPatterns
   });
 }
 
-async function attachTrxEvidence(tests, trxPath, { runner, expectedPatterns }) {
-  const evidence = await readTrxEvidence(trxPath);
+function attachTrxEvidence(tests, evidence, trxPath, { runner, expectedPatterns }) {
   tests.runner = runner;
   tests.testCount = evidence?.total ?? null;
   tests.executedTestCount = evidence?.executed ?? null;
@@ -296,17 +299,26 @@ export async function detectDotnetTestRunner(options) {
   return (await inspectDotnetTestRunner(options)).runner;
 }
 
-async function runDotnetCheck({ cwd, exec, signal, timeoutMs, kind, project, args, specId, attempt }) {
+async function runDotnetCheck({ cwd, exec, signal, timeoutMs, kind, project, args, specId, attempt, trxPath = null }) {
   const result = await exec("dotnet", args, { signal, timeout: timeoutMs, cwd });
   const artifact = await writeCommandArtifact(cwd, specId, attempt, kind, result);
+  const evidence = trxPath ? await readTrxEvidence(trxPath) : null;
+  const passed = result.code === 0 && result.killed !== true;
   return {
-    kind,
-    project,
-    passed: result.code === 0 && result.killed !== true,
-    code: result.code,
-    killed: result.killed === true,
-    diagnostics: extractDiagnostics(result.stdout, result.stderr),
-    artifact
+    check: {
+      kind,
+      project,
+      passed,
+      code: result.code,
+      killed: result.killed === true,
+      diagnostics: extractDiagnostics(result.stdout, result.stderr, {
+        cwd,
+        failed: !passed,
+        trxFailures: (evidence?.failures ?? []).map((failure) => failureFromTrx(failure, { cwd }))
+      }),
+      artifact
+    },
+    evidence
   };
 }
 
@@ -361,10 +373,22 @@ async function readTrxEvidence(filePath) {
       if (className && name) identities.add(`${className}.${name}`);
     }
 
+    // A failed result keeps its assertion message and stack trace here even
+    // when the console printed them in a shape the reader does not know.
+    const failures = [];
+    for (const match of text.matchAll(/<UnitTestResult\b([^>]*?)>([\s\S]*?)<\/UnitTestResult>/gi)) {
+      const attrs = parseXmlAttributes(match[1]);
+      if (String(attrs.outcome ?? "").toLowerCase() !== "failed") continue;
+      const message = match[2].match(/<Message>([\s\S]*?)<\/Message>/i)?.[1] ?? "";
+      const stackTrace = match[2].match(/<StackTrace>([\s\S]*?)<\/StackTrace>/i)?.[1] ?? "";
+      failures.push({ name: decodeXml(attrs.testName ?? ""), message: decodeXml(message), stackTrace: decodeXml(stackTrace) });
+    }
+
     return {
       total: readCounter(countersTag, "total"),
       executed: readCounter(countersTag, "executed"),
-      executedIdentities: [...identities]
+      executedIdentities: [...identities],
+      failures
     };
   } catch (error) {
     if (error?.code === "ENOENT") return null;
@@ -411,7 +435,25 @@ function summarize(results) {
   };
 }
 
-function extractDiagnostics(stdout = "", stderr = "") {
+// What the implementer reads after a failed check. The shared reader gives the
+// verdict, compiler errors and failed tests with their values and source line;
+// failed tests come from the TRX file when it has them. Output the reader does
+// not recognise, and a failure it cannot explain, fall back to the keyword
+// lines used before.
+export function extractDiagnostics(stdout = "", stderr = "", { cwd = null, failed = false, trxFailures = [] } = {}) {
+  const text = `${stdout}\n${stderr}`;
+  const parsed = parseDotnetOutput(text, { cwd });
+  if (trxFailures.length > 0) parsed.tests.failures = trxFailures;
+  if (!isRecognised(parsed)) return keywordDiagnostics(stdout, stderr);
+
+  const lines = formatDotnetReport(parsed, { budget: DIAGNOSTIC_BUDGET_CHARS, fullFailures: 4 });
+  if ((failed || reportsFailure(parsed)) && !hasFailureDetail(parsed)) {
+    for (const line of keywordDiagnostics(stdout, stderr)) if (!lines.includes(line)) lines.push(line);
+  }
+  return lines.slice(0, MAX_DIAGNOSTICS);
+}
+
+function keywordDiagnostics(stdout = "", stderr = "") {
   const lines = `${stdout}\n${stderr}`.split(/\r?\n/).map((x) => x.trimEnd()).filter(Boolean);
   const important = lines.filter((line) =>
     /\berror\b/i.test(line) ||

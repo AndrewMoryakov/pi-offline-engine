@@ -1,10 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { ensureStateSubdir } from "./state-dir.mjs";
+import { formatDotnetReport, hasFailureDetail, isRecognised, keywordLines, parseDotnetOutput, reportsFailure } from "./dotnet-output.mjs";
 
 const DEFAULT_MIN_CHARS = 8000;
 const MAX_DIAGNOSTIC_LINES = 50;
 const MAX_TAIL_LINES = 12;
+const REPORT_BUDGET_CHARS = 6000;
 
 export async function compactToolResult({
   cwd,
@@ -23,7 +25,7 @@ export async function compactToolResult({
   if (text.length < minChars) return null;
 
   const artifact = await writeToolArtifact(cwd, toolCallId, command, text);
-  const summary = summarizeDotnetOutput(text, { command, artifact });
+  const summary = summarizeDotnetOutput(text, { command, artifact, cwd });
 
   return {
     content: [{ type: "text", text: summary }],
@@ -33,29 +35,38 @@ export async function compactToolResult({
   };
 }
 
-export function summarizeDotnetOutput(text, { command = "", artifact = "" } = {}) {
+// What the model sees instead of the full output. The verdict comes first,
+// then compiler errors, an aborted run, failed tests with their message and
+// source line, and warnings grouped by code. Output in a shape the reader does
+// not recognise keeps the keyword selection used before, and a failure the
+// reader cannot explain adds those keyword lines, so nothing is shown with
+// less than before.
+export function summarizeDotnetOutput(text, { command = "", artifact = "", cwd = null } = {}) {
+  const parsed = parseDotnetOutput(text, { cwd });
+  if (!isRecognised(parsed)) return summarizeByKeywords(text, { command, artifact });
+
+  const [verdict, ...report] = formatDotnetReport(parsed, { budget: REPORT_BUDGET_CHARS });
+  const unexplained = reportsFailure(parsed) && !hasFailureDetail(parsed)
+    ? keywordLines(text, { max: 30 })
+    : [];
+
+  return [
+    "[pi-offline-engine: compacted dotnet tool output]",
+    verdict,
+    command ? `Command: ${command}` : null,
+    `Original: ${countLines(text)} lines / ${String(text.length)} chars`,
+    artifact ? `Full artifact: ${artifact}` : null,
+    report.length > 0 ? "" : null,
+    ...report,
+    ...(unexplained.length > 0 ? ["", "Lines that mention a failure (shape not recognised):", ...unexplained] : []),
+    "",
+    "Full output was retained locally; use the artifact only if the compact diagnostics are insufficient."
+  ].filter((x) => x !== null).join("\n");
+}
+
+function summarizeByKeywords(text, { command, artifact }) {
   const lines = String(text).split(/\r?\n/);
-  const diagnosticLines = [];
-  const seen = new Set();
-
-  for (const line of lines) {
-    const trimmed = line.trimEnd();
-    if (!trimmed) continue;
-    if (
-      /\berror\s+[A-Z]{1,5}\d{3,}\b/i.test(trimmed) ||
-      /\bfailed\b/i.test(trimmed) ||
-      /\bexception\b/i.test(trimmed) ||
-      /\bassert(?:ion)?\b/i.test(trimmed) ||
-      /\bTest Run Failed\b/i.test(trimmed)
-    ) {
-      if (!seen.has(trimmed)) {
-        diagnosticLines.push(trimmed);
-        seen.add(trimmed);
-      }
-      if (diagnosticLines.length >= MAX_DIAGNOSTIC_LINES) break;
-    }
-  }
-
+  const diagnosticLines = keywordLines(text, { max: MAX_DIAGNOSTIC_LINES });
   const tail = lines.filter((x) => x.trim().length > 0).slice(-MAX_TAIL_LINES);
   const body = diagnosticLines.length > 0 ? diagnosticLines : tail;
 

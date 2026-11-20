@@ -10,7 +10,7 @@
   <a href="https://nodejs.org/"><img alt="Node.js 22.19+" src="https://img.shields.io/badge/Node.js-22.19%2B-339933.svg?logo=nodedotjs&logoColor=white"></a>
   <a href="#install"><img alt="Pi 1.5.0 verified" src="https://img.shields.io/badge/Pi-1.5.0%20verified-6E56CF.svg"></a>
   <a href="#current-vertical-slice"><img alt="Verification: dotnet build and test" src="https://img.shields.io/badge/verification-dotnet%20build%20%2B%20test-512BD4.svg?logo=dotnet&logoColor=white"></a>
-  <a href="../package.json"><img alt="Version 0.3.1" src="https://img.shields.io/badge/version-0.3.1-blue.svg"></a>
+  <a href="../package.json"><img alt="Version 0.3.2" src="https://img.shields.io/badge/version-0.3.2-blue.svg"></a>
 </p>
 
 <p align="center"><b>English</b> | <a href="REFERENCE.ru.md">Русский</a></p>
@@ -23,7 +23,7 @@ pi                                                      # then run /offline-doct
 
 `pi-offline-engine` is a Pi extension package for working with **local** language models, including with no network at all. One install brings the engine and four pinned companion extensions (retrieval, language server, code tool, lean edit). On top of them the engine adds: a readiness doctor and first-run endpoint discovery; two delegation tools that hand a precisely specified change to a much smaller local coding model and let real `dotnet build` / `dotnet test` decide whether it worked; a deterministic repository snapshot and compaction of large build output, so a slow model spends fewer tokens; a trimmed tool set for slow models; local telemetry; and an opt-in recorder that turns verified attempts into training data.
 
-It is experimental (version 0.3.1, a Git-distributed Pi package, not on npm) and verification is **.NET-only** today. The [status and known limits](#status-and-known-limits) say exactly what has and has not been measured.
+It is experimental (version 0.3.2, a Git-distributed Pi package, not on npm) and verification is **.NET-only** today. The [status and known limits](#status-and-known-limits) say exactly what has and has not been measured.
 
 **Contents:** [In plain words](#in-plain-words) · [What's inside](#whats-inside) · [Components and models](#what-gets-installed-and-which-models-run) · [How it works](#how-it-works) · [Quick start](#quick-start) · [Install](#install) · [Delegation in depth](#current-vertical-slice) · [Configuration](#tiny-implementer) · [Safety](#safety) · [Offline operations](#offline-operations) · [Reference](#reference) · [Troubleshooting](#troubleshooting) · [Status](#status-and-known-limits) · [Docs map](#documentation-map)
 
@@ -695,7 +695,7 @@ The engine writes `.pi/offline-engine/.gitignore` (containing `*`) itself, so a 
 
 ## Status and known limits
 
-Experimental. `pi-offline-engine` is at version 0.3.1 and is a Git-distributed Pi package (`private: true`, not published to npm).
+Experimental. `pi-offline-engine` is at version 0.3.2 and is a Git-distributed Pi package (`private: true`, not published to npm).
 
 - **Measured vs not.** The contract and helpers are covered by unit tests, extension-level tests with a fake Pi and fake TinyCoder, and the gates above. The real-model acceptance run ([docs/ACCEPTANCE_V0.md](ACCEPTANCE_V0.md)) has no recorded result, and `docs/HYBRID_EDIT_V0.md` states that a real local llama-server has not been run for the hybrid evidence. Success rates of real TinyCoder implementations are therefore unknown.
 - **No CI.** The project does not use GitHub Actions. `gate:local`, the production dependency audit, `gate:pi`, `gate:edit`, `gate:install` and `gate:dotnet` are run by hand before a merge; the Pi 1.3.0 evidence is recorded in the [upgrade assessment](PI_COMPATIBILITY_2026-10-21.md) and the Pi 1.5.0 evidence in the [1.5.0 compatibility check](PI_COMPATIBILITY_2026-11-19.md).
